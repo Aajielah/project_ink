@@ -4,6 +4,7 @@ import 'package:archive/archive.dart';
 import 'package:drift/drift.dart';
 import 'package:path_provider/path_provider.dart';
 import '../database/database.dart';
+import '../repositories/statistics_repository.dart';
 
 class BackupService {
   final AppDatabase _db;
@@ -313,6 +314,7 @@ class BackupService {
         }
       });
 
+      await StatisticsRepository(_db).recalculateStatistics();
       return true;
     } catch (e) {
       return false;

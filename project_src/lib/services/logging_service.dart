@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/project.dart';
 import '../models/daily_log.dart';
@@ -8,19 +9,22 @@ import '../repositories/project_repository.dart';
 import '../repositories/schedule_repository.dart';
 import '../repositories/daily_log_repository.dart';
 import '../repositories/statistics_repository.dart';
+import '../shared/providers.dart';
 
 class LoggingService {
   final ProjectRepository _projectRepo;
   final ScheduleRepository _scheduleRepo;
   final DailyLogRepository _logRepo;
   final StatisticsRepository _statsRepo;
+  final Ref? _ref;
 
   const LoggingService(
     this._projectRepo,
     this._scheduleRepo,
     this._logRepo,
-    this._statsRepo,
-  );
+    this._statsRepo, [
+    this._ref,
+  ]);
 
   /// Logs writing progress for a project on a specific date.
   /// Handles Carry-Forward, Backlog creation, Streaks, and Statistics updates.
@@ -174,60 +178,13 @@ class LoggingService {
     await _projectRepo.updateProject(updatedProject);
 
     // 7. Recalculate Global Statistics
-    final stats = await _statsRepo.getStatistics();
-    
-    int newWritingDays = stats.writingDays;
-    if (prevLogWords == 0 && actualWords > 0) {
-      newWritingDays++;
+    await _statsRepo.recalculateStatistics();
+
+    if (_ref != null) {
+      _ref!.invalidate(statisticsProvider);
+      _ref!.invalidate(homeEncouragementProvider);
+      _ref!.invalidate(homeQuoteProvider);
     }
-
-    // Global streak
-    int newGlobalStreak = stats.currentGlobalStreak;
-    
-    final allProjects = await _projectRepo.getAllProjects();
-    bool hasOtherCompletedToday = false;
-    for (final p in allProjects) {
-      if (p.id == projectId) continue;
-      final log = await _logRepo.getLogForDate(p.id, cleanDate);
-      if (log != null && log.completed) {
-        hasOtherCompletedToday = true;
-        break;
-      }
-    }
-
-    if (isCompleted) {
-      if (!wasCompletedBefore && !hasOtherCompletedToday) {
-        final yesterdayGlobalStreak = await _calculateGlobalStreakBeforeToday(cleanDate);
-        newGlobalStreak = yesterdayGlobalStreak + 1;
-      }
-    } else {
-      if (!hasOtherCompletedToday) {
-        newGlobalStreak = 0; // broke the streak
-      }
-    }
-    final newLongestGlobal = max(stats.longestGlobalStreak, newGlobalStreak);
-
-    final newProjectsCompleted = newStatus == ProjectStatus.completed &&
-            project.status != ProjectStatus.completed
-        ? stats.projectsCompleted + 1 
-        : stats.projectsCompleted;
-
-    final newLifetimeWords = stats.lifetimeWords + wordDiff;
-    final double newAvg = newWritingDays > 0 ? newLifetimeWords / newWritingDays : 0.0;
-
-    final updatedStats = stats.copyWith(
-      lifetimeWords: newLifetimeWords,
-      writingDays: newWritingDays,
-      averageWordsPerDay: newAvg,
-      currentGlobalStreak: newGlobalStreak,
-      longestGlobalStreak: newLongestGlobal,
-      projectsCompleted: newProjectsCompleted,
-      currentBacklog: isOngoing ? stats.currentBacklog : max(0, stats.currentBacklog - prevBacklogCreated + backlogCreated),
-      restDaysUsed: stats.restDaysUsed +
-          (schedule.isRestDay && existingLog == null ? 1 : 0),
-    );
-
-    await _statsRepo.updateStatistics(updatedStats);
   }
 
   Future<int> _calculateStreakBeforeToday(String projectId, DateTime cleanToday) async {

@@ -88,12 +88,18 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
   final SchedulingService _schedulingService;
   final ScheduleRepository _scheduleRepo;
   final OngoingSyncService _syncService;
+  final DailyLogRepository _dailyLogRepo;
+  final StatisticsRepository _statsRepo;
+  final Ref _ref;
 
   ProjectsNotifier(
     this._projectRepo,
     this._schedulingService,
     this._scheduleRepo,
     this._syncService,
+    this._dailyLogRepo,
+    this._statsRepo,
+    this._ref,
   ) : super(const AsyncValue.loading()) {
     loadProjects();
   }
@@ -252,16 +258,30 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       }
 
       await loadProjects();
+      await _statsRepo.recalculateStatistics();
+      _invalidateAllDependentProviders();
       return null;
     } catch (e) {
       return 'Failed to save project: $e';
     }
   }
 
+  void _invalidateAllDependentProviders() {
+    _ref.invalidate(statisticsProvider);
+    _ref.invalidate(homeEncouragementProvider);
+    _ref.invalidate(homeQuoteProvider);
+  }
 
   Future<void> deleteProject(String id) async {
     try {
-      await _projectRepo.deleteProject(id);
+      final db = _ref.read(dbProvider);
+      await db.transaction(() async {
+        await _projectRepo.deleteProject(id);
+        await _scheduleRepo.deleteSchedulesForProject(id);
+        await _dailyLogRepo.deleteLogsForProject(id);
+      });
+      await _statsRepo.recalculateStatistics();
+      _invalidateAllDependentProviders();
       await loadProjects();
     } catch (_) {}
   }
@@ -276,6 +296,8 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         );
         await _projectRepo.updateProject(updated);
         await loadProjects();
+        await _statsRepo.recalculateStatistics();
+        _invalidateAllDependentProviders();
       }
     } catch (_) {}
   }
@@ -290,6 +312,8 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         );
         await _projectRepo.updateProject(updated);
         await loadProjects();
+        await _statsRepo.recalculateStatistics();
+        _invalidateAllDependentProviders();
       }
     } catch (_) {}
   }
@@ -298,6 +322,8 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     try {
       await _projectRepo.updateProject(updated);
       await loadProjects();
+      await _statsRepo.recalculateStatistics();
+      _invalidateAllDependentProviders();
     } catch (_) {}
   }
 }
@@ -310,6 +336,9 @@ final projectsProvider =
     ref.watch(schedulingServiceProvider),
     ref.watch(scheduleRepositoryProvider),
     ref.watch(ongoingSyncServiceProvider),
+    ref.watch(dailyLogRepositoryProvider),
+    ref.watch(statisticsRepositoryProvider),
+    ref,
   );
 });
 

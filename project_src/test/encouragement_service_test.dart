@@ -85,6 +85,9 @@ class FakeStatisticsRepository implements StatisticsRepository {
 
   @override
   Future<StatisticsModel> getStatistics() async => stats;
+
+  @override
+  Future<void> recalculateStatistics() async {}
 }
 
 // --- MAIN UNIT TESTS ---
