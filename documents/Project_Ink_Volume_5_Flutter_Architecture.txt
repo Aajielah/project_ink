@@ -1,0 +1,38 @@
+Project Ink - Volume 5
+Flutter Architecture & Development Guide
+Technology Stack
+Framework: FlutterLanguage: DartArchitecture: Clean Architecture + MVVMState Management: RiverpodDatabase: SQLite (Drift)Preferences: SharedPreferencesNotifications: flutter_local_notificationsCharts: fl_chartRouting: go_router
+Recommended Folder Structure
+lib/ ├── core/ │   ├── constants/ │   ├── theme/ │   ├── utils/ │   └── errors/ ├── features/ │   ├── home/ │   ├── projects/ │   ├── statistics/ │   └── settings/ ├── database/ ├── models/ ├── repositories/ ├── services/ ├── widgets/ └── main.dart
+Architecture Layers
+Presentation Layer- Screens- Widgets- ProvidersDomain Layer- Entities- Use Cases- Repository InterfacesData Layer- Drift Database- Repository Implementations- Local Storage
+Core Services
+• SchedulingService
+• LoggingService
+• StatisticsService
+• NotificationService
+• BackupService
+• QuoteService
+• StreakService
+Coding Standards
+• Use immutable models where possible.
+• Keep business logic out of widgets.
+• Each feature owns its providers.
+• Repositories are the only database access layer.
+• Use dependency injection for services.
+• Write unit tests for algorithms.
+Implementation Order
+1. Initialize Flutter project
+2. Configure packages
+3. Implement database
+4. Implement repositories
+5. Build Home UI
+6. Build Project Management
+7. Implement Scheduling Engine
+8. Implement Daily Logging
+9. Statistics
+10. Notifications
+11. Backup & Restore
+12. Testing and release
+Version 1 Scope
+Offline only.Single user.No cloud sync.Export/Import backup.Android first.

@@ -1,0 +1,48 @@
+Project Ink - Volume 7
+Master Technical Blueprint (Foundation Edition)
+Purpose
+This document is the master blueprint that connects all previous volumes into one implementation guide. It defines coding conventions, feature interactions, UI behavior, and development milestones.
+Feature Interaction Rules
+• One source of truth: the database drives UI state.
+• Every word log updates project progress, statistics and streaks in one transaction.
+• History is immutable after a day is locked.
+• Only future schedules are recalculated.
+• Every destructive action requires confirmation.
+Screen Specifications
+Home
+Greeting, quote, today's tasks, progress, global streak, quick navigation.
+Projects
+Scrollable project cards with progress, status, remaining words and today's target.
+Project Detail
+Overview, This Week, History and Manage tabs.
+Statistics
+Charts, lifetime totals, streaks, backlog and completed projects.
+Settings
+Theme, notifications, backup, about.
+UI Standards
+• One responsibility per screen.
+• Consistent spacing and typography.
+• Animations under 300ms.
+• Dark and light themes.
+• Accessible contrast and touch targets.
+Development Milestones
+1. Foundation & database
+2. Navigation and themes
+3. Project management
+4. Scheduling engine
+5. Logging engine
+6. Statistics
+7. Notifications
+8. Backup/restore
+9. Testing
+10. Release candidate
+Coding Checklist
+• Write unit tests for services.
+• Document public classes.
+• Avoid duplicated business logic.
+• Use repositories for all persistence.
+• Keep widgets presentation-only.
+Future Expansion
+Possible additions include desktop support, optional cloud sync, writing timers, calendar integrations, AI-assisted writing insights, and public release.
+Conclusion
+Project Ink should always prioritize helping the writer finish projects through clarity, consistency, and intelligent planning rather than adding unnecessary complexity.

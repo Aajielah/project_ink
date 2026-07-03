@@ -1,0 +1,35 @@
+Project Ink - Volume 4
+Scheduling Engine & Algorithms
+Purpose
+Defines the core scheduling engine that powers Project Ink.
+Project Creation Algorithm
+• Validate inputs (target words, daily target, duration).
+• Generate calendar from start date.
+• Apply selected rest-day mode.
+• Calculate available writing days.
+• If writing days × daily target < target words, reject project.
+• Otherwise generate daily schedule and save.
+Daily Logging Algorithm
+• User may log words only for today.
+• Actual == Planned: mark complete.
+• Actual > Planned: complete today then carry excess to future planned days until exhausted.
+• Actual < Planned: mark difference as backlog.
+• Recalculate remaining words and statistics.
+Carry Forward Rules
+Carry-forward reduces future planned targets but never below zero. Overflow can span multiple future days.
+Backlog Rules
+Backlog is informational only. It is never automatically redistributed. The user must edit the plan to absorb backlog.
+Editing Plan
+Only remaining unscheduled days are recalculated. Locked historical records are never modified.
+Freeze Algorithm
+If scheduled writing is ignored for multiple consecutive days, freeze the project. On reopening, analyze remaining schedule. If still feasible, offer resume. Otherwise require plan adjustment.
+Pause
+Pause consumes available flexible/rest allowance. Resume extends finish date accordingly.
+Completion
+When remaining words reach zero, celebrate completion and offer to continue the same project with a new writing cycle while preserving project streak/history.
+Edge Cases
+• Phone date changes must not create duplicate logs.
+• Future logs are forbidden.
+• Completed days are immutable.
+• Impossible edits are rejected.
+• Duplicate project names may be allowed but IDs remain unique.

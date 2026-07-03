@@ -1,0 +1,36 @@
+Project Ink - Volume 6
+Testing, Release & Implementation Roadmap
+Testing Strategy
+• Create valid project
+• Reject impossible schedule
+• Edit daily target
+• Flexible rest day validation
+• Random rest day consumption
+• Carry-forward across multiple days
+• Backlog creation
+• Freeze after inactivity
+• Resume frozen project
+• Export backup
+• Import backup
+• Delete project
+• Theme switching
+• Notification triggers
+Acceptance Criteria
+• A user can create a project in under one minute.
+• Impossible schedules are never saved.
+• Statistics update immediately after logging.
+• App works completely offline.
+• Backup restores all user data.
+Release Checklist
+• Database migration tested
+• Notifications verified
+• Backup verified
+• UI tested on small and large screens
+• Performance tested
+• Dark/Light themes verified
+Backup File
+Extension: .projectinkFormat: ZIP archive containing JSON files:user.jsonprojects.jsonschedule.jsonlogs.jsonstatistics.jsonsettings.jsonachievements.jsonquotes.json
+Version Roadmap
+v1.0- Core writing plannerv1.1- Achievements- Better analyticsv1.2- Calendar heatmap- Custom quotesv2.0- Optional cloud sync- Desktop support
+Final Vision
+Project Ink is not a generic to-do application. It is a writing operating system focused on helping authors consistently finish manuscripts through intelligent planning, realistic scheduling, motivation, and accountability.

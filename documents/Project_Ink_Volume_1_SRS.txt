@@ -1,0 +1,42 @@
+Project Ink - Volume 1
+Software Requirements Specification
+1. Purpose
+Project Ink is an offline-first personal writing productivity system designed to help a single user consistently complete writing projects through realistic planning, scheduling, accountability, and motivation.
+2. Goals
+Help the user finish every writing project started.
+Prevent unrealistic writing plans.
+Reduce planning fatigue.
+Track consistency through streaks and statistics.
+Provide meaningful encouragement instead of guilt.
+3. Core Principles
+Never allow impossible schedules.
+Never modify a user's plan automatically.
+Treat missed work as backlog unless the user changes the plan.
+Freeze inactive projects instead of endlessly accumulating missed tasks.
+Celebrate progress at every milestone.
+4. Target User
+The application is designed for one primary user: the author. Multi-user support is intentionally out of scope for Version 1.
+5. Functional Requirements
+• Create unlimited writing projects.
+• Configure target words, daily target, duration and optional future start date.
+• Support Fixed, Flexible and Random rest day modes.
+• Automatically generate weekly writing schedules.
+• Display only the current week's tasks.
+• Log actual words written each day.
+• Carry excess words into future scheduled days.
+• Convert unfinished words into backlog.
+• Allow plan adjustments while recalculating only remaining work.
+• Pause and freeze projects.
+• Maintain project and global streaks.
+• Provide statistics and achievements.
+• Export and import backups.
+6. Non-Functional Requirements
+• Offline-first.
+• Fast startup (<2 seconds target).
+• Dark and Light themes.
+• Reliable local storage.
+• Backup file portable between devices.
+7. Project States
+Upcoming → Active → Paused → Frozen → Completed
+8. Initial Technology Decision
+Flutter + DartRiverpodSQLite (Drift)SharedPreferencesFlutter Local NotificationsClean Architecture

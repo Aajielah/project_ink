@@ -1,0 +1,93 @@
+Project Ink - Volume 3
+Database Design & Data Model
+Overview
+This document defines the complete logical database model for Project Ink Version 1. The application is offline-first and uses SQLite.
+User
+• id
+• name
+• createdAt
+• theme
+• notificationsEnabled
+• dailyQuotesEnabled
+Project
+• id
+• name
+• description
+• status
+• targetWords
+• writtenWords
+• remainingWords
+• dailyWordTarget
+• backlogWords
+• startDate
+• expectedFinishDate
+• actualFinishDate
+• restMode
+• allowedRestDays
+• remainingRestDays
+• projectStreak
+• longestProjectStreak
+• currentWeek
+• createdAt
+• updatedAt
+Schedule
+• id
+• projectId
+• date
+• plannedWords
+• isRestDay
+• completed
+• automaticRestDay
+• locked
+DailyLog
+• id
+• projectId
+• scheduleId
+• date
+• plannedWords
+• actualWords
+• carryForwardWords
+• backlogCreated
+• completed
+• loggedAt
+Statistics
+• id
+• lifetimeWords
+• averageWordsPerDay
+• currentGlobalStreak
+• longestGlobalStreak
+• projectsCompleted
+• writingDays
+• restDaysUsed
+• currentBacklog
+Achievement
+• id
+• title
+• description
+• earnedDate
+Quote
+• id
+• text
+• author
+• category
+Settings
+• id
+• theme
+• notifications
+• dailyQuotes
+• backupReminder
+• vibration
+Relationships
+User ├── Projects │      ├── Schedule │      ├── DailyLog │      └── Achievement ├── Statistics └── Settings
+Indexes
+Index Project(status)Index Schedule(projectId,date)Index DailyLog(projectId,date)Index Achievement(earnedDate)
+Backup Format
+Backup contains:UserProjectsSchedulesDaily LogsStatisticsAchievementsQuotesSettingsFormat:Compressed JSON (.projectink)
+Data Integrity Rules
+• Project names cannot be empty.
+• Target words must be greater than zero.
+• Daily target must be greater than zero.
+• Schedule dates are unique per project.
+• Completed days become locked.
+• Deleting a project deletes its schedules and logs.
+• Statistics are recalculated after every log.

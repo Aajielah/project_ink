@@ -1,0 +1,32 @@
+Project Ink - Volume 2 (UI & Architecture Starter)
+Overview
+This document is the implementation starter for the first build of Project Ink. It complements Volume 1.
+Navigation
+Bottom Navigation:• Home• Projects• Statistics• SettingsFloating Action Button:• Create Project (Projects page only)
+Home Screen
+Components:1. Greeting2. Daily motivational quote3. Today's combined tasks4. Today's total target5. Global streak6. Progress bar7. Good luck message
+Projects Screen
+Each project card shows:• Name• Status• Progress• Remaining words• Today's target (if active)Tap opens the Project Detail screen.
+Project Detail
+Tabs:• Overview• This Week• History• ManageOverview:- Project streak- Progress- Remaining words- Finish estimateThis Week:- Only current week's schedule- Log today's wordsHistory:- Previous weeks- Completed logsManage:- Edit plan- Pause- Resume- Delete
+Statistics
+Show:• Lifetime words• Average/day• Current streak• Longest streak• Projects completed• Backlog• Rest days used
+Settings
+ThemeNotificationsExport BackupImport BackupAbout
+Flutter Architecture
+lib/  core/  features/    home/    projects/    statistics/    settings/  shared/  services/  database/  models/  repositories/  widgets/
+Recommended Packages
+flutter_riverpodgo_routerdriftsqlite3_flutter_libsshared_preferencesflutter_local_notificationsfl_chartfile_pickerpath_providerarchive
+Development Order
+1. Create Flutter project
+2. Configure Riverpod
+3. Configure Drift database
+4. Create navigation
+5. Build Home screen
+6. Build Project CRUD
+7. Implement scheduling engine
+8. Implement logging
+9. Implement statistics
+10. Implement notifications
+11. Implement backup
+12. Testing & polish
