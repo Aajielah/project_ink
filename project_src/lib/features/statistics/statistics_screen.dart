@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -7,133 +6,13 @@ import 'package:intl/intl.dart';
 import '../../shared/providers.dart';
 import '../../models/statistics.dart';
 import '../../models/project.dart';
-import '../projects/widgets/book_cover_widget.dart';
 
-class StatisticsScreen extends ConsumerStatefulWidget {
+class StatisticsScreen extends ConsumerWidget {
   const StatisticsScreen({super.key});
 
   @override
-  ConsumerState<StatisticsScreen> createState() => _StatisticsScreenState();
-}
-
-class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
-  String _selectedStrategy = 'smart';
-
-  Map<String, dynamic> _computeRecommendation(List<ProjectModel> activeProjects) {
-    if (activeProjects.isEmpty) {
-      return {
-        'name': 'No Active Projects',
-        'reason': 'Create or resume a writing project to receive custom advisor recommendations.',
-        'confidence': 0,
-        'project': null,
-      };
-    }
-
-    // Helper: calculate progress ratio
-    double getProgress(ProjectModel p) => p.targetWords > 0 ? p.writtenWords / p.targetWords : 0.0;
-
-    switch (_selectedStrategy) {
-      case 'near':
-        // Sort by progress descending (but not 1.0 completed)
-        final unfinished = activeProjects.where((p) => getProgress(p) < 1.0).toList();
-        if (unfinished.isEmpty) break;
-        unfinished.sort((a, b) => getProgress(b).compareTo(getProgress(a)));
-        final p = unfinished.first;
-        return {
-          'name': p.name,
-          'reason': 'This book is nearest to completion (${(getProgress(p)*100).toInt()}%). Focus here to cross the finish line!',
-          'confidence': 90,
-          'project': p,
-        };
-
-      case 'deadline':
-        // Sort by expectedFinishDate ascending
-        final list = List<ProjectModel>.from(activeProjects);
-        list.sort((a, b) => a.expectedFinishDate.compareTo(b.expectedFinishDate));
-        final p = list.first;
-        return {
-          'name': p.name,
-          'reason': 'This manuscript has the earliest expected finish date (${DateFormat('MMM d').format(p.expectedFinishDate)}). Stay on schedule!',
-          'confidence': 85,
-          'project': p,
-        };
-
-      case 'target':
-        // Sort by daily target descending
-        final list = List<ProjectModel>.from(activeProjects);
-        list.sort((a, b) => b.dailyWordTarget.compareTo(a.dailyWordTarget));
-        final p = list.first;
-        return {
-          'name': p.name,
-          'reason': 'This project requires the highest daily output (${p.dailyWordTarget} words/day) to stay on path.',
-          'confidence': 80,
-          'project': p,
-        };
-
-      case 'rotate':
-        // Sort by updatedAt ascending (least recently edited)
-        final list = List<ProjectModel>.from(activeProjects);
-        list.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
-        final p = list.first;
-        return {
-          'name': p.name,
-          'reason': 'You haven\'t logged words here recently. Rotate back to keep the narrative draft fresh!',
-          'confidence': 75,
-          'project': p,
-        };
-
-      case 'smart':
-      default:
-        // Heuristic smart recommendation:
-        // 1. Backlog first
-        final backlogged = activeProjects.where((p) => p.backlogWords > 0).toList();
-        if (backlogged.isNotEmpty) {
-          backlogged.sort((a, b) => b.backlogWords.compareTo(a.backlogWords));
-          final p = backlogged.first;
-          return {
-            'name': p.name,
-            'reason': 'Urgent: This book has a backlog of ${p.backlogWords} words. Clean this first to secure your writing schedule!',
-            'confidence': 98,
-            'project': p,
-          };
-        }
-        // 2. Near finish (progress > 80%)
-        final highProgress = activeProjects.where((p) => getProgress(p) >= 0.8 && getProgress(p) < 1.0).toList();
-        if (highProgress.isNotEmpty) {
-          highProgress.sort((a, b) => getProgress(b).compareTo(getProgress(a)));
-          final p = highProgress.first;
-          return {
-            'name': p.name,
-            'reason': 'Highly Recommended: Crossed the 80% mark (${(getProgress(p)*100).toInt()}% done). Focus on final drafting!',
-            'confidence': 92,
-            'project': p,
-          };
-        }
-        // 3. Closest deadline
-        final list = List<ProjectModel>.from(activeProjects);
-        list.sort((a, b) => a.expectedFinishDate.compareTo(b.expectedFinishDate));
-        final p = list.first;
-        return {
-          'name': p.name,
-          'reason': 'Priority schedule: Closest upcoming deadline (${DateFormat('MMM d').format(p.expectedFinishDate)}).',
-          'confidence': 88,
-          'project': p,
-        };
-    }
-
-    final p = activeProjects.first;
-    return {
-      'name': p.name,
-      'reason': 'Keep your daily writing streak active on this book!',
-      'confidence': 70,
-      'project': p,
-    };
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(statisticsProvider);
-    final projectsAsync = ref.watch(projectsProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -145,7 +24,6 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(statisticsProvider);
-              ref.invalidate(projectsProvider);
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -153,155 +31,6 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Writing Advisor Section
-                  projectsAsync.when(
-                    data: (projects) {
-                      final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
-                      final rec = _computeRecommendation(activeProjects);
-                      final ProjectModel? recProject = rec['project'];
-
-                      return Card(
-                        color: theme.colorScheme.tertiaryContainer.withOpacity(0.2),
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(color: theme.colorScheme.tertiary.withOpacity(0.3)),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.auto_awesome, color: theme.colorScheme.tertiary),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Writing Advisor',
-                                        style: theme.textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: theme.colorScheme.onTertiaryContainer,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  DropdownButton<String>(
-                                    value: _selectedStrategy,
-                                    dropdownColor: theme.colorScheme.surface,
-                                    underline: const SizedBox(),
-                                    style: theme.textTheme.labelMedium?.copyWith(
-                                      color: theme.colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    items: const [
-                                      DropdownMenuItem(value: 'smart', child: Text('🧠 Smart Recommendation')),
-                                      DropdownMenuItem(value: 'near', child: Text('🏁 Finish Near Completion')),
-                                      DropdownMenuItem(value: 'deadline', child: Text('📅 Earliest Deadline')),
-                                      DropdownMenuItem(value: 'target', child: Text('🚀 Highest Daily Target')),
-                                      DropdownMenuItem(value: 'rotate', child: Text('🔄 Rotate Projects')),
-                                    ],
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        setState(() {
-                                          _selectedStrategy = val;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                              const Divider(height: 24),
-                              if (recProject != null)
-                                Row(
-                                  children: [
-                                    // Mini procedural cover of recommended project
-                                    BookCoverWidget(
-                                      title: recProject.name,
-                                      coverImagePath: recProject.coverImagePath,
-                                      coverType: recProject.coverType,
-                                      width: 60,
-                                      height: 80,
-                                      borderRadius: 6.0,
-                                      showTitle: false,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'RECOMMENDED FOCUS:',
-                                            style: theme.textTheme.labelSmall?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: theme.colorScheme.tertiary,
-                                            ),
-                                          ),
-                                          Text(
-                                            rec['name'] as String,
-                                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            rec['reason'] as String,
-                                            style: theme.textTheme.bodySmall?.copyWith(
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    // Confidence score gauge
-                                    Column(
-                                      children: [
-                                        Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            SizedBox(
-                                              width: 46,
-                                              height: 46,
-                                              child: CircularProgressIndicator(
-                                                value: (rec['confidence'] as int) / 100.0,
-                                                color: theme.colorScheme.tertiary,
-                                                backgroundColor: theme.colorScheme.tertiary.withOpacity(0.15),
-                                                strokeWidth: 4,
-                                              ),
-                                            ),
-                                            Text(
-                                              '${rec['confidence']}%',
-                                              style: theme.textTheme.labelSmall?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: theme.colorScheme.onTertiaryContainer,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'CONFIDENCE',
-                                          style: theme.textTheme.labelSmall?.copyWith(fontSize: 8.0),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                )
-                              else
-                                Text(
-                                  rec['reason'] as String,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                    loading: () => const SizedBox(),
-                    error: (_, __) => const SizedBox(),
-                  ),
-                  const SizedBox(height: 16),
-
                   // Lifetime Overview Card
                   Card(
                     color: theme.colorScheme.primaryContainer.withOpacity(0.35),

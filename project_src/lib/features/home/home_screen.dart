@@ -32,6 +32,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  String _selectedStrategy = 'smart';
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good morning';
@@ -56,8 +58,109 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return tasks;
   }
 
+  Map<String, dynamic> _computeRecommendation(List<ProjectModel> activeProjects) {
+    if (activeProjects.isEmpty) {
+      return {
+        'name': 'No Active Projects',
+        'reason': 'Create or resume a writing project to receive custom advisor recommendations.',
+        'confidence': 0,
+        'project': null,
+      };
+    }
+
+    double getProgress(ProjectModel p) => p.targetWords > 0 ? p.writtenWords / p.targetWords : 0.0;
+
+    switch (_selectedStrategy) {
+      case 'near':
+        final unfinished = activeProjects.where((p) => getProgress(p) < 1.0).toList();
+        if (unfinished.isEmpty) break;
+        unfinished.sort((a, b) => getProgress(b).compareTo(getProgress(a)));
+        final p = unfinished.first;
+        return {
+          'name': p.name,
+          'reason': 'This book is nearest to completion (${(getProgress(p)*100).toInt()}%). Focus here to cross the finish line!',
+          'confidence': 90,
+          'project': p,
+        };
+
+      case 'deadline':
+        final list = List<ProjectModel>.from(activeProjects);
+        list.sort((a, b) => a.expectedFinishDate.compareTo(b.expectedFinishDate));
+        final p = list.first;
+        return {
+          'name': p.name,
+          'reason': 'This manuscript has the earliest expected finish date (${DateFormat('MMM d').format(p.expectedFinishDate)}). Stay on schedule!',
+          'confidence': 85,
+          'project': p,
+        };
+
+      case 'target':
+        final list = List<ProjectModel>.from(activeProjects);
+        list.sort((a, b) => b.dailyWordTarget.compareTo(a.dailyWordTarget));
+        final p = list.first;
+        return {
+          'name': p.name,
+          'reason': 'This project requires the highest daily output (${p.dailyWordTarget} words/day) to stay on path.',
+          'confidence': 80,
+          'project': p,
+        };
+
+      case 'rotate':
+        final list = List<ProjectModel>.from(activeProjects);
+        list.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
+        final p = list.first;
+        return {
+          'name': p.name,
+          'reason': 'You haven\'t logged words here recently. Rotate back to keep the narrative draft fresh!',
+          'confidence': 75,
+          'project': p,
+        };
+
+      case 'smart':
+      default:
+        final backlogged = activeProjects.where((p) => p.backlogWords > 0).toList();
+        if (backlogged.isNotEmpty) {
+          backlogged.sort((a, b) => b.backlogWords.compareTo(a.backlogWords));
+          final p = backlogged.first;
+          return {
+            'name': p.name,
+            'reason': 'Urgent: This book has a backlog of ${p.backlogWords} words. Clean this first to secure your writing schedule!',
+            'confidence': 98,
+            'project': p,
+          };
+        }
+        final highProgress = activeProjects.where((p) => getProgress(p) >= 0.8 && getProgress(p) < 1.0).toList();
+        if (highProgress.isNotEmpty) {
+          highProgress.sort((a, b) => getProgress(b).compareTo(getProgress(a)));
+          final p = highProgress.first;
+          return {
+            'name': p.name,
+            'reason': 'Highly Recommended: Crossed the 80% mark (${(getProgress(p)*100).toInt()}% done). Focus on final drafting!',
+            'confidence': 92,
+            'project': p,
+          };
+        }
+        final list = List<ProjectModel>.from(activeProjects);
+        list.sort((a, b) => a.expectedFinishDate.compareTo(b.expectedFinishDate));
+        final p = list.first;
+        return {
+          'name': p.name,
+          'reason': 'Priority schedule: Closest upcoming deadline (${DateFormat('MMM d').format(p.expectedFinishDate)}).',
+          'confidence': 88,
+          'project': p,
+        };
+    }
+
+    final p = activeProjects.first;
+    return {
+      'name': p.name,
+      'reason': 'Keep your daily writing streak active on this book!',
+      'confidence': 70,
+      'project': p,
+    };
+  }
+
   void _triggerQuickLog(List<TodayWritingTask> tasks) {
-    // Filter tasks that require writing today (exclude rest days)
     final writingTasks = tasks.where((t) => !t.schedule.isRestDay).toList();
 
     if (writingTasks.isEmpty) {
@@ -68,10 +171,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     if (writingTasks.length == 1) {
-      // Auto-assign directly to the single active task
       _showSingleLogDialog(writingTasks.first);
     } else {
-      // Multiple active tasks: show Split Log options dialog
       _showSplitLogDialog(writingTasks);
     }
   }
@@ -255,13 +356,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onPressed: () async {
                 Navigator.pop(context);
                 
-                // Submit logs for each project
                 for (final t in tasks) {
                   final text = controllers[t.project.id]!.text.trim();
                   if (text.isNotEmpty) {
                     final words = int.tryParse(text) ?? 0;
                     if (words > 0) {
-                      await ref.read(loggingServiceProvider).logProgress(t.project.id, words);
+                      await ref.read(loggingServiceProvider).logWords(
+                            projectId: t.project.id,
+                            date: DateTime.now(),
+                            actualWords: words,
+                          );
                     }
                   }
                 }
@@ -281,7 +385,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _submitLog(String projectId, int words) async {
     try {
-      await ref.read(loggingServiceProvider).logProgress(projectId, words);
+      await ref.read(loggingServiceProvider).logWords(
+            projectId: projectId,
+            date: DateTime.now(),
+            actualWords: words,
+          );
       _refreshAll();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Successfully logged $words words!')),
@@ -301,7 +409,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     for (int i = 0; i < count; i++) {
       final task = tasks[i];
       final wordsToLog = i == 0 ? splitWords + remainder : splitWords;
-      await ref.read(loggingServiceProvider).logProgress(task.project.id, wordsToLog);
+      await ref.read(loggingServiceProvider).logWords(
+            projectId: task.project.id,
+            date: DateTime.now(),
+            actualWords: wordsToLog,
+          );
     }
     
     _refreshAll();
@@ -328,7 +440,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         remainingToLog -= wordsToLog;
       }
       if (wordsToLog > 0) {
-        await ref.read(loggingServiceProvider).logProgress(task.project.id, wordsToLog);
+        await ref.read(loggingServiceProvider).logWords(
+              projectId: task.project.id,
+              date: DateTime.now(),
+              actualWords: wordsToLog,
+            );
       }
     }
 
@@ -339,14 +455,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _applySmartSplit(List<TodayWritingTask> tasks, int totalWords) async {
-    // Heuristic:
-    // 1. Allocate words to satisfy existing backlog first
-    // 2. Allocate remaining words to satisfy today's targets
-    // 3. Allocate any remaining overflow proportionally
     int remainingWords = totalWords;
     final Map<String, int> allocations = {for (var t in tasks) t.project.id: 0};
 
-    // First: fill backlogs
     for (final t in tasks) {
       if (remainingWords <= 0) break;
       final backlog = t.project.backlogWords;
@@ -357,7 +468,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
-    // Second: satisfy today's target
     for (final t in tasks) {
       if (remainingWords <= 0) break;
       final target = t.schedule.plannedWords;
@@ -368,7 +478,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
-    // Third: split any overflow evenly
     if (remainingWords > 0) {
       final split = remainingWords ~/ tasks.length;
       final rem = remainingWords % tasks.length;
@@ -379,10 +488,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
-    // Submit all logs
     for (final entry in allocations.entries) {
       if (entry.value > 0) {
-        await ref.read(loggingServiceProvider).logProgress(entry.key, entry.value);
+        await ref.read(loggingServiceProvider).logWords(
+              projectId: entry.key,
+              date: DateTime.now(),
+              actualWords: entry.value,
+            );
       }
     }
 
@@ -490,7 +602,156 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // Writing Advisor Section (First thing the user sees below greeting)
+              projectsAsync.when(
+                data: (projects) {
+                  final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
+                  final rec = _computeRecommendation(activeProjects);
+                  final ProjectModel? recProject = rec['project'];
+
+                  return Card(
+                    color: theme.colorScheme.tertiaryContainer.withOpacity(0.25),
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(color: theme.colorScheme.tertiary.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.auto_awesome, color: theme.colorScheme.tertiary),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Writing Advisor',
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onTertiaryContainer,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              DropdownButton<String>(
+                                value: _selectedStrategy,
+                                dropdownColor: theme.colorScheme.surface,
+                                underline: const SizedBox(),
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                items: const [
+                                  DropdownMenuItem(value: 'smart', child: Text('🧠 Smart Strategy')),
+                                  DropdownMenuItem(value: 'near', child: Text('🏁 Finish Near')),
+                                  DropdownMenuItem(value: 'deadline', child: Text('📅 Deadline')),
+                                  DropdownMenuItem(value: 'target', child: Text('🚀 High Target')),
+                                  DropdownMenuItem(value: 'rotate', child: Text('🔄 Rotate')),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      _selectedStrategy = val;
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+                          if (recProject != null)
+                            Row(
+                              children: [
+                                // Mini book cover of recommended project
+                                BookCoverWidget(
+                                  title: recProject.name,
+                                  coverImagePath: recProject.coverImagePath,
+                                  coverType: recProject.coverType,
+                                  width: 60,
+                                  height: 80,
+                                  borderRadius: 6.0,
+                                  showTitle: false,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'RECOMMENDED FOCUS:',
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.tertiary,
+                                        ),
+                                      ),
+                                      Text(
+                                        rec['name'] as String,
+                                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        rec['reason'] as String,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Confidence gauge
+                                Column(
+                                  children: [
+                                    Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        SizedBox(
+                                          width: 44,
+                                          height: 44,
+                                          child: CircularProgressIndicator(
+                                            value: (rec['confidence'] as int) / 100.0,
+                                            color: theme.colorScheme.tertiary,
+                                            backgroundColor: theme.colorScheme.tertiary.withOpacity(0.15),
+                                            strokeWidth: 4,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${rec['confidence']}%',
+                                          style: theme.textTheme.labelSmall?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.onTertiaryContainer,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'CONFIDENCE',
+                                      style: theme.textTheme.labelSmall?.copyWith(fontSize: 8.0),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                          else
+                            Text(
+                              rec['reason'] as String,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                loading: () => const SizedBox(),
+                error: (_, __) => const SizedBox(),
+              ),
+              const SizedBox(height: 16),
 
               // Motivational Quote Card
               quoteAsync.when(
@@ -528,7 +789,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         );
                       }
 
-                      // Calculate today's totals
                       int totalPlannedToday = 0;
                       int totalLoggedToday = 0;
                       for (final t in todayTasks) {
@@ -578,7 +838,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   padding: const EdgeInsets.all(12.0),
                                   child: Row(
                                     children: [
-                                      // Miniature Book Cover Widget
                                       BookCoverWidget(
                                         title: task.project.name,
                                         coverImagePath: task.project.coverImagePath,
@@ -650,7 +909,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           const SizedBox(height: 20),
                           
-                          // Daily Combined Total summary
                           if (totalPlannedToday > 0)
                             Card(
                               color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
@@ -689,7 +947,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Contextual system encouragement section
               Text(
                 'Personal Insights & Progress',
                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
