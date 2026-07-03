@@ -23,21 +23,31 @@ class SettingsScreen extends ConsumerWidget {
       }
 
       final tempFile = File(tempPath);
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final defaultFileName = 'project_ink_backup_$timestamp.projectink';
+      final bytes = await tempFile.readAsBytes();
 
-      // 1. Try file picker save dialog
+      final now = DateTime.now();
+      final year = now.year;
+      final month = now.month.toString().padLeft(2, '0');
+      final day = now.day.toString().padLeft(2, '0');
+      final defaultFileName = 'ProjectInk_Backup_$year-$month-$day.projectink';
+
+      // 1. Try file picker save dialog (supported on Android using SAF when bytes are passed)
       String? outputPath;
+      bool savedViaPicker = false;
       try {
         outputPath = await FilePicker.platform.saveFile(
           dialogTitle: 'Select export location',
           fileName: defaultFileName,
+          bytes: bytes,
         );
+        if (outputPath != null) {
+          savedViaPicker = true;
+        }
       } catch (e) {
-        // saveFile is not supported on this platform/SDK version
+        // saveFile is not supported or failed on this platform/SDK version
       }
 
-      // 2. Fallback to Downloads directory (especially on Android)
+      // 2. Fallback to Downloads directory if picker was cancelled or not supported
       if (outputPath == null) {
         final downloadsDir = await getDownloadsDirectory();
         if (downloadsDir != null) {
@@ -53,28 +63,21 @@ class SettingsScreen extends ConsumerWidget {
         }
       }
 
-      // 4. If we found a path, copy the temp file to the output location
+      // 4. If we didn't save via picker but found a fallback path, write the bytes manually
       if (outputPath != null) {
-        final outputFile = File(outputPath);
-        await tempFile.copy(outputFile.path);
+        if (!savedViaPicker) {
+          final outputFile = File(outputPath);
+          await outputFile.writeAsBytes(bytes);
+        }
+
         // Clean up temp file
         try {
           await tempFile.delete();
         } catch (_) {}
 
         if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Backup Exported'),
-              content: Text('Your backup has been saved successfully to:\n\n$outputPath'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(content: Text('Backup exported successfully.')),
           );
         }
       } else {
