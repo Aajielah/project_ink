@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
+import 'package:drift/web.dart';
 
 QueryExecutor connect() {
-  throw UnsupportedError('Web is not supported yet.');
+  return WebDatabase('project_ink_db');
 }
