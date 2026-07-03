@@ -1,0 +1,180 @@
+I would definitely change that. Your idea is better than generating fake covers.
+
+Instead of this:
+
+> Add a visual Book Cover Theme Selector...
+
+
+
+I'd replace it with this specification:
+
+
+---
+
+2. Book Cover Support (Updated)
+
+Each project may have a custom book cover.
+
+Cover Options
+
+When creating or editing a project, the user can choose one of the following:
+
+Option 1 – Upload Custom Cover (Recommended)
+
+The user can upload an image from their device.
+
+Supported formats:
+
+JPG
+
+JPEG
+
+PNG
+
+WEBP
+
+
+Recommended size:
+
+3:4 aspect ratio
+
+Minimum 600 × 800 pixels
+
+
+The uploaded image becomes the project's official cover.
+
+
+---
+
+Option 2 – Use a Random Default Cover
+
+If no custom image is selected, Project Ink automatically assigns one of its built-in cover designs.
+
+Requirements:
+
+At least 30–50 professionally designed default covers should ship with the app.
+
+Covers should represent different genres and moods.
+
+Covers are selected randomly when a project is created.
+
+The user can refresh the selection until they find one they like.
+
+
+Examples:
+
+Fantasy
+
+Sci-Fi
+
+Romance
+
+Horror
+
+Mystery
+
+Action
+
+Minimalist
+
+Abstract
+
+
+
+---
+
+Editing Covers
+
+At any time the user can:
+
+Upload a new cover.
+
+Remove the current cover.
+
+Choose another random built-in cover.
+
+
+Changing a cover must not affect the writing schedule or project data.
+
+
+---
+
+Data Model
+
+Instead of storing cover information inside the description field, I recommend storing it separately.
+
+For example:
+
+Project
+
+id
+
+name
+
+description
+
+coverImagePath
+
+coverType
+
+Where:
+
+coverType
+
+Uploaded
+
+Default
+
+
+and
+
+coverImagePath
+
+contains either:
+
+The local path of the uploaded image
+
+
+or
+
+The asset path of the default cover
+
+
+Examples:
+
+assets/covers/fantasy_03.webp
+
+or
+
+/storage/emulated/0/Pictures/book_cover.png
+
+This is cleaner and more extensible than packing JSON into the description column.
+
+
+---
+
+Why I'd avoid JSON in the description
+
+The implementation plan suggested storing cover metadata as JSON in the description field for backward compatibility.
+
+That works, but it mixes two unrelated pieces of data. Descriptions and cover information have different purposes, which makes future maintenance harder.
+
+A small database migration that adds dedicated coverImagePath and coverType columns is a cleaner long-term solution, especially since this is still your own app and you're building Version 2. It's a good time to evolve the schema properly.
+
+
+---
+
+One more feature I'd sneak in
+
+When viewing all projects, long-press a cover to bring up a small menu:
+
+📷 Change Cover
+
+🖼 Choose Default Cover
+
+❌ Remove Cover
+
+
+That would make managing covers very convenient without digging through the edit screen.
+
+I think this approach is more in line with how a writing app should feel: every manuscript gets its own visual identity, whether that's a custom cover you've designed or a built-in cover that inspires you.

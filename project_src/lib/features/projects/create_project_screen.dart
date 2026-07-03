@@ -23,6 +23,7 @@ class CreateProjectScreen extends ConsumerStatefulWidget {
 
 class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   final _formKey = GlobalKey<FormState>();
+  ProjectType _projectType = ProjectType.fixed;
 
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
@@ -155,67 +156,87 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final targetWords = int.parse(_targetWordsController.text);
-    final dailyTarget = int.parse(_dailyTargetController.text);
-    final durationDays = _calculateTotalDays();
-
-    if (durationDays <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a valid duration/date range.')),
-      );
-      return;
-    }
-
-    // Call service to validate scheduling viability
-    final schedulingService = ref.read(schedulingServiceProvider);
-    final validationError = schedulingService.validateInputs(
-      targetWords: targetWords,
-      dailyWordTarget: dailyTarget,
-      durationDays: durationDays,
-      restMode: _restMode,
-      fixedRestWeekdays: _fixedRestDays,
-      allowedRestDays: _allowedRestDays,
-    );
-
-    if (validationError != null) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Invalid Schedule Plan'),
-          content: Text(validationError),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    // Save project
     final notifier = ref.read(projectsProvider.notifier);
-    final saveError = await notifier.addProject(
-      name: _nameController.text.trim(),
-      description: _descController.text.trim().isNotEmpty ? _descController.text.trim() : null,
-      targetWords: targetWords,
-      dailyWordTarget: dailyTarget,
-      durationDays: durationDays,
-      startDate: _startDate,
-      restMode: _restMode,
-      fixedRestWeekdays: _fixedRestDays,
-      allowedRestDays: _allowedRestDays,
-      coverImagePath: _coverImagePath,
-      coverType: _coverType,
-    );
+    String? saveError;
+
+    if (_projectType == ProjectType.fixed) {
+      final targetWords = int.parse(_targetWordsController.text);
+      final dailyTarget = int.parse(_dailyTargetController.text);
+      final durationDays = _calculateTotalDays();
+
+      if (durationDays <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a valid duration/date range.')),
+        );
+        return;
+      }
+
+      final schedulingService = ref.read(schedulingServiceProvider);
+      final validationError = schedulingService.validateInputs(
+        targetWords: targetWords,
+        dailyWordTarget: dailyTarget,
+        durationDays: durationDays,
+        restMode: _restMode,
+        fixedRestWeekdays: _fixedRestDays,
+        allowedRestDays: _allowedRestDays,
+      );
+
+      if (validationError != null) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Invalid Schedule Plan'),
+            content: Text(validationError),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      saveError = await notifier.addProject(
+        name: _nameController.text.trim(),
+        description: _descController.text.trim().isNotEmpty ? _descController.text.trim() : null,
+        projectType: ProjectType.fixed,
+        targetWords: targetWords,
+        dailyWordTarget: dailyTarget,
+        durationDays: durationDays,
+        startDate: _startDate,
+        restMode: _restMode,
+        fixedRestWeekdays: _fixedRestDays,
+        allowedRestDays: _allowedRestDays,
+        coverImagePath: _coverImagePath,
+        coverType: _coverType,
+      );
+    } else {
+      final dailyTarget = int.parse(_dailyTargetController.text);
+
+      saveError = await notifier.addProject(
+        name: _nameController.text.trim(),
+        description: _descController.text.trim().isNotEmpty ? _descController.text.trim() : null,
+        projectType: ProjectType.ongoing,
+        targetWords: 0,
+        dailyWordTarget: dailyTarget,
+        durationDays: 0,
+        startDate: _startDate,
+        restMode: RestMode.flexible,
+        fixedRestWeekdays: const [],
+        allowedRestDays: 0,
+        coverImagePath: _coverImagePath,
+        coverType: _coverType,
+      );
+    }
 
     if (saveError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(saveError)),
       );
     } else {
-      context.pop(); // Go back to projects screen
+      context.pop();
     }
   }
 
@@ -292,6 +313,51 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
               ),
               const SizedBox(height: 16),
 
+              // Project Type Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Project Type',
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<ProjectType>(
+                        segments: const [
+                          ButtonSegment<ProjectType>(
+                            value: ProjectType.fixed,
+                            icon: Icon(Icons.flag),
+                            label: Text('Fixed Goal'),
+                          ),
+                          ButtonSegment<ProjectType>(
+                            value: ProjectType.ongoing,
+                            icon: Icon(Icons.all_inclusive),
+                            label: Text('Ongoing Habit'),
+                          ),
+                        ],
+                        selected: {_projectType},
+                        onSelectionChanged: (Set<ProjectType> newSelection) {
+                          setState(() {
+                            _projectType = newSelection.first;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _projectType == ProjectType.fixed
+                            ? 'A Fixed Goal project has a target word count, duration, and customized rest days.'
+                            : 'An Ongoing Habit has no target word count or end date—only a daily target task that auto-generates.',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // Basic Info Card
               Card(
                 child: Padding(
@@ -329,9 +395,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // Targets Card
+              const SizedBox(height: 16),              // Targets Card
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -343,22 +407,24 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _targetWordsController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Total Target Words',
-                          prefixIcon: Icon(Icons.bar_chart),
-                          border: OutlineInputBorder(),
+                      if (_projectType == ProjectType.fixed) ...[
+                        TextFormField(
+                          controller: _targetWordsController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Total Target Words',
+                            prefixIcon: Icon(Icons.bar_chart),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return 'Please enter target words.';
+                            final val = int.tryParse(value);
+                            if (val == null || val <= 0) return 'Must be a positive integer.';
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter target words.';
-                          final val = int.tryParse(value);
-                          if (val == null || val <= 0) return 'Must be a positive integer.';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
+                      ],
                       TextFormField(
                         controller: _dailyTargetController,
                         keyboardType: TextInputType.number,
@@ -375,85 +441,85 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      
-                      // Flexible Duration Picker Row
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: DropdownButtonFormField<DurationType>(
-                              value: _durationType,
-                              decoration: const InputDecoration(
-                                labelText: 'Duration Unit',
-                                border: OutlineInputBorder(),
+                      if (_projectType == ProjectType.fixed) ...[
+                        // Flexible Duration Picker Row
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: DropdownButtonFormField<DurationType>(
+                                value: _durationType,
+                                decoration: const InputDecoration(
+                                  labelText: 'Duration Unit',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(value: DurationType.days, child: Text('Days')),
+                                  DropdownMenuItem(value: DurationType.weeks, child: Text('Weeks')),
+                                  DropdownMenuItem(value: DurationType.months, child: Text('Months')),
+                                  DropdownMenuItem(value: DurationType.customRange, child: Text('Custom Range')),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      _durationType = val;
+                                      if (val == DurationType.days) _qtyController.text = '30';
+                                      if (val == DurationType.weeks) _qtyController.text = '4';
+                                      if (val == DurationType.months) _qtyController.text = '1';
+                                    });
+                                  }
+                                },
                               ),
-                              items: const [
-                                DropdownMenuItem(value: DurationType.days, child: Text('Days')),
-                                DropdownMenuItem(value: DurationType.weeks, child: Text('Weeks')),
-                                DropdownMenuItem(value: DurationType.months, child: Text('Months')),
-                                DropdownMenuItem(value: DurationType.customRange, child: Text('Custom Range')),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() {
-                                    _durationType = val;
-                                    // Reset values depending on selections
-                                    if (val == DurationType.days) _qtyController.text = '30';
-                                    if (val == DurationType.weeks) _qtyController.text = '4';
-                                    if (val == DurationType.months) _qtyController.text = '1';
-                                  });
-                                }
-                              },
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 2,
-                            child: _durationType == DurationType.customRange
-                                ? OutlinedButton(
-                                    onPressed: _selectDateRange,
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 18.0),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 2,
+                              child: _durationType == DurationType.customRange
+                                  ? OutlinedButton(
+                                      onPressed: _selectDateRange,
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 18.0),
+                                      ),
+                                      child: const Text('Select Range'),
+                                    )
+                                  : TextFormField(
+                                      controller: _qtyController,
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(
+                                        labelText: 'Qty',
+                                        border: const OutlineInputBorder(),
+                                        suffixText: _durationType == DurationType.days
+                                            ? 'days'
+                                            : _durationType == DurationType.weeks
+                                                ? 'wks'
+                                                : 'mos',
+                                      ),
+                                      onChanged: (_) => setState(() {}),
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) return 'Required.';
+                                        final val = int.tryParse(value);
+                                        if (val == null || val <= 0) return 'Invalid.';
+                                        return null;
+                                      },
                                     ),
-                                    child: const Text('Select Range'),
-                                  )
-                                : TextFormField(
-                                    controller: _qtyController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      labelText: 'Qty',
-                                      border: const OutlineInputBorder(),
-                                      suffixText: _durationType == DurationType.days
-                                          ? 'days'
-                                          : _durationType == DurationType.weeks
-                                              ? 'wks'
-                                              : 'mos',
-                                    ),
-                                    onChanged: (_) => setState(() {}),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) return 'Required.';
-                                      final val = int.tryParse(value);
-                                      if (val == null || val <= 0) return 'Invalid.';
-                                      return null;
-                                    },
-                                  ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Duration calculations preview
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       ListTile(
                         shape: RoundedRectangleBorder(
                           side: BorderSide(color: theme.colorScheme.outlineVariant),
                           borderRadius: BorderRadius.circular(4.0),
                         ),
                         leading: const Icon(Icons.today),
-                        title: const Text('Calendar Timeline'),
+                        title: Text(_projectType == ProjectType.fixed ? 'Calendar Timeline' : 'Start Date'),
                         subtitle: Text(
-                          _durationType == DurationType.customRange && _endDate != null
-                              ? '${DateFormat('MMM d, yyyy').format(_startDate)} to ${DateFormat('MMM d, yyyy').format(_endDate!)} ($calculatedDays days)'
-                              : 'Starts: ${DateFormat('MMM d, yyyy').format(_startDate)} ($calculatedDays days total)',
+                          _projectType == ProjectType.fixed
+                              ? (_durationType == DurationType.customRange && _endDate != null
+                                  ? '${DateFormat('MMM d, yyyy').format(_startDate)} to ${DateFormat('MMM d, yyyy').format(_endDate!)} ($calculatedDays days)'
+                                  : 'Starts: ${DateFormat('MMM d, yyyy').format(_startDate)} ($calculatedDays days total)')
+                              : 'Starts: ${DateFormat('MMMM d, yyyy').format(_startDate)}',
                         ),
                         trailing: TextButton(
                           onPressed: _selectStartDate,
@@ -467,98 +533,101 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
               const SizedBox(height: 16),
 
               // Rest Day Configuration Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Rest Day Mode',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Project Ink forces rest days to avoid burnout. Choose how you want to schedule them.',
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<RestMode>(
-                        value: _restMode,
-                        decoration: const InputDecoration(
-                          labelText: 'Select Rest Mode',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: RestMode.fixed,
-                            child: Text('Fixed (Specific days of the week)'),
-                          ),
-                          DropdownMenuItem(
-                            value: RestMode.flexible,
-                            child: Text('Flexible (Budget allowed per week)'),
-                          ),
-                          DropdownMenuItem(
-                            value: RestMode.random,
-                            child: Text('Random (Distributed by system per week)'),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _restMode = val;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      if (_restMode == RestMode.fixed) ...[
+              if (_projectType == ProjectType.fixed) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          'Choose Rest Days:',
-                          style: theme.textTheme.titleSmall,
+                          'Rest Day Mode',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8.0,
-                          children: [
-                            _RestDayChip(label: 'Mon', dayValue: 1, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
-                            _RestDayChip(label: 'Tue', dayValue: 2, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
-                            _RestDayChip(label: 'Wed', dayValue: 3, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
-                            _RestDayChip(label: 'Thu', dayValue: 4, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
-                            _RestDayChip(label: 'Fri', dayValue: 5, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
-                            _RestDayChip(label: 'Sat', dayValue: 6, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
-                            _RestDayChip(label: 'Sun', dayValue: 7, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
-                          ],
+                        Text(
+                          'Project Ink forces rest days to avoid burnout. Choose how you want to schedule them.',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                         ),
-                      ] else ...[
-                        TextFormField(
-                          initialValue: _allowedRestDays.toString(),
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: 'Rest Days Allowed Per Week',
-                            helperText: _restMode == RestMode.random
-                                ? 'The scheduling engine will randomly assign these rest days in your calendar.'
-                                : 'You can manually activate up to this many rest days each week.',
-                            border: const OutlineInputBorder(),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<RestMode>(
+                          value: _restMode,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Rest Mode',
+                            border: OutlineInputBorder(),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return 'Required.';
-                            final val = int.tryParse(value);
-                            if (val == null || val < 0 || val > 6) return 'Must be between 0 and 6 days.';
-                            return null;
-                          },
+                          items: const [
+                            DropdownMenuItem(
+                              value: RestMode.fixed,
+                              child: Text('Fixed (Specific days of the week)'),
+                            ),
+                            DropdownMenuItem(
+                              value: RestMode.flexible,
+                              child: Text('Flexible (Budget allowed per week)'),
+                            ),
+                            DropdownMenuItem(
+                              value: RestMode.random,
+                              child: Text('Random (Distributed by system per week)'),
+                            ),
+                          ],
                           onChanged: (val) {
-                            final parsed = int.tryParse(val);
-                            if (parsed != null && parsed >= 0 && parsed <= 6) {
-                              _allowedRestDays = parsed;
+                            if (val != null) {
+                              setState(() {
+                                _restMode = val;
+                              });
                             }
                           },
                         ),
+                        const SizedBox(height: 16),
+                        if (_restMode == RestMode.fixed) ...[
+                          Text(
+                            'Choose Rest Days:',
+                            style: theme.textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8.0,
+                            children: [
+                              _RestDayChip(label: 'Mon', dayValue: 1, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
+                              _RestDayChip(label: 'Tue', dayValue: 2, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
+                              _RestDayChip(label: 'Wed', dayValue: 3, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
+                              _RestDayChip(label: 'Thu', dayValue: 4, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
+                              _RestDayChip(label: 'Fri', dayValue: 5, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
+                              _RestDayChip(label: 'Sat', dayValue: 6, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
+                              _RestDayChip(label: 'Sun', dayValue: 7, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
+                            ],
+                          ),
+                        ] else ...[
+                          TextFormField(
+                            initialValue: _allowedRestDays.toString(),
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'Rest Days Allowed Per Week',
+                              helperText: _restMode == RestMode.random
+                                  ? 'The scheduling engine will randomly assign these rest days in your calendar.'
+                                  : 'You can manually activate up to this many rest days each week.',
+                              border: const OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Required.';
+                              final val = int.tryParse(value);
+                              if (val == null || val < 0 || val > 6) return 'Must be between 0 and 6 days.';
+                              return null;
+                            },
+                            onChanged: (val) {
+                              final parsed = int.tryParse(val);
+                              if (parsed != null && parsed >= 0 && parsed <= 6) {
+                                _allowedRestDays = parsed;
+                              }
+                            },
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+              ],
               const SizedBox(height: 32),
 
               FilledButton.icon(

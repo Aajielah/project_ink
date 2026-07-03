@@ -54,7 +54,8 @@ class BackupService {
         'projectStreak': p.projectStreak, 'longestProjectStreak': p.longestProjectStreak,
         'currentWeek': p.currentWeek, 'createdAt': p.createdAt.toIso8601String(),
         'updatedAt': p.updatedAt.toIso8601String(),
-        'coverImagePath': p.coverImagePath, 'coverType': p.coverType
+        'coverImagePath': p.coverImagePath, 'coverType': p.coverType,
+        'projectType': p.projectType
       }).toList());
 
 
@@ -215,6 +216,7 @@ class BackupService {
               updatedAt: DateTime.parse(p['updatedAt']),
               coverImagePath: Value(p['coverImagePath']),
               coverType: Value(p['coverType']),
+              projectType: Value(p['projectType'] ?? 'fixed'),
             ));
           }
         }

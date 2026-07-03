@@ -49,6 +49,9 @@ class FakeProjectRepository implements ProjectRepository {
 
   @override
   Future<ProjectModel?> getProjectById(String id) async => db[id];
+
+  @override
+  Future<List<ProjectModel>> getAllProjects() async => db.values.toList();
 }
 
 class FakeDailyLogRepository implements DailyLogRepository {

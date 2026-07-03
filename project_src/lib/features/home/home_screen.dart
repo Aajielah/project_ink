@@ -878,17 +878,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                               )
                                             else ...[
                                               Text(
+                                                task.project.projectType == ProjectType.ongoing
+                                                    ? "Today's Habit"
+                                                    : "Today's Goal",
+                                                style: theme.textTheme.labelSmall?.copyWith(
+                                                  color: theme.colorScheme.primary,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
                                                 '$logged / $target words',
                                                 style: theme.textTheme.bodyMedium?.copyWith(
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                               ),
-                                              const SizedBox(height: 6),
-                                              LinearProgressIndicator(
-                                                value: progress,
-                                                minHeight: 6,
-                                                borderRadius: BorderRadius.circular(3),
-                                              ),
+                                              if (task.project.projectType != ProjectType.ongoing) ...[
+                                                const SizedBox(height: 6),
+                                                LinearProgressIndicator(
+                                                  value: progress,
+                                                  minHeight: 6,
+                                                  borderRadius: BorderRadius.circular(3),
+                                                ),
+                                              ],
                                             ]
                                           ],
                                         ),

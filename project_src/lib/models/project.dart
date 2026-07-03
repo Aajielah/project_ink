@@ -2,11 +2,14 @@ enum ProjectStatus { upcoming, active, paused, frozen, completed }
 
 enum RestMode { fixed, flexible, random }
 
+enum ProjectType { fixed, ongoing }
+
 class ProjectModel {
   final String id;
   final String name;
   final String? description;
   final ProjectStatus status;
+  final ProjectType projectType;
   final int targetWords;
   final int writtenWords;
   final int remainingWords;
@@ -31,6 +34,7 @@ class ProjectModel {
     required this.name,
     this.description,
     required this.status,
+    this.projectType = ProjectType.fixed,
     required this.targetWords,
     required this.writtenWords,
     required this.remainingWords,
@@ -52,11 +56,13 @@ class ProjectModel {
   });
 
 
+
   ProjectModel copyWith({
     String? id,
     String? name,
     String? description,
     ProjectStatus? status,
+    ProjectType? projectType,
     int? targetWords,
     int? writtenWords,
     int? remainingWords,
@@ -81,6 +87,7 @@ class ProjectModel {
       name: name ?? this.name,
       description: description ?? this.description,
       status: status ?? this.status,
+      projectType: projectType ?? this.projectType,
       targetWords: targetWords ?? this.targetWords,
       writtenWords: writtenWords ?? this.writtenWords,
       remainingWords: remainingWords ?? this.remainingWords,
@@ -108,6 +115,7 @@ class ProjectModel {
       'name': name,
       'description': description,
       'status': status.name,
+      'projectType': projectType.name,
       'targetWords': targetWords,
       'writtenWords': writtenWords,
       'remainingWords': remainingWords,
@@ -135,6 +143,7 @@ class ProjectModel {
       name: json['name'] as String,
       description: json['description'] as String?,
       status: ProjectStatus.values.byName(json['status'] as String),
+      projectType: ProjectType.values.byName(json['projectType'] as String? ?? 'fixed'),
       targetWords: json['targetWords'] as int,
       writtenWords: json['writtenWords'] as int,
       remainingWords: json['remainingWords'] as int,
@@ -157,5 +166,4 @@ class ProjectModel {
       coverType: json['coverType'] as String?,
     );
   }
-
 }

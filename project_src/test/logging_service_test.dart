@@ -24,6 +24,9 @@ class FakeProjectRepository implements ProjectRepository {
   Future<void> updateProject(ProjectModel project) async {
     db[project.id] = project;
   }
+
+  @override
+  Future<List<ProjectModel>> getAllProjects() async => db.values.toList();
 }
 
 class FakeScheduleRepository implements ScheduleRepository {
@@ -209,6 +212,36 @@ void main() {
       // Verify tomorrow is reduced by 300 words (500 - 300 = 200)
       final updatedTomorrow = await scheduleRepo.getScheduleForDate('p1', cleanToday.add(const Duration(days: 1)));
       expect(updatedTomorrow?.plannedWords, 200);
+    });
+
+    test('logging multiple times in a single day updates the log and does not double-increment streak', () async {
+      // 1. Setup schedule row
+      final sched = ScheduleModel(
+        id: 's_multi', projectId: 'p1', date: cleanToday, plannedWords: 500,
+        isRestDay: false, completed: false, automaticRestDay: false, locked: false,
+      );
+      await scheduleRepo.insertSchedules([sched]);
+
+      // 2. Log first time (200 words, under target)
+      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 200);
+      
+      var project = await projectRepo.getProjectById('p1');
+      expect(project?.writtenWords, 200);
+      expect(project?.projectStreak, 0);
+
+      // 3. Log second time (500 words, meets target)
+      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 500);
+      
+      project = await projectRepo.getProjectById('p1');
+      expect(project?.writtenWords, 500);
+      expect(project?.projectStreak, 1);
+
+      // 4. Log third time (600 words, over target)
+      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 600);
+      
+      project = await projectRepo.getProjectById('p1');
+      expect(project?.writtenWords, 600);
+      expect(project?.projectStreak, 1); // Streak should remain 1, not 2
     });
   });
 }

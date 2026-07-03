@@ -37,12 +37,12 @@ class Projects extends Table {
   DateTimeColumn get updatedAt => dateTime()();
   TextColumn get coverImagePath => text().nullable()();
   TextColumn get coverType => text().nullable()();
+  TextColumn get projectType => text().withDefault(const Constant('fixed'))();
 
   @override
   Set<Column> get primaryKey => {id};
-
-
 }
+
 
 class Schedules extends Table {
   TextColumn get id => text()();
@@ -147,7 +147,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -160,6 +160,9 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(projects, projects.coverImagePath);
           await m.addColumn(projects, projects.coverType);
         }
+        if (from < 3) {
+          await m.addColumn(projects, projects.projectType);
+        }
       },
       beforeOpen: (details) async {
         // Enable foreign keys in SQLite
@@ -167,5 +170,4 @@ class AppDatabase extends _$AppDatabase {
       },
     );
   }
-
 }

@@ -4,6 +4,7 @@ import '../database/database.dart';
 import '../database/connection/native.dart'
     if (dart.library.html) '../database/connection/web.dart' as native;
 import '../models/project.dart';
+import '../models/schedule.dart';
 
 import '../models/settings.dart';
 import '../models/statistics.dart';
@@ -18,6 +19,7 @@ import '../services/scheduling_service.dart';
 import '../services/logging_service.dart';
 import '../services/encouragement_service.dart';
 import '../services/backup_service.dart';
+import '../services/ongoing_sync_service.dart';
 
 // --- Database & Connection Provider ---
 final dbProvider = Provider<AppDatabase>((ref) {
@@ -85,9 +87,14 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
   final ProjectRepository _projectRepo;
   final SchedulingService _schedulingService;
   final ScheduleRepository _scheduleRepo;
+  final OngoingSyncService _syncService;
 
-  ProjectsNotifier(this._projectRepo, this._schedulingService, this._scheduleRepo)
-      : super(const AsyncValue.loading()) {
+  ProjectsNotifier(
+    this._projectRepo,
+    this._schedulingService,
+    this._scheduleRepo,
+    this._syncService,
+  ) : super(const AsyncValue.loading()) {
     loadProjects();
   }
 
@@ -95,7 +102,14 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     state = const AsyncValue.loading();
     try {
       final list = await _projectRepo.getAllProjects();
-      state = AsyncValue.data(list);
+      final activeOngoing = list.where((p) => p.status == ProjectStatus.active && p.projectType == ProjectType.ongoing).toList();
+      if (activeOngoing.isNotEmpty) {
+        await _syncService.syncOngoingSchedules(activeOngoing);
+        final updatedList = await _projectRepo.getAllProjects();
+        state = AsyncValue.data(updatedList);
+      } else {
+        state = AsyncValue.data(list);
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -104,6 +118,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
   Future<String?> addProject({
     required String name,
     String? description,
+    ProjectType projectType = ProjectType.fixed,
     required int targetWords,
     required int dailyWordTarget,
     required int durationDays,
@@ -114,25 +129,8 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     String? coverImagePath,
     String? coverType,
   }) async {
-    // 1. Validate
-    final err = _schedulingService.validateInputs(
-      targetWords: targetWords,
-      dailyWordTarget: dailyWordTarget,
-      durationDays: durationDays,
-      restMode: restMode,
-      fixedRestWeekdays: fixedRestWeekdays,
-      allowedRestDays: allowedRestDays,
-    );
-    if (err != null) return err;
-
-    try {
-      final uuid = const Uuid();
-      final projectId = uuid.v4();
-
-      // 2. Generate initial schedule
-      final schedules = _schedulingService.generateInitialSchedule(
-        projectId: projectId,
-        startDate: startDate,
+    if (projectType == ProjectType.fixed) {
+      final err = _schedulingService.validateInputs(
         targetWords: targetWords,
         dailyWordTarget: dailyWordTarget,
         durationDays: durationDays,
@@ -140,48 +138,121 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         fixedRestWeekdays: fixedRestWeekdays,
         allowedRestDays: allowedRestDays,
       );
+      if (err != null) return err;
+    }
 
-      // Calculate finish date based on generated schedule dates
-      final finishDate = schedules.last.date;
-
-      // 3. Create project model
+    try {
+      final uuid = const Uuid();
+      final projectId = uuid.v4();
       final today = DateTime.now();
       final cleanStartDate = DateTime(startDate.year, startDate.month, startDate.day);
       final cleanToday = DateTime(today.year, today.month, today.day);
 
-      final project = ProjectModel(
-        id: projectId,
-        name: name,
-        description: description,
-        status: cleanStartDate.isAfter(cleanToday)
-            ? ProjectStatus.upcoming
-            : ProjectStatus.active,
-        targetWords: targetWords,
-        writtenWords: 0,
-        remainingWords: targetWords,
-        dailyWordTarget: dailyWordTarget,
-        backlogWords: 0,
-        startDate: cleanStartDate,
-        expectedFinishDate: finishDate,
-        restMode: restMode,
-        allowedRestDays: allowedRestDays,
-        remainingRestDays: allowedRestDays,
-        projectStreak: 0,
-        longestProjectStreak: 0,
-        currentWeek: 1,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        coverImagePath: coverImagePath,
-        coverType: coverType,
-      );
+      if (projectType == ProjectType.fixed) {
+        final schedules = _schedulingService.generateInitialSchedule(
+          projectId: projectId,
+          startDate: startDate,
+          targetWords: targetWords,
+          dailyWordTarget: dailyWordTarget,
+          durationDays: durationDays,
+          restMode: restMode,
+          fixedRestWeekdays: fixedRestWeekdays,
+          allowedRestDays: allowedRestDays,
+        );
 
-      // 4. Save to DB
-      await _projectRepo.insertProject(project);
-      await _scheduleRepo.insertSchedules(schedules);
+        final finishDate = schedules.last.date;
 
-      // 5. Reload state
+        final project = ProjectModel(
+          id: projectId,
+          name: name,
+          description: description,
+          status: cleanStartDate.isAfter(cleanToday)
+              ? ProjectStatus.upcoming
+              : ProjectStatus.active,
+          projectType: ProjectType.fixed,
+          targetWords: targetWords,
+          writtenWords: 0,
+          remainingWords: targetWords,
+          dailyWordTarget: dailyWordTarget,
+          backlogWords: 0,
+          startDate: cleanStartDate,
+          expectedFinishDate: finishDate,
+          restMode: restMode,
+          allowedRestDays: allowedRestDays,
+          remainingRestDays: allowedRestDays,
+          projectStreak: 0,
+          longestProjectStreak: 0,
+          currentWeek: 1,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          coverImagePath: coverImagePath,
+          coverType: coverType,
+        );
+
+        await _projectRepo.insertProject(project);
+        await _scheduleRepo.insertSchedules(schedules);
+      } else {
+        final project = ProjectModel(
+          id: projectId,
+          name: name,
+          description: description,
+          status: cleanStartDate.isAfter(cleanToday)
+              ? ProjectStatus.upcoming
+              : ProjectStatus.active,
+          projectType: ProjectType.ongoing,
+          targetWords: 0,
+          writtenWords: 0,
+          remainingWords: 0,
+          dailyWordTarget: dailyWordTarget,
+          backlogWords: 0,
+          startDate: cleanStartDate,
+          expectedFinishDate: cleanStartDate,
+          restMode: RestMode.flexible,
+          allowedRestDays: 0,
+          remainingRestDays: 0,
+          projectStreak: 0,
+          longestProjectStreak: 0,
+          currentWeek: 1,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          coverImagePath: coverImagePath,
+          coverType: coverType,
+        );
+
+        await _projectRepo.insertProject(project);
+
+        if (cleanToday.isAtSameMomentAs(cleanStartDate) || cleanToday.isAfter(cleanStartDate)) {
+          final List<ScheduleModel> initialTasks = [];
+          var tempDate = cleanStartDate;
+          while (tempDate.isBefore(cleanToday)) {
+            initialTasks.add(ScheduleModel(
+              id: uuid.v4(),
+              projectId: projectId,
+              date: tempDate,
+              plannedWords: 0,
+              isRestDay: true,
+              automaticRestDay: true,
+              completed: false,
+              locked: true,
+            ));
+            tempDate = tempDate.add(const Duration(days: 1));
+          }
+          initialTasks.add(ScheduleModel(
+            id: uuid.v4(),
+            projectId: projectId,
+            date: cleanToday,
+            plannedWords: dailyWordTarget,
+            isRestDay: false,
+            completed: false,
+            automaticRestDay: false,
+            locked: false,
+          ));
+          await _scheduleRepo.insertSchedules(initialTasks);
+        }
+      }
+
       await loadProjects();
-      return null; // success
+      return null;
     } catch (e) {
       return 'Failed to save project: $e';
     }
@@ -238,6 +309,7 @@ final projectsProvider =
     ref.watch(projectRepositoryProvider),
     ref.watch(schedulingServiceProvider),
     ref.watch(scheduleRepositoryProvider),
+    ref.watch(ongoingSyncServiceProvider),
   );
 });
 

@@ -142,16 +142,10 @@ class BookCoverWidget extends StatelessWidget {
   Widget _buildUploadedCover(BuildContext context) {
     final file = File(coverImagePath!);
     if (file.existsSync()) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.file(
-            file,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _buildPlaceholderFallback(),
-          ),
-          if (showTitle) _buildTitleOverlay(),
-        ],
+      return Image.file(
+        file,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildPlaceholderFallback(),
       );
     }
     return _buildPlaceholderFallback();

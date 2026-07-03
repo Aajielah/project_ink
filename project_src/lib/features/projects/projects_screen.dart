@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:file_picker/file_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../../shared/providers.dart';
 import '../../models/project.dart';
@@ -229,6 +230,7 @@ class _ProjectCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isOngoing = project.projectType == ProjectType.ongoing;
     final progress = project.targetWords > 0 ? project.writtenWords / project.targetWords : 0.0;
     final percent = (progress * 100).toInt();
 
@@ -278,16 +280,21 @@ class _ProjectCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '${project.writtenWords} / ${project.targetWords} words ($percent%)',
+                      isOngoing
+                          ? '${NumberFormat('#,###').format(project.writtenWords)} words written'
+                          : '${project.writtenWords} / ${project.targetWords} words ($percent%)',
                       style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 6),
-                    LinearProgressIndicator(
-                      value: min(1.0, progress),
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    const SizedBox(height: 8),
+                    if (!isOngoing) ...[
+                      LinearProgressIndicator(
+                        value: min(1.0, progress),
+                        minHeight: 6,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      const SizedBox(height: 8),
+                    ] else
+                      const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

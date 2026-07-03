@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../shared/providers.dart';
 import '../../models/settings.dart';
 
@@ -12,29 +14,77 @@ class SettingsScreen extends ConsumerWidget {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
-      final path = await backupService.exportBackup();
-      if (path != null) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Backup Exported'),
-            content: Text('Your backup has been saved successfully to:\n\n$path'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
+      final tempPath = await backupService.exportBackup();
+      if (tempPath == null) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Failed to generate backup.')),
         );
+        return;
+      }
+
+      final tempFile = File(tempPath);
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final defaultFileName = 'project_ink_backup_$timestamp.projectink';
+
+      // 1. Try file picker save dialog
+      String? outputPath;
+      try {
+        outputPath = await FilePicker.platform.saveFile(
+          dialogTitle: 'Select export location',
+          fileName: defaultFileName,
+        );
+      } catch (e) {
+        // saveFile is not supported on this platform/SDK version
+      }
+
+      // 2. Fallback to Downloads directory (especially on Android)
+      if (outputPath == null) {
+        final downloadsDir = await getDownloadsDirectory();
+        if (downloadsDir != null) {
+          outputPath = '${downloadsDir.path}/$defaultFileName';
+        }
+      }
+
+      // 3. Fallback to external storage directory on Android if Downloads is null
+      if (outputPath == null && Platform.isAndroid) {
+        final extDir = await getExternalStorageDirectory();
+        if (extDir != null) {
+          outputPath = '${extDir.path}/$defaultFileName';
+        }
+      }
+
+      // 4. If we found a path, copy the temp file to the output location
+      if (outputPath != null) {
+        final outputFile = File(outputPath);
+        await tempFile.copy(outputFile.path);
+        // Clean up temp file
+        try {
+          await tempFile.delete();
+        } catch (_) {}
+
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Backup Exported'),
+              content: Text('Your backup has been saved successfully to:\n\n$outputPath'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
       } else {
         scaffoldMessenger.showSnackBar(
-          const SnackBar(content: Text('Failed to export backup.')),
+          const SnackBar(content: Text('Could not determine a save location for the backup.')),
         );
       }
     } catch (e) {
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text('Error exporting backup: $e')),
       );
     }
   }
@@ -45,13 +95,20 @@ class SettingsScreen extends ConsumerWidget {
 
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['projectink'],
+        type: FileType.any,
       );
 
       if (result == null || result.files.single.path == null) return;
 
       final path = result.files.single.path!;
+      
+      // Validate backup file extension
+      if (!path.toLowerCase().endsWith('.projectink')) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Invalid file format. Please select a .projectink file.')),
+        );
+        return;
+      }
       
       final confirm = await showDialog<bool>(
         context: context,
@@ -103,7 +160,7 @@ class SettingsScreen extends ConsumerWidget {
       }
     } catch (e) {
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text('Error restoring backup: $e')),
       );
     }
   }

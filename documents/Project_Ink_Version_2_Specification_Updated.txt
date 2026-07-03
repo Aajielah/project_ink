@@ -1,0 +1,50 @@
+Project Ink Version 2 Specification (Updated)
+Purpose
+Version 2 improves usability, reduces friction, and enhances the writing workflow while keeping the Version 1 foundation.
+1. Project Editing
+Edit daily word target.
+Edit duration.
+Edit start/end dates when applicable.
+Edit rest-day settings.
+Only future schedules are recalculated.
+2. Flexible Duration
+Support Days, Weeks, Months and Custom Date Range.
+Provide a calendar picker.
+Convert all duration types into calendar days internally.
+3. Home Screen Redesign (Today's Mission)
+The Home screen should NOT list every active project. Instead, it displays only the tasks scheduled for the current day.
+Display the current day and date.
+Keep combined progress
+Colorful streak badge
+Show today's scheduled writing tasks only.
+Each task displays Book Cover, Book Name, Today's Progress (e.g. 900/2300 words) and a Quick Log button.
+Projects with a rest day display 'REST DAY' instead of a target.
+Display a combined total for today's writing at the bottom.
+Display the global streak using a colourful badge.
+Example:
+FridayReturn of Ajila0 / 1200 words      [Log]Trent IF RE900 / 2300 words   [Log]Today's Total900 / 3500 words
+4. Global Quick Log
+If only one active writing task exists today, automatically assign the words.
+If multiple tasks exist, offer Even Split, Split by Today's Targets, Smart Split or Manual Allocation.
+5. Project Cards
+Replace description with a book cover.
+Display today's target, progress bar, completion percentage and status.
+6. Statistics
+Use subtle colour accents for important metrics.
+Improve the streak card and statistics visibility.
+Colour-coded cards for Lifetime Words, Streaks, Completed Books, Daily Average and Backlog.
+
+
+Writing Advisor
+Recommend which project to start.
+Explain the recommendation.
+Confidence score.
+Strategies: Finish Nearly Completed, Earliest Deadline, Highest Daily Target, Rotate Projects and Smart Recommendation.
+Recommendation is optional.
+UI
+Material 3.
+Minimal accent colours.
+Focus on readability and motivation.
+Goals
+Reduce friction, increase motivation and make Project Ink feel like a dedicated writing companion.
+
