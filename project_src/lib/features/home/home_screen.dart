@@ -222,6 +222,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _showSplitLogDialog(List<TodayWritingTask> tasks) {
     final totalController = TextEditingController();
+    String selectedMethod = 'even'; // 'even', 'proportional', 'smart', 'manual'
     
     showDialog(
       context: context,
@@ -229,86 +230,283 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
+              scrollable: true,
               title: const Text('Global Quick Log'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: totalController,
-                      keyboardType: TextInputType.number,
-                      autofocus: true,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'Total Words Written',
-                        hintText: 'Enter total words written across all books',
-                        suffixText: 'words',
-                        border: OutlineInputBorder(),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: totalController,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      labelText: 'Words Written Today',
+                      hintText: 'Enter total words written across all books',
+                      suffixText: 'words',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Choose Split Method:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Even Split Card
+                  GestureDetector(
+                    onTap: () {
+                      setDialogState(() {
+                        selectedMethod = 'even';
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: selectedMethod == 'even'
+                            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+                            : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selectedMethod == 'even'
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Radio<String>(
+                            value: 'even',
+                            groupValue: selectedMethod,
+                            onChanged: (val) {
+                              setDialogState(() {
+                                selectedMethod = val!;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '⚖️ Even Split',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Distribute words equally among all active books today.',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Choose Distribution Strategy:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+
+                  // Proportional Split Card
+                  GestureDetector(
+                    onTap: () {
+                      setDialogState(() {
+                        selectedMethod = 'proportional';
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: selectedMethod == 'proportional'
+                            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+                            : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selectedMethod == 'proportional'
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Radio<String>(
+                            value: 'proportional',
+                            groupValue: selectedMethod,
+                            onChanged: (val) {
+                              setDialogState(() {
+                                selectedMethod = val!;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '📊 By Today\'s Targets',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Distribute words proportionally based on today\'s targets.',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      tileColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
-                      title: const Text('⚖️ Even Split'),
-                      subtitle: const Text('Distribute words equally among all active books today.'),
-                      onTap: () {
-                        final val = int.tryParse(totalController.text) ?? 0;
-                        if (val <= 0) return;
-                        Navigator.pop(context);
-                        _applyEvenSplit(tasks, val);
-                      },
+                  ),
+
+                  // Smart Split Card
+                  GestureDetector(
+                    onTap: () {
+                      setDialogState(() {
+                        selectedMethod = 'smart';
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: selectedMethod == 'smart'
+                            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+                            : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selectedMethod == 'smart'
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Radio<String>(
+                            value: 'smart',
+                            groupValue: selectedMethod,
+                            onChanged: (val) {
+                              setDialogState(() {
+                                selectedMethod = val!;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '🧠 Smart Split',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Fills backlogs first, then targets.',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      tileColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
-                      title: const Text('📊 Proportional Split'),
-                      subtitle: const Text('Distribute words based on today\'s targets.'),
-                      onTap: () {
-                        final val = int.tryParse(totalController.text) ?? 0;
-                        if (val <= 0) return;
-                        Navigator.pop(context);
-                        _applyProportionalSplit(tasks, val);
-                      },
+                  ),
+
+                  // Manual Card
+                  GestureDetector(
+                    onTap: () {
+                      setDialogState(() {
+                        selectedMethod = 'manual';
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: selectedMethod == 'manual'
+                            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+                            : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selectedMethod == 'manual'
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Radio<String>(
+                            value: 'manual',
+                            groupValue: selectedMethod,
+                            onChanged: (val) {
+                              setDialogState(() {
+                                selectedMethod = val!;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '✍️ Manual Allocation',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Enter custom words for each project individually.',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      tileColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
-                      title: const Text('🧠 Smart Split'),
-                      subtitle: const Text('Fills backlogs first, then targets.'),
-                      onTap: () {
-                        final val = int.tryParse(totalController.text) ?? 0;
-                        if (val <= 0) return;
-                        Navigator.pop(context);
-                        _applySmartSplit(tasks, val);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      tileColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
-                      title: const Text('✍️ Manual Allocation'),
-                      subtitle: const Text('Enter custom words for each project individually.'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showManualAllocationDialog(tasks);
-                      },
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    final val = int.tryParse(totalController.text) ?? 0;
+                    if (selectedMethod != 'manual' && val <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please enter a valid word count.')),
+                      );
+                      return;
+                    }
+                    Navigator.pop(context);
+                    if (selectedMethod == 'even') {
+                      _applyEvenSplit(tasks, val);
+                    } else if (selectedMethod == 'proportional') {
+                      _applyProportionalSplit(tasks, val);
+                    } else if (selectedMethod == 'smart') {
+                      _applySmartSplit(tasks, val);
+                    } else if (selectedMethod == 'manual') {
+                      _showManualAllocationDialog(tasks);
+                    }
+                  },
+                  child: const Text('Log Words'),
                 ),
               ],
             );
