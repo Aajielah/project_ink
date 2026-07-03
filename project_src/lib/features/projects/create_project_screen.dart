@@ -10,9 +10,8 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../shared/providers.dart';
 import '../../models/project.dart';
+import 'project_duration_type.dart';
 import 'widgets/book_cover_widget.dart';
-
-enum DurationType { days, weeks, months, customRange }
 
 class CreateProjectScreen extends ConsumerStatefulWidget {
   const CreateProjectScreen({super.key});

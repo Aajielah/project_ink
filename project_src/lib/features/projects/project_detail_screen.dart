@@ -9,6 +9,8 @@ import '../../shared/providers.dart';
 import '../../models/project.dart';
 import '../../models/schedule.dart';
 import '../../models/daily_log.dart';
+import '../../services/ongoing_sync_service.dart';
+import 'project_duration_type.dart';
 
 class ProjectDetailScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -1144,4 +1146,3 @@ class _ManageTab extends ConsumerWidget {
     );
   }
 }
-

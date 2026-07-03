@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 
 import '../../shared/providers.dart';
@@ -44,13 +45,13 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
 
     // 1. Monthly Words Written
     final monthlyLogsQuery = db.select(db.dailyLogs)
-      ..where((t) => t.date.greaterOrEquals(currentMonthStart));
+      ..where((t) => t.date.isBiggerOrEqualValue(currentMonthStart));
     final monthlyLogs = await monthlyLogsQuery.get();
     final monthlyWords = monthlyLogs.fold<int>(0, (sum, l) => sum + l.actualWords);
 
     // 2. Yearly Words Written
     final yearlyLogsQuery = db.select(db.dailyLogs)
-      ..where((t) => t.date.greaterOrEquals(currentYearStart));
+      ..where((t) => t.date.isBiggerOrEqualValue(currentYearStart));
     final yearlyLogs = await yearlyLogsQuery.get();
     final yearlyWords = yearlyLogs.fold<int>(0, (sum, l) => sum + l.actualWords);
 
