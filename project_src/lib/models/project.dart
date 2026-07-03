@@ -23,6 +23,8 @@ class ProjectModel {
   final int currentWeek;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? coverImagePath;
+  final String? coverType;
 
   const ProjectModel({
     required this.id,
@@ -45,7 +47,10 @@ class ProjectModel {
     required this.currentWeek,
     required this.createdAt,
     required this.updatedAt,
+    this.coverImagePath,
+    this.coverType,
   });
+
 
   ProjectModel copyWith({
     String? id,
@@ -68,6 +73,8 @@ class ProjectModel {
     int? currentWeek,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? coverImagePath,
+    String? coverType,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -90,6 +97,8 @@ class ProjectModel {
       currentWeek: currentWeek ?? this.currentWeek,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      coverImagePath: coverImagePath ?? this.coverImagePath,
+      coverType: coverType ?? this.coverType,
     );
   }
 
@@ -115,6 +124,8 @@ class ProjectModel {
       'currentWeek': currentWeek,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'coverImagePath': coverImagePath,
+      'coverType': coverType,
     };
   }
 
@@ -142,6 +153,9 @@ class ProjectModel {
       currentWeek: json['currentWeek'] as int,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      coverImagePath: json['coverImagePath'] as String?,
+      coverType: json['coverType'] as String?,
     );
   }
+
 }

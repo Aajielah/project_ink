@@ -1,10 +1,16 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:file_picker/file_picker.dart';
+
 import '../../shared/providers.dart';
 import '../../models/project.dart';
+import 'widgets/book_cover_widget.dart';
 
 class ProjectsScreen extends ConsumerWidget {
   const ProjectsScreen({super.key});
@@ -12,7 +18,6 @@ class ProjectsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projectsAsync = ref.watch(projectsProvider);
-    final theme = Theme.of(context);
 
     return DefaultTabController(
       length: 3,
@@ -97,13 +102,132 @@ class _ProjectList extends StatelessWidget {
   }
 }
 
-class _ProjectCard extends StatelessWidget {
+class _ProjectCard extends ConsumerWidget {
   final ProjectModel project;
 
   const _ProjectCard({required this.project});
 
+  Future<void> _pickCustomCover(BuildContext context, WidgetRef ref) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image);
+      if (result != null && result.files.single.path != null) {
+        final pickedPath = result.files.single.path!;
+        final appDir = await getApplicationDocumentsDirectory();
+        
+        final extensionName = p.extension(pickedPath);
+        final fileName = 'cover_${project.id}_${DateTime.now().millisecondsSinceEpoch}$extensionName';
+        final savedFile = await File(pickedPath).copy('${appDir.path}/$fileName');
+        
+        final updated = project.copyWith(
+          coverType: 'uploaded',
+          coverImagePath: savedFile.path,
+          updatedAt: DateTime.now(),
+        );
+        
+        await ref.read(projectsProvider.notifier).updateProject(updated);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Book cover updated successfully!')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update cover image: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _rollRandomCover(BuildContext context, WidgetRef ref) async {
+    final random = Random();
+    final chosen = defaultCovers[random.nextInt(defaultCovers.length)];
+    
+    final updated = project.copyWith(
+      coverType: 'default',
+      coverImagePath: chosen.id,
+      updatedAt: DateTime.now(),
+    );
+    
+    await ref.read(projectsProvider.notifier).updateProject(updated);
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Random cover selected!')),
+      );
+    }
+  }
+
+  Future<void> _removeCover(BuildContext context, WidgetRef ref) async {
+    final updated = project.copyWith(
+      coverType: null,
+      coverImagePath: null,
+      updatedAt: DateTime.now(),
+    );
+    
+    await ref.read(projectsProvider.notifier).updateProject(updated);
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cover cover removed.')),
+      );
+    }
+  }
+
+  void _showCoverActionSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 20.0),
+                child: Text(
+                  'Manage Cover for "${project.name}"',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('📷 Upload Custom Cover'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickCustomCover(context, ref);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.casino),
+                title: const Text('🖼 Choose Random Default Cover'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _rollRandomCover(context, ref);
+                },
+              ),
+              if (project.coverType != null)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text('❌ Remove Cover', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _removeCover(context, ref);
+                  },
+                ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final progress = project.targetWords > 0 ? project.writtenWords / project.targetWords : 0.0;
     final percent = (progress * 100).toInt();
@@ -113,84 +237,82 @@ class _ProjectCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12.0),
         onTap: () => context.go('/projects/${project.id}'),
+        onLongPress: () => _showCoverActionSheet(context, ref),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      project.name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  _StatusChip(status: project.status),
-                ],
+              // Visual Book Cover (3:4 ratio)
+              BookCoverWidget(
+                title: project.name,
+                coverImagePath: project.coverImagePath,
+                coverType: project.coverType,
+                width: 75,
+                height: 100,
+                borderRadius: 6.0,
+                showTitle: true,
               ),
-              if (project.description != null && project.description!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  project.description!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${project.writtenWords} / ${project.targetWords} words ($percent%)',
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                  ),
-                  Text(
-                    '${project.remainingWords} left',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: min(1.0, progress),
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Target: ${project.dailyWordTarget} words/day',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                  if (project.projectStreak > 0)
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.local_fire_department, size: 16, color: theme.colorScheme.primary),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${project.projectStreak}d streak',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            project.name,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        _StatusChip(status: project.status),
                       ],
                     ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      '${project.writtenWords} / ${project.targetWords} words ($percent%)',
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: min(1.0, progress),
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${project.dailyWordTarget} words/day',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                        if (project.projectStreak > 0)
+                          Row(
+                            children: [
+                              Icon(Icons.local_fire_department, size: 14, color: theme.colorScheme.primary),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${project.projectStreak}d streak',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -240,12 +362,13 @@ class _StatusChip extends StatelessWidget {
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.0)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
         child: Text(
           status.name.toUpperCase(),
           style: theme.textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: textColor,
+            fontSize: 9.0,
           ),
         ),
       ),

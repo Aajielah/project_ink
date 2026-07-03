@@ -29,6 +29,8 @@ class ProjectRepository {
       currentWeek: data.currentWeek,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+      coverImagePath: data.coverImagePath,
+      coverType: data.coverType,
     );
   }
 
@@ -54,8 +56,11 @@ class ProjectRepository {
       currentWeek: Value(model.currentWeek),
       createdAt: Value(model.createdAt),
       updatedAt: Value(model.updatedAt),
+      coverImagePath: Value(model.coverImagePath),
+      coverType: Value(model.coverType),
     );
   }
+
 
   Future<List<ProjectModel>> getAllProjects() async {
     final query = _db.select(_db.projects);

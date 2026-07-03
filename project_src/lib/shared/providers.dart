@@ -111,6 +111,8 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     required RestMode restMode,
     required List<int> fixedRestWeekdays,
     required int allowedRestDays,
+    String? coverImagePath,
+    String? coverType,
   }) async {
     // 1. Validate
     final err = _schedulingService.validateInputs(
@@ -169,6 +171,8 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         currentWeek: 1,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        coverImagePath: coverImagePath,
+        coverType: coverType,
       );
 
       // 4. Save to DB
@@ -182,6 +186,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       return 'Failed to save project: $e';
     }
   }
+
 
   Future<void> deleteProject(String id) async {
     try {
@@ -217,7 +222,15 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       }
     } catch (_) {}
   }
+
+  Future<void> updateProject(ProjectModel updated) async {
+    try {
+      await _projectRepo.updateProject(updated);
+      await loadProjects();
+    } catch (_) {}
+  }
 }
+
 
 final projectsProvider =
     StateNotifierProvider<ProjectsNotifier, AsyncValue<List<ProjectModel>>>((ref) {

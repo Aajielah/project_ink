@@ -21,7 +21,6 @@ class ProjectDetailScreen extends ConsumerStatefulWidget {
 class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _logController = TextEditingController();
-  final _editTargetController = TextEditingController();
 
   @override
   void initState() {
@@ -33,7 +32,6 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
   void dispose() {
     _tabController.dispose();
     _logController.dispose();
-    _editTargetController.dispose();
     super.dispose();
   }
 
@@ -49,7 +47,6 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
       return;
     }
 
-    // Call logging service
     final loggingService = ref.read(loggingServiceProvider);
     try {
       await loggingService.logWords(
@@ -63,7 +60,6 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
         const SnackBar(content: Text('Words logged successfully!')),
       );
 
-      // Force UI updates
       ref.invalidate(projectsProvider);
       ref.invalidate(statisticsProvider);
       ref.invalidate(homeQuoteProvider(widget.projectId));
@@ -76,56 +72,223 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
     }
   }
 
-  Future<void> _updatePlan(ProjectModel project) async {
-    final text = _editTargetController.text.trim();
-    if (text.isEmpty) return;
-
-    final newTarget = int.tryParse(text);
-    if (newTarget == null || newTarget <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid target.')),
-      );
-      return;
+  Future<void> _showEditProjectDialog(ProjectModel project) async {
+    final nameController = TextEditingController(text: project.name);
+    final descController = TextEditingController(text: project.description ?? '');
+    final targetWordsController = TextEditingController(text: project.targetWords.toString());
+    final dailyTargetController = TextEditingController(text: project.dailyWordTarget.toString());
+    
+    RestMode editRestMode = project.restMode;
+    int editAllowedRestDays = project.allowedRestDays;
+    
+    final schedRepo = ref.read(scheduleRepositoryProvider);
+    final existingScheds = await schedRepo.getSchedulesForProject(project.id);
+    
+    final List<int> editFixedRestDays = [];
+    if (project.restMode == RestMode.fixed) {
+      for (final s in existingScheds) {
+        if (s.isRestDay) {
+          final wd = s.date.weekday;
+          if (!editFixedRestDays.contains(wd)) {
+            editFixedRestDays.add(wd);
+          }
+        }
+      }
     }
 
-    final schedRepo = ref.read(scheduleRepositoryProvider);
-    final scheds = await schedRepo.getSchedulesForProject(project.id);
-    
-    // Count how many rest days used in history
-    int restDaysUsed = scheds.where((s) => s.locked && s.isRestDay).length;
+    if (!mounted) return;
 
-    final schedService = ref.read(schedulingServiceProvider);
-    final recalculated = schedService.recalculateFutureSchedule(
-      existingSchedules: scheds,
-      recalculateFromDate: DateTime.now(),
-      newDailyTarget: newTarget,
-      totalRemainingWords: project.remainingWords,
-      fixedRestWeekdays: const [6, 7], // default Sat/Sun for recalculation
-      restMode: project.restMode,
-      allowedRestDaysBudget: project.allowedRestDays,
-      restDaysUsed: restDaysUsed,
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Project Settings'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Project Name', border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(labelText: 'Description (optional)', border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: targetWordsController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Total Target Words', border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: dailyTargetController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Daily Word Target', border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<RestMode>(
+                      value: editRestMode,
+                      decoration: const InputDecoration(labelText: 'Rest Mode', border: OutlineInputBorder()),
+                      items: const [
+                        DropdownMenuItem(value: RestMode.fixed, child: Text('Fixed (Weekly Days)')),
+                        DropdownMenuItem(value: RestMode.flexible, child: Text('Flexible (Budget)')),
+                        DropdownMenuItem(value: RestMode.random, child: Text('Random')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() {
+                            editRestMode = val;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    if (editRestMode == RestMode.fixed) ...[
+                      const Text('Choose Rest Days:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8.0,
+                        children: [
+                          FilterChip(
+                            label: const Text('Mon'),
+                            selected: editFixedRestDays.contains(1),
+                            onSelected: (sel) => setDialogState(() => sel ? editFixedRestDays.add(1) : editFixedRestDays.remove(1)),
+                          ),
+                          FilterChip(
+                            label: const Text('Tue'),
+                            selected: editFixedRestDays.contains(2),
+                            onSelected: (sel) => setDialogState(() => sel ? editFixedRestDays.add(2) : editFixedRestDays.remove(2)),
+                          ),
+                          FilterChip(
+                            label: const Text('Wed'),
+                            selected: editFixedRestDays.contains(3),
+                            onSelected: (sel) => setDialogState(() => sel ? editFixedRestDays.add(3) : editFixedRestDays.remove(3)),
+                          ),
+                          FilterChip(
+                            label: const Text('Thu'),
+                            selected: editFixedRestDays.contains(4),
+                            onSelected: (sel) => setDialogState(() => sel ? editFixedRestDays.add(4) : editFixedRestDays.remove(4)),
+                          ),
+                          FilterChip(
+                            label: const Text('Fri'),
+                            selected: editFixedRestDays.contains(5),
+                            onSelected: (sel) => setDialogState(() => sel ? editFixedRestDays.add(5) : editFixedRestDays.remove(5)),
+                          ),
+                          FilterChip(
+                            label: const Text('Sat'),
+                            selected: editFixedRestDays.contains(6),
+                            onSelected: (sel) => setDialogState(() => sel ? editFixedRestDays.add(6) : editFixedRestDays.remove(6)),
+                          ),
+                          FilterChip(
+                            label: const Text('Sun'),
+                            selected: editFixedRestDays.contains(7),
+                            onSelected: (sel) => setDialogState(() => sel ? editFixedRestDays.add(7) : editFixedRestDays.remove(7)),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      TextFormField(
+                        initialValue: editAllowedRestDays.toString(),
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Rest Days Allowed Per Week',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (val) {
+                          final parsed = int.tryParse(val);
+                          if (parsed != null && parsed >= 0 && parsed <= 6) {
+                            editAllowedRestDays = parsed;
+                          }
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    final desc = descController.text.trim();
+                    final targetWords = int.tryParse(targetWordsController.text) ?? project.targetWords;
+                    final dailyTarget = int.tryParse(dailyTargetController.text) ?? project.dailyWordTarget;
+
+                    if (name.isEmpty || targetWords <= project.writtenWords || dailyTarget <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invalid input fields. Target words must exceed written words.')),
+                      );
+                      return;
+                    }
+
+                    final today = DateTime.now();
+                    final cleanToday = DateTime(today.year, today.month, today.day);
+                    final restDaysUsed = existingScheds.where((s) => s.locked && s.isRestDay).length;
+
+                    final remainingWords = targetWords - project.writtenWords;
+
+                    final schedService = ref.read(schedulingServiceProvider);
+                    final recalculated = schedService.recalculateFutureSchedule(
+                      existingSchedules: existingScheds,
+                      recalculateFromDate: cleanToday,
+                      newDailyTarget: dailyTarget,
+                      totalRemainingWords: remainingWords,
+                      fixedRestWeekdays: editFixedRestDays,
+                      restMode: editRestMode,
+                      allowedRestDaysBudget: editAllowedRestDays,
+                      restDaysUsed: restDaysUsed,
+                    );
+
+                    await schedRepo.deleteUnlockedFutureSchedules(project.id, cleanToday);
+                    await schedRepo.insertSchedules(recalculated);
+
+                    final updated = project.copyWith(
+                      name: name,
+                      description: desc.isNotEmpty ? desc : null,
+                      targetWords: targetWords,
+                      dailyWordTarget: dailyTarget,
+                      restMode: editRestMode,
+                      allowedRestDays: editAllowedRestDays,
+                      expectedFinishDate: recalculated.isNotEmpty ? recalculated.last.date : project.expectedFinishDate,
+                      remainingWords: remainingWords,
+                      updatedAt: DateTime.now(),
+                    );
+
+                    await ref.read(projectsProvider.notifier).updateProject(updated);
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Project settings updated and schedule recalculated!')),
+                      );
+                    }
+                    _refreshAll();
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
+  }
 
-    // Save recalculated schedule
-    await schedRepo.deleteUnlockedFutureSchedules(project.id, DateTime.now());
-    await schedRepo.insertSchedules(recalculated);
-
-    // Update project target
-    final updatedProject = project.copyWith(
-      dailyWordTarget: newTarget,
-      expectedFinishDate: recalculated.last.date,
-      updatedAt: DateTime.now(),
-    );
-    await ref.read(projectRepositoryProvider).updateProject(updatedProject);
-
-    _editTargetController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Plan updated successfully!')),
-    );
-    
+  void _refreshAll() {
     ref.invalidate(projectsProvider);
     setState(() {});
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -164,9 +327,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
               _HistoryTab(projectId: project.id),
               _ManageTab(
                 project: project,
-                editController: _editTargetController,
-                onUpdatePlan: () => _updatePlan(project),
+                onEditConfiguration: _showEditProjectDialog,
               ),
+
             ],
           ),
         );
@@ -582,13 +745,11 @@ class _HistoryTab extends ConsumerWidget {
 
 class _ManageTab extends ConsumerWidget {
   final ProjectModel project;
-  final TextEditingController editController;
-  final VoidCallback onUpdatePlan;
+  final Function(ProjectModel) onEditConfiguration;
 
   const _ManageTab({
     required this.project,
-    required this.editController,
-    required this.onUpdatePlan,
+    required this.onEditConfiguration,
   });
 
   @override
@@ -598,51 +759,35 @@ class _ManageTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
-        // Target editing Card
-        if (project.status == ProjectStatus.active)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Adjust Writing Goal Target',
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        // Configuration edit panel
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Project Configuration',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Adjust writing goals, timeline, or rest day setups. Project Ink will recalculate future days while preserving your logs.',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: () => onEditConfiguration(project),
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Edit Project Configuration'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14.0),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Change your daily target for remaining days. Past locked days are preserved.',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: editController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: 'New daily target',
-                            hintText: 'Currently: ${project.dailyWordTarget}',
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: onUpdatePlan,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                        ),
-                        child: const Text('Adjust'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        ),
         const SizedBox(height: 12),
 
         // Pause/Resume actions
@@ -709,3 +854,4 @@ class _ManageTab extends ConsumerWidget {
     );
   }
 }
+

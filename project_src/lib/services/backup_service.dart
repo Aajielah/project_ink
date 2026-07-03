@@ -53,8 +53,10 @@ class BackupService {
         'allowedRestDays': p.allowedRestDays, 'remainingRestDays': p.remainingRestDays,
         'projectStreak': p.projectStreak, 'longestProjectStreak': p.longestProjectStreak,
         'currentWeek': p.currentWeek, 'createdAt': p.createdAt.toIso8601String(),
-        'updatedAt': p.updatedAt.toIso8601String()
+        'updatedAt': p.updatedAt.toIso8601String(),
+        'coverImagePath': p.coverImagePath, 'coverType': p.coverType
       }).toList());
+
 
       writeJsonFile('schedule.json', schedules.map((s) => {
         'id': s.id, 'projectId': s.projectId, 'date': s.date.toIso8601String(),
@@ -211,9 +213,12 @@ class BackupService {
               currentWeek: Value(p['currentWeek'] ?? 1),
               createdAt: DateTime.parse(p['createdAt']),
               updatedAt: DateTime.parse(p['updatedAt']),
+              coverImagePath: Value(p['coverImagePath']),
+              coverType: Value(p['coverType']),
             ));
           }
         }
+
 
         // Restore Schedules
         if (decodedSchedules != null) {

@@ -503,6 +503,18 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
   late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
       'updated_at', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _coverImagePathMeta =
+      const VerificationMeta('coverImagePath');
+  @override
+  late final GeneratedColumn<String> coverImagePath = GeneratedColumn<String>(
+      'cover_image_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _coverTypeMeta =
+      const VerificationMeta('coverType');
+  @override
+  late final GeneratedColumn<String> coverType = GeneratedColumn<String>(
+      'cover_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -524,7 +536,9 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         longestProjectStreak,
         currentWeek,
         createdAt,
-        updatedAt
+        updatedAt,
+        coverImagePath,
+        coverType
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -663,6 +677,16 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('cover_image_path')) {
+      context.handle(
+          _coverImagePathMeta,
+          coverImagePath.isAcceptableOrUnknown(
+              data['cover_image_path']!, _coverImagePathMeta));
+    }
+    if (data.containsKey('cover_type')) {
+      context.handle(_coverTypeMeta,
+          coverType.isAcceptableOrUnknown(data['cover_type']!, _coverTypeMeta));
+    }
     return context;
   }
 
@@ -713,6 +737,10 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      coverImagePath: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}cover_image_path']),
+      coverType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}cover_type']),
     );
   }
 
@@ -743,6 +771,8 @@ class Project extends DataClass implements Insertable<Project> {
   final int currentWeek;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? coverImagePath;
+  final String? coverType;
   const Project(
       {required this.id,
       required this.name,
@@ -763,7 +793,9 @@ class Project extends DataClass implements Insertable<Project> {
       required this.longestProjectStreak,
       required this.currentWeek,
       required this.createdAt,
-      required this.updatedAt});
+      required this.updatedAt,
+      this.coverImagePath,
+      this.coverType});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -791,6 +823,12 @@ class Project extends DataClass implements Insertable<Project> {
     map['current_week'] = Variable<int>(currentWeek);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || coverImagePath != null) {
+      map['cover_image_path'] = Variable<String>(coverImagePath);
+    }
+    if (!nullToAbsent || coverType != null) {
+      map['cover_type'] = Variable<String>(coverType);
+    }
     return map;
   }
 
@@ -820,6 +858,12 @@ class Project extends DataClass implements Insertable<Project> {
       currentWeek: Value(currentWeek),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      coverImagePath: coverImagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverImagePath),
+      coverType: coverType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverType),
     );
   }
 
@@ -850,6 +894,8 @@ class Project extends DataClass implements Insertable<Project> {
       currentWeek: serializer.fromJson<int>(json['currentWeek']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      coverImagePath: serializer.fromJson<String?>(json['coverImagePath']),
+      coverType: serializer.fromJson<String?>(json['coverType']),
     );
   }
   @override
@@ -876,6 +922,8 @@ class Project extends DataClass implements Insertable<Project> {
       'currentWeek': serializer.toJson<int>(currentWeek),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'coverImagePath': serializer.toJson<String?>(coverImagePath),
+      'coverType': serializer.toJson<String?>(coverType),
     };
   }
 
@@ -899,7 +947,9 @@ class Project extends DataClass implements Insertable<Project> {
           int? longestProjectStreak,
           int? currentWeek,
           DateTime? createdAt,
-          DateTime? updatedAt}) =>
+          DateTime? updatedAt,
+          Value<String?> coverImagePath = const Value.absent(),
+          Value<String?> coverType = const Value.absent()}) =>
       Project(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -923,6 +973,9 @@ class Project extends DataClass implements Insertable<Project> {
         currentWeek: currentWeek ?? this.currentWeek,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
+        coverImagePath:
+            coverImagePath.present ? coverImagePath.value : this.coverImagePath,
+        coverType: coverType.present ? coverType.value : this.coverType,
       );
   Project copyWithCompanion(ProjectsCompanion data) {
     return Project(
@@ -969,6 +1022,10 @@ class Project extends DataClass implements Insertable<Project> {
           data.currentWeek.present ? data.currentWeek.value : this.currentWeek,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      coverImagePath: data.coverImagePath.present
+          ? data.coverImagePath.value
+          : this.coverImagePath,
+      coverType: data.coverType.present ? data.coverType.value : this.coverType,
     );
   }
 
@@ -994,33 +1051,38 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('longestProjectStreak: $longestProjectStreak, ')
           ..write('currentWeek: $currentWeek, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('coverImagePath: $coverImagePath, ')
+          ..write('coverType: $coverType')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      name,
-      description,
-      status,
-      targetWords,
-      writtenWords,
-      remainingWords,
-      dailyWordTarget,
-      backlogWords,
-      startDate,
-      expectedFinishDate,
-      actualFinishDate,
-      restMode,
-      allowedRestDays,
-      remainingRestDays,
-      projectStreak,
-      longestProjectStreak,
-      currentWeek,
-      createdAt,
-      updatedAt);
+  int get hashCode => Object.hashAll([
+        id,
+        name,
+        description,
+        status,
+        targetWords,
+        writtenWords,
+        remainingWords,
+        dailyWordTarget,
+        backlogWords,
+        startDate,
+        expectedFinishDate,
+        actualFinishDate,
+        restMode,
+        allowedRestDays,
+        remainingRestDays,
+        projectStreak,
+        longestProjectStreak,
+        currentWeek,
+        createdAt,
+        updatedAt,
+        coverImagePath,
+        coverType
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1044,7 +1106,9 @@ class Project extends DataClass implements Insertable<Project> {
           other.longestProjectStreak == this.longestProjectStreak &&
           other.currentWeek == this.currentWeek &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.coverImagePath == this.coverImagePath &&
+          other.coverType == this.coverType);
 }
 
 class ProjectsCompanion extends UpdateCompanion<Project> {
@@ -1068,6 +1132,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<int> currentWeek;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<String?> coverImagePath;
+  final Value<String?> coverType;
   final Value<int> rowid;
   const ProjectsCompanion({
     this.id = const Value.absent(),
@@ -1090,6 +1156,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.currentWeek = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.coverImagePath = const Value.absent(),
+    this.coverType = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectsCompanion.insert({
@@ -1113,6 +1181,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.currentWeek = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.coverImagePath = const Value.absent(),
+    this.coverType = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1146,6 +1216,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<int>? currentWeek,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<String>? coverImagePath,
+    Expression<String>? coverType,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1171,6 +1243,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (currentWeek != null) 'current_week': currentWeek,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (coverImagePath != null) 'cover_image_path': coverImagePath,
+      if (coverType != null) 'cover_type': coverType,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1196,6 +1270,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       Value<int>? currentWeek,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
+      Value<String?>? coverImagePath,
+      Value<String?>? coverType,
       Value<int>? rowid}) {
     return ProjectsCompanion(
       id: id ?? this.id,
@@ -1218,6 +1294,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       currentWeek: currentWeek ?? this.currentWeek,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      coverImagePath: coverImagePath ?? this.coverImagePath,
+      coverType: coverType ?? this.coverType,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1286,6 +1364,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (coverImagePath.present) {
+      map['cover_image_path'] = Variable<String>(coverImagePath.value);
+    }
+    if (coverType.present) {
+      map['cover_type'] = Variable<String>(coverType.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1315,6 +1399,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('currentWeek: $currentWeek, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('coverImagePath: $coverImagePath, ')
+          ..write('coverType: $coverType, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4008,6 +4094,8 @@ typedef $$ProjectsTableCreateCompanionBuilder = ProjectsCompanion Function({
   Value<int> currentWeek,
   required DateTime createdAt,
   required DateTime updatedAt,
+  Value<String?> coverImagePath,
+  Value<String?> coverType,
   Value<int> rowid,
 });
 typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
@@ -4031,6 +4119,8 @@ typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
   Value<int> currentWeek,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
+  Value<String?> coverImagePath,
+  Value<String?> coverType,
   Value<int> rowid,
 });
 
@@ -4144,6 +4234,13 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get coverImagePath => $composableBuilder(
+      column: $table.coverImagePath,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get coverType => $composableBuilder(
+      column: $table.coverType, builder: (column) => ColumnFilters(column));
 
   Expression<bool> schedulesRefs(
       Expression<bool> Function($$SchedulesTableFilterComposer f) f) {
@@ -4266,6 +4363,13 @@ class $$ProjectsTableOrderingComposer
 
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get coverImagePath => $composableBuilder(
+      column: $table.coverImagePath,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get coverType => $composableBuilder(
+      column: $table.coverType, builder: (column) => ColumnOrderings(column));
 }
 
 class $$ProjectsTableAnnotationComposer
@@ -4336,6 +4440,12 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get coverImagePath => $composableBuilder(
+      column: $table.coverImagePath, builder: (column) => column);
+
+  GeneratedColumn<String> get coverType =>
+      $composableBuilder(column: $table.coverType, builder: (column) => column);
 
   Expression<T> schedulesRefs<T extends Object>(
       Expression<T> Function($$SchedulesTableAnnotationComposer a) f) {
@@ -4423,6 +4533,8 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<int> currentWeek = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
+            Value<String?> coverImagePath = const Value.absent(),
+            Value<String?> coverType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion(
@@ -4446,6 +4558,8 @@ class $$ProjectsTableTableManager extends RootTableManager<
             currentWeek: currentWeek,
             createdAt: createdAt,
             updatedAt: updatedAt,
+            coverImagePath: coverImagePath,
+            coverType: coverType,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -4469,6 +4583,8 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<int> currentWeek = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
+            Value<String?> coverImagePath = const Value.absent(),
+            Value<String?> coverType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion.insert(
@@ -4492,6 +4608,8 @@ class $$ProjectsTableTableManager extends RootTableManager<
             currentWeek: currentWeek,
             createdAt: createdAt,
             updatedAt: updatedAt,
+            coverImagePath: coverImagePath,
+            coverType: coverType,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
