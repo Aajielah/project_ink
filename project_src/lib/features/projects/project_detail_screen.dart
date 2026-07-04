@@ -169,8 +169,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
       setState(() {});
 
       if (wasCompleted) {
-        final projectAsync = ref.read(projectDetailProvider(widget.projectId));
-        final project = projectAsync.value;
+        final projectsAsync = ref.read(projectsProvider);
+        final project = projectsAsync.whenOrNull(
+          data: (projects) => projects.firstWhere((p) => p.id == widget.projectId),
+        );
         if (mounted && project != null) {
           _showCompletionDialog(context, project.name);
         }
@@ -1258,7 +1260,6 @@ class _HistoryTab extends ConsumerWidget {
                     ref.invalidate(statisticsProvider);
                     ref.invalidate(homeQuoteProvider(log.projectId));
                     ref.invalidate(homeEncouragementProvider(log.projectId));
-                    ref.invalidate(projectDetailProvider(log.projectId));
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Log updated successfully!')),
