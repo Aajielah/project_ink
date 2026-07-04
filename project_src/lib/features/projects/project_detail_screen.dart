@@ -1298,6 +1298,7 @@ class _HistoryTab extends ConsumerWidget {
                       projectId: log.projectId,
                       date: DateTime.now(),
                       actualWords: words,
+                      isAdditive: false,
                     );
                     
                     ref.invalidate(projectsProvider);

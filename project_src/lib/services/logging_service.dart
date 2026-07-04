@@ -33,6 +33,7 @@ class LoggingService {
     required String projectId,
     required DateTime date,
     required int actualWords,
+    bool isAdditive = true,
   }) async {
     if (actualWords < 0) {
       throw ArgumentError('Logged words cannot be negative.');
@@ -73,17 +74,19 @@ class LoggingService {
       await _scheduleRepo.insertSchedules([schedule]);
     }
 
-    final isOngoing = project.projectType == ProjectType.ongoing;
-    final plannedWords = schedule.plannedWords;
-    final isExcess = actualWords > plannedWords;
-    final excessWords = isExcess ? actualWords - plannedWords : 0;
-    final backlogCreated = 0; // Today is still in progress, backlog is only generated after rollover.
-    final isCompleted = actualWords >= plannedWords;
-
     // 3. Create/Update Daily Log row
     final existingLog = await _logRepo.getLogForDate(projectId, cleanDate);
     final prevLogWords = existingLog?.actualWords ?? 0;
     final prevBacklogCreated = existingLog?.backlogCreated ?? 0;
+
+    final newActualWords = isAdditive ? (prevLogWords + actualWords) : actualWords;
+
+    final isOngoing = project.projectType == ProjectType.ongoing;
+    final plannedWords = schedule.plannedWords;
+    final isExcess = newActualWords > plannedWords;
+    final excessWords = isExcess ? newActualWords - plannedWords : 0;
+    final backlogCreated = 0; // Today is still in progress, backlog is only generated after rollover.
+    final isCompleted = newActualWords >= plannedWords;
     
     final dailyLog = DailyLogModel(
       id: existingLog?.id ?? uuid.v4(),
@@ -91,7 +94,7 @@ class LoggingService {
       scheduleId: schedule.id,
       date: cleanDate,
       plannedWords: plannedWords,
-      actualWords: actualWords,
+      actualWords: newActualWords,
       carryForwardWords: excessWords,
       backlogCreated: backlogCreated,
       completed: isCompleted,
@@ -114,7 +117,7 @@ class LoggingService {
     }
 
     // 6. Recalculate Project Progress & Backlog
-    final wordDiff = actualWords - prevLogWords;
+    final wordDiff = newActualWords - prevLogWords;
     final newWrittenWords = project.writtenWords + wordDiff;
     final newRemainingWords = isOngoing ? 0 : max(0, project.targetWords - newWrittenWords);
     

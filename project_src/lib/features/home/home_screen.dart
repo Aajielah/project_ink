@@ -635,7 +635,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Future<void> _submitLog(String projectId, int words) async {
+  Future<void> _submitLog(String projectId, int words, {bool isAdditive = true}) async {
     try {
       final project = ref.read(projectsProvider).value?.firstWhere((p) => p.id == projectId);
       
@@ -643,6 +643,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             projectId: projectId,
             date: DateTime.now(),
             actualWords: words,
+            isAdditive: isAdditive,
           );
       _refreshAll();
       if (wasCompleted && project != null) {
@@ -911,7 +912,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 );
 
                 if (confirmed == true) {
-                  await _submitLog(task.project.id, words);
+                  await _submitLog(task.project.id, words, isAdditive: false);
                 }
               },
               child: const Text('Continue'),

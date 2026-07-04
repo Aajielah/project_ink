@@ -106,8 +106,10 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     loadProjects();
   }
 
-  Future<void> loadProjects() async {
-    state = const AsyncValue.loading();
+  Future<void> loadProjects({bool silent = false}) async {
+    if (!silent) {
+      state = const AsyncValue.loading();
+    }
     try {
       final list = await _projectRepo.getAllProjects();
       final active = list.where((p) => p.status == ProjectStatus.active).toList();
@@ -308,6 +310,13 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
 
   Future<void> deleteProject(String id) async {
     try {
+      // Optimistic UI update: immediately remove project from memory
+      if (state is AsyncData<List<ProjectModel>>) {
+        final currentList = state.value ?? [];
+        final newList = currentList.where((p) => p.id != id).toList();
+        state = AsyncValue.data(newList);
+      }
+
       final db = _ref.read(dbProvider);
       await db.transaction(() async {
         await _projectRepo.deleteProject(id);
@@ -316,13 +325,20 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       });
       await _statsRepo.recalculateStatistics();
       _invalidateAllDependentProviders();
-      await loadProjects();
+      await loadProjects(silent: true);
       await cleanupOrphanedCovers();
     } catch (_) {}
   }
 
   Future<void> pauseProject(String id) async {
     try {
+      // Optimistic UI update: immediately mark project as paused in memory
+      if (state is AsyncData<List<ProjectModel>>) {
+        final currentList = state.value ?? [];
+        final newList = currentList.map((p) => p.id == id ? p.copyWith(status: ProjectStatus.paused) : p).toList();
+        state = AsyncValue.data(newList);
+      }
+
       final project = await _projectRepo.getProjectById(id);
       if (project != null && project.status == ProjectStatus.active) {
         final updated = project.copyWith(
@@ -330,15 +346,22 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           updatedAt: DateTime.now(),
         );
         await _projectRepo.updateProject(updated);
-        await loadProjects();
         await _statsRepo.recalculateStatistics();
         _invalidateAllDependentProviders();
+        await loadProjects(silent: true);
       }
     } catch (_) {}
   }
 
   Future<void> resumeProject(String id) async {
     try {
+      // Optimistic UI update: immediately mark project as active in memory
+      if (state is AsyncData<List<ProjectModel>>) {
+        final currentList = state.value ?? [];
+        final newList = currentList.map((p) => p.id == id ? p.copyWith(status: ProjectStatus.active) : p).toList();
+        state = AsyncValue.data(newList);
+      }
+
       final project = await _projectRepo.getProjectById(id);
       if (project != null && project.status == ProjectStatus.paused) {
         final updated = project.copyWith(
@@ -346,19 +369,26 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           updatedAt: DateTime.now(),
         );
         await _projectRepo.updateProject(updated);
-        await loadProjects();
         await _statsRepo.recalculateStatistics();
         _invalidateAllDependentProviders();
+        await loadProjects(silent: true);
       }
     } catch (_) {}
   }
 
   Future<void> updateProject(ProjectModel updated) async {
     try {
+      // Optimistic UI update: immediately replace project in memory
+      if (state is AsyncData<List<ProjectModel>>) {
+        final currentList = state.value ?? [];
+        final newList = currentList.map((p) => p.id == updated.id ? updated : p).toList();
+        state = AsyncValue.data(newList);
+      }
+
       await _projectRepo.updateProject(updated);
-      await loadProjects();
       await _statsRepo.recalculateStatistics();
       _invalidateAllDependentProviders();
+      await loadProjects(silent: true);
       await cleanupOrphanedCovers();
     } catch (_) {}
   }

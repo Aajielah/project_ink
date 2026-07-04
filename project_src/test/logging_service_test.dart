@@ -278,19 +278,53 @@ void main() {
       expect(project?.writtenWords, 200);
       expect(project?.projectStreak, 0);
 
-      // 3. Log second time (500 words, meets target)
-      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 500);
+      // 3. Log second time (300 words, meets target of 500 total)
+      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 300);
       
       project = await projectRepo.getProjectById('p1');
       expect(project?.writtenWords, 500);
       expect(project?.projectStreak, 1);
 
-      // 4. Log third time (600 words, over target)
-      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 600);
+      // 4. Log third time (100 words, over target to 600 total)
+      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 100);
       
       project = await projectRepo.getProjectById('p1');
       expect(project?.writtenWords, 600);
       expect(project?.projectStreak, 1); // Streak should remain 1, not 2
+    });
+
+    test('logging is additive by default', () async {
+      final sched = ScheduleModel(
+        id: 's_add', projectId: 'p1', date: cleanToday, plannedWords: 500,
+        isRestDay: false, completed: false, automaticRestDay: false, locked: false,
+      );
+      await scheduleRepo.insertSchedules([sched]);
+
+      // Log 200 words
+      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 200);
+      
+      // Log another 150 words
+      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 150);
+
+      final updatedProject = await projectRepo.getProjectById('p1');
+      expect(updatedProject?.writtenWords, 350); // accumulated!
+    });
+
+    test('logging with isAdditive: false overrides progress', () async {
+      final sched = ScheduleModel(
+        id: 's_override', projectId: 'p1', date: cleanToday, plannedWords: 500,
+        isRestDay: false, completed: false, automaticRestDay: false, locked: false,
+      );
+      await scheduleRepo.insertSchedules([sched]);
+
+      // Log 200 words
+      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 200);
+      
+      // Log edit/override to 150 words
+      await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 150, isAdditive: false);
+
+      final updatedProject = await projectRepo.getProjectById('p1');
+      expect(updatedProject?.writtenWords, 150); // overridden!
     });
   });
 }

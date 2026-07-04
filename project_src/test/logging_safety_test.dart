@@ -301,6 +301,7 @@ void main() {
         projectId: project.id,
         date: cleanToday,
         actualWords: 4000,
+        isAdditive: false,
       );
 
       updated = projectRepo.db[project.id]!;

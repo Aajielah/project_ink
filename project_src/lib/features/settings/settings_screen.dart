@@ -311,7 +311,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: Column(
                     children: [
                       Text(
-                        'Project Ink v1.0.0',
+                        'Project Ink v2.2',
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
