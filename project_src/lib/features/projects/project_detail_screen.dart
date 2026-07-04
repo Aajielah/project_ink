@@ -995,15 +995,16 @@ class _ThisWeekTab extends ConsumerWidget {
                           todaySchedule.isRestDay
                               ? 'Today is scheduled as a REST DAY. Writing is optional!'
                               : (() {
-                                  final remaining = todaySchedule.plannedWords - loggedToday;
+                                  final sched = todaySchedule!;
+                                  final remaining = sched.plannedWords - loggedToday;
                                   if (remaining > 0) {
                                     if (loggedToday > 0) {
-                                      return 'Progress: $loggedToday / ${todaySchedule.plannedWords} words.\n✨ $remaining words remaining. You can do it!';
+                                      return 'Progress: $loggedToday / ${sched.plannedWords} words.\n✨ $remaining words remaining. You can do it!';
                                     } else {
                                       return '$remaining words left today.\nKeep going—you\'ve almost made it!';
                                     }
                                   }
-                                  return 'Progress: $loggedToday / ${todaySchedule.plannedWords} words.';
+                                  return 'Progress: $loggedToday / ${sched.plannedWords} words.';
                                 })(),
                           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
                         ),
