@@ -255,7 +255,7 @@ void main() {
   });
 
   group('Ongoing Project Logging & Streaks Tests', () {
-    test('logging less than daily target still completes and increments streak', () async {
+    test('logging less than daily target remains in progress and does not increment streak', () async {
       final project = ProjectModel(
         id: 'p_ongoing',
         name: 'Ongoing Book',
@@ -297,20 +297,20 @@ void main() {
       final updatedProject = await projectRepo.getProjectById('p_ongoing');
       expect(updatedProject?.writtenWords, 150);
       expect(updatedProject?.backlogWords, 0); // No backlog for ongoing habits!
-      expect(updatedProject?.projectStreak, 1); // Streak increments as long as actualWords > 0!
+      expect(updatedProject?.projectStreak, 0); // Streak remains 0
 
       final updatedSched = await scheduleRepo.getScheduleForDate('p_ongoing', cleanToday);
-      expect(updatedSched?.completed, isTrue);
+      expect(updatedSched?.completed, isFalse); // Remains incomplete/in progress!
     });
 
-    test('logging 0 words breaks the streak', () async {
+    test('logging daily target completes today and increments streak', () async {
       final project = ProjectModel(
         id: 'p_ongoing',
         name: 'Ongoing Book',
         status: ProjectStatus.active,
         projectType: ProjectType.ongoing,
         targetWords: 0,
-        writtenWords: 100,
+        writtenWords: 0,
         remainingWords: 0,
         dailyWordTarget: 500,
         backlogWords: 0,
@@ -319,8 +319,8 @@ void main() {
         restMode: RestMode.flexible,
         allowedRestDays: 0,
         remainingRestDays: 0,
-        projectStreak: 4, // existing streak
-        longestProjectStreak: 4,
+        projectStreak: 0,
+        longestProjectStreak: 0,
         currentWeek: 1,
         createdAt: cleanToday,
         updatedAt: cleanToday,
@@ -339,11 +339,155 @@ void main() {
       );
       await scheduleRepo.insertSchedules([sched]);
 
+      // Log 500 words (reaches target of 500)
+      await loggingService.logWords(projectId: 'p_ongoing', date: cleanToday, actualWords: 500);
+
+      final updatedProject = await projectRepo.getProjectById('p_ongoing');
+      expect(updatedProject?.writtenWords, 500);
+      expect(updatedProject?.backlogWords, 0);
+      expect(updatedProject?.projectStreak, 1); // Streak increments on completion!
+
+      final updatedSched = await scheduleRepo.getScheduleForDate('p_ongoing', cleanToday);
+      expect(updatedSched?.completed, isTrue);
+    });
+
+    test('logging 0 words remains in progress and preserves streak', () async {
+      final project = ProjectModel(
+        id: 'p_ongoing',
+        name: 'Ongoing Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.ongoing,
+        targetWords: 0,
+        writtenWords: 100,
+        remainingWords: 0,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: cleanToday.subtract(const Duration(days: 4)),
+        expectedFinishDate: cleanToday,
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 4, // existing streak
+        longestProjectStreak: 4,
+        currentWeek: 1,
+        createdAt: cleanToday.subtract(const Duration(days: 4)),
+        updatedAt: cleanToday,
+      );
+      projectRepo.db['p_ongoing'] = project;
+
+      // Seed 4 past completed days to justify the streak of 4
+      for (int i = 1; i <= 4; i++) {
+        final date = cleanToday.subtract(Duration(days: i));
+        await scheduleRepo.insertSchedules([
+          ScheduleModel(
+            id: 's_past_$i',
+            projectId: 'p_ongoing',
+            date: date,
+            plannedWords: 500,
+            isRestDay: false,
+            completed: true,
+            automaticRestDay: false,
+            locked: true,
+          )
+        ]);
+        await logRepo.insertLog(
+          DailyLogModel(
+            id: 'l_past_$i',
+            projectId: 'p_ongoing',
+            scheduleId: 's_past_$i',
+            date: date,
+            plannedWords: 500,
+            actualWords: 500,
+            carryForwardWords: 0,
+            backlogCreated: 0,
+            completed: true,
+            loggedAt: date,
+          )
+        );
+      }
+
+      final sched = ScheduleModel(
+        id: 's_today',
+        projectId: 'p_ongoing',
+        date: cleanToday,
+        plannedWords: 500,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      await scheduleRepo.insertSchedules([sched]);
+
       // Log 0 words today
       await loggingService.logWords(projectId: 'p_ongoing', date: cleanToday, actualWords: 0);
 
       final updatedProject = await projectRepo.getProjectById('p_ongoing');
-      expect(updatedProject?.projectStreak, 0); // streak reset
+      expect(updatedProject?.projectStreak, 4); // streak preserved today since it's still ongoing!
+    });
+
+    test('ongoing project catch-up converts past incomplete days to Rest Days and preserves streak', () async {
+      final startDate = cleanToday.subtract(const Duration(days: 2));
+      final project = ProjectModel(
+        id: 'p_ongoing',
+        name: 'Ongoing Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.ongoing,
+        targetWords: 0,
+        writtenWords: 150,
+        remainingWords: 0,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: startDate,
+        expectedFinishDate: cleanToday,
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 3, // existing streak
+        longestProjectStreak: 3,
+        currentWeek: 1,
+        createdAt: startDate,
+        updatedAt: startDate,
+      );
+      projectRepo.db['p_ongoing'] = project;
+
+      // Day 1 (yesterday): writing day, logged 150/500 (incomplete)
+      final yesterday = cleanToday.subtract(const Duration(days: 1));
+      final yesterdaySched = ScheduleModel(
+        id: 's_yesterday',
+        projectId: 'p_ongoing',
+        date: yesterday,
+        plannedWords: 500,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: true,
+      );
+      final yesterdayLog = DailyLogModel(
+        id: 'l_yesterday',
+        projectId: 'p_ongoing',
+        scheduleId: 's_yesterday',
+        date: yesterday,
+        plannedWords: 500,
+        actualWords: 150,
+        carryForwardWords: 0,
+        backlogCreated: 0,
+        completed: false,
+        loggedAt: yesterday,
+      );
+      await scheduleRepo.insertSchedules([yesterdaySched]);
+      await logRepo.insertLog(yesterdayLog);
+
+      // Trigger sync today
+      await syncService.syncOngoingSchedules([project]);
+
+      final updatedSched = await scheduleRepo.getScheduleForDate('p_ongoing', yesterday);
+      expect(updatedSched?.isRestDay, isTrue);
+      expect(updatedSched?.automaticRestDay, isTrue);
+      expect(updatedSched?.plannedWords, 0);
+
+      final updatedLog = await logRepo.getLogForDate('p_ongoing', yesterday);
+      expect(updatedLog?.plannedWords, 0);
+      expect(updatedLog?.backlogCreated, 0);
     });
   });
 }

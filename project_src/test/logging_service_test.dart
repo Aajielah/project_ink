@@ -8,6 +8,9 @@ import '../lib/repositories/project_repository.dart';
 import '../lib/repositories/schedule_repository.dart';
 import '../lib/repositories/daily_log_repository.dart';
 import '../lib/repositories/statistics_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../lib/shared/providers.dart';
+import '../lib/services/ongoing_sync_service.dart';
 
 // --- FAKE IN-MEMORY REPOSITORIES ---
 
@@ -176,7 +179,7 @@ void main() {
       expect(updatedProject?.projectStreak, 1);
     });
 
-    test('logging under target: creates backlog', () async {
+    test('logging under target: does not create backlog today, creates backlog after rollover', () async {
       final sched = ScheduleModel(
         id: 's1', projectId: 'p1', date: cleanToday, plannedWords: 500,
         isRestDay: false, completed: false, automaticRestDay: false, locked: false,
@@ -186,10 +189,49 @@ void main() {
       // Log only 200 words
       await loggingService.logWords(projectId: 'p1', date: cleanToday, actualWords: 200);
 
-      final updatedProject = await projectRepo.getProjectById('p1');
-      expect(updatedProject?.writtenWords, 200);
-      expect(updatedProject?.backlogWords, 300); // 300 words added to backlog
-      expect(updatedProject?.projectStreak, 0); // streak reset
+      final updatedProjectToday = await projectRepo.getProjectById('p1');
+      expect(updatedProjectToday?.writtenWords, 200);
+      expect(updatedProjectToday?.backlogWords, 0); // No backlog generated today!
+      expect(updatedProjectToday?.projectStreak, 0); // Streak reset
+
+      // Simulate day rollover: move the schedule and log to yesterday (1 day ago)
+      final yesterday = cleanToday.subtract(const Duration(days: 1));
+      
+      final idxSched = scheduleRepo.db.indexWhere((s) => s.id == 's1');
+      if (idxSched != -1) {
+        scheduleRepo.db[idxSched] = scheduleRepo.db[idxSched].copyWith(
+          date: yesterday,
+        );
+      }
+      
+      final log = await logRepo.getLogForDate('p1', cleanToday);
+      if (log != null) {
+        final idxLog = logRepo.db.indexWhere((l) => l.id == log.id);
+        if (idxLog != -1) {
+          logRepo.db[idxLog] = logRepo.db[idxLog].copyWith(
+            date: yesterday,
+            loggedAt: yesterday,
+          );
+        }
+      }
+
+      // Run sync service to catch up and calculate backlog
+      final container = ProviderContainer(
+        overrides: [
+          projectRepositoryProvider.overrideWithValue(projectRepo),
+          scheduleRepositoryProvider.overrideWithValue(scheduleRepo),
+          dailyLogRepositoryProvider.overrideWithValue(logRepo),
+        ],
+      );
+      final syncService = container.read(ongoingSyncServiceProvider);
+      
+      final project = await projectRepo.getProjectById('p1');
+      if (project != null) {
+        await syncService.syncFixedGoalBacklogs([project]);
+      }
+
+      final updatedProjectRollover = await projectRepo.getProjectById('p1');
+      expect(updatedProjectRollover?.backlogWords, 300); // 300 words added to backlog after rollover!
     });
 
     test('logging over target: carry-forward saves to pendingCarryForward and does not modify future targets', () async {

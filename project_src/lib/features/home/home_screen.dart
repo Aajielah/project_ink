@@ -162,11 +162,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _triggerQuickLog(List<TodayWritingTask> tasks) {
-    final writingTasks = tasks.where((t) => !t.schedule.isRestDay).toList();
+    final writingTasks = tasks.where((t) => !t.schedule.isRestDay && !t.schedule.completed).toList();
 
     if (writingTasks.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No writing tasks scheduled for today! Enjoy your rest day.')),
+        const SnackBar(content: Text('All scheduled projects are already completed for today!')),
       );
       return;
     }
@@ -637,18 +637,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _submitLog(String projectId, int words) async {
     try {
+      final project = ref.read(projectsProvider).value?.firstWhere((p) => p.id == projectId);
+      
       final wasCompleted = await ref.read(loggingServiceProvider).logWords(
             projectId: projectId,
             date: DateTime.now(),
             actualWords: words,
           );
       _refreshAll();
-      if (wasCompleted) {
-        final project = ref.read(projectsProvider).value?.firstWhere((p) => p.id == projectId);
-        if (context.mounted && project != null) {
+      if (wasCompleted && project != null) {
+        if (context.mounted) {
           _showCompletionDialog(context, project.name);
         }
-      } else {
+      } else if (!wasCompleted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Successfully logged $words words!')),
         );

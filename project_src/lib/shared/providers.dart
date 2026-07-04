@@ -117,6 +117,11 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         await _syncService.syncOngoingSchedules(activeOngoing);
       }
       
+      final activeFixed = active.where((p) => p.projectType != ProjectType.ongoing).toList();
+      if (activeFixed.isNotEmpty) {
+        await _syncService.syncFixedGoalBacklogs(activeFixed);
+      }
+      
       // Apply pending carry forward credit for active projects (both fixed and ongoing)
       final loggingService = _ref.read(loggingServiceProvider);
       await loggingService.checkAndApplyPendingCarryForward(active);

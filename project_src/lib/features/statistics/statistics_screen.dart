@@ -82,47 +82,83 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     logsByMonth.forEach((key, logs) {
       final label = DateFormat('MMMM yyyy').format(key);
       final words = logs.fold<int>(0, (sum, l) => sum + l.actualWords);
-      final writingDays = logs.where((l) => l.actualWords > 0).length;
+      
+      // Count distinct calendar dates where actualWords > 0
+      final writingDays = logs.where((l) => l.actualWords > 0)
+          .map((l) => '${l.date.year}-${l.date.month}-${l.date.day}')
+          .toSet()
+          .length;
 
-      int best = 0;
+      // Group logs by distinct calendar day to calculate total daily words for the best day
+      final Map<String, int> dailyTotals = {};
       for (final l in logs) {
-        if (l.actualWords > best) best = l.actualWords;
+        final dateKey = '${l.date.year}-${l.date.month}-${l.date.day}';
+        dailyTotals[dateKey] = (dailyTotals[dateKey] ?? 0) + l.actualWords;
+      }
+      int best = 0;
+      for (final total in dailyTotals.values) {
+        if (total > best) best = total;
       }
 
       final scheds = schedsByMonth[key] ?? [];
-      final restDays = scheds.where((s) => s.isRestDay).length;
+      
+      // Count distinct calendar dates for rest days
+      final restDays = scheds.where((s) => s.isRestDay)
+          .map((s) => '${s.date.year}-${s.date.month}-${s.date.day}')
+          .toSet()
+          .length;
 
-      // Calculate longest streak in this month
-      logs.sort((a, b) => a.date.compareTo(b.date));
-      int currentStreak = 0;
-      int maxStreak = 0;
-      DateTime? prevDate;
-
+      // Calculate longest streak in this month using daily states
+      final Map<String, List<Schedule>> schedulesByDate = {};
+      for (final s in scheds) {
+        final dateKey = '${s.date.year}-${s.date.month}-${s.date.day}';
+        schedulesByDate.putIfAbsent(dateKey, () => []).add(s);
+      }
+      final Map<String, List<DailyLog>> logsByDate = {};
       for (final l in logs) {
-        if (l.completed) {
-          if (prevDate == null) {
-            currentStreak = 1;
-          } else {
-            final diff = l.date.difference(prevDate).inDays;
-            if (diff == 1) {
-              currentStreak++;
-            } else if (diff > 1) {
-              currentStreak = 1;
-            }
-          }
-          prevDate = l.date;
-          if (currentStreak > maxStreak) maxStreak = currentStreak;
+        final dateKey = '${l.date.year}-${l.date.month}-${l.date.day}';
+        logsByDate.putIfAbsent(dateKey, () => []).add(l);
+      }
+
+      final daysInMonth = DateTime(key.year, key.month + 1, 0).day;
+      final List<String> monthlyStates = [];
+      for (int day = 1; day <= daysInMonth; day++) {
+        final dateKey = '${key.year}-${key.month}-$day';
+        final dayScheds = schedulesByDate[dateKey] ?? [];
+        final dayLogs = logsByDate[dateKey] ?? [];
+
+        if (dayScheds.isEmpty && dayLogs.isEmpty) {
+          monthlyStates.add('rest');
         } else {
-          final scheduleForLog = scheds.firstWhere(
-            (s) => s.id == l.scheduleId,
-            orElse: () => scheds.firstWhere((s) => s.date.day == l.date.day),
-          );
-          if (scheduleForLog.isRestDay) {
-            prevDate = l.date;
+          bool hasCompleted = dayLogs.any((l) => l.completed);
+          bool hasScheduledWriting = dayScheds.any((s) => !s.isRestDay);
+
+          if (hasCompleted) {
+            monthlyStates.add('completed');
+          } else if (hasScheduledWriting) {
+            final today = DateTime.now();
+            final isToday = (key.year == today.year && key.month == today.month && day == today.day);
+            if (isToday) {
+              monthlyStates.add('rest');
+            } else {
+              monthlyStates.add('failed');
+            }
           } else {
-            currentStreak = 0;
-            prevDate = null;
+            monthlyStates.add('rest');
           }
+        }
+      }
+
+      int tempStreak = 0;
+      int maxStreak = 0;
+      for (final state in monthlyStates) {
+        if (state == 'completed') {
+          tempStreak++;
+          if (tempStreak > maxStreak) {
+            maxStreak = tempStreak;
+          }
+        } else if (state == 'failed') {
+          tempStreak = 0;
         }
       }
 

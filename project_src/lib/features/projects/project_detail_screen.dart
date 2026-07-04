@@ -162,21 +162,26 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
       _logController.clear();
       _loadTodayLog();
 
+      String? projectName;
+      ref.read(projectsProvider).whenOrNull(
+        data: (projects) {
+          try {
+            projectName = projects.firstWhere((p) => p.id == widget.projectId).name;
+          } catch (_) {}
+        },
+      );
+
       ref.invalidate(projectsProvider);
       ref.invalidate(statisticsProvider);
       ref.invalidate(homeQuoteProvider(widget.projectId));
       ref.invalidate(homeEncouragementProvider(widget.projectId));
       setState(() {});
 
-      if (wasCompleted) {
-        final projectsAsync = ref.read(projectsProvider);
-        final project = projectsAsync.whenOrNull(
-          data: (projects) => projects.firstWhere((p) => p.id == widget.projectId),
-        );
-        if (mounted && project != null) {
-          _showCompletionDialog(context, project.name);
+      if (wasCompleted && projectName != null) {
+        if (mounted) {
+          _showCompletionDialog(context, projectName!);
         }
-      } else {
+      } else if (!wasCompleted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Words logged successfully!')),
         );
@@ -935,19 +940,37 @@ class _ThisWeekTab extends ConsumerWidget {
     final sunday = monday.add(const Duration(days: 6));
 
     final schedRepo = ref.watch(scheduleRepositoryProvider);
+    final logRepo = ref.watch(dailyLogRepositoryProvider);
 
-    return FutureBuilder<List<ScheduleModel>>(
-      future: schedRepo.getSchedulesForDateRange(project.id, monday, sunday),
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        schedRepo.getSchedulesForDateRange(project.id, monday, sunday),
+        logRepo.getLogsForProject(project.id),
+      ]),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final weekSchedules = snapshot.data!;
+        final weekSchedules = snapshot.data![0] as List<ScheduleModel>;
+        final allLogs = snapshot.data![1] as List<DailyLogModel>;
+
         ScheduleModel? todaySchedule;
         try {
           todaySchedule = weekSchedules.firstWhere((s) => s.date.day == cleanToday.day);
         } catch (_) {}
+
+        DailyLogModel? todayLog;
+        if (todaySchedule != null) {
+          try {
+            todayLog = allLogs.firstWhere(
+              (l) => l.date.year == todaySchedule!.date.year &&
+                     l.date.month == todaySchedule.date.month &&
+                     l.date.day == todaySchedule.date.day,
+            );
+          } catch (_) {}
+        }
+        final loggedToday = todayLog?.actualWords ?? 0;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -971,7 +994,17 @@ class _ThisWeekTab extends ConsumerWidget {
                         Text(
                           todaySchedule.isRestDay
                               ? 'Today is scheduled as a REST DAY. Writing is optional!'
-                              : 'Target for today: ${todaySchedule.plannedWords} words.',
+                              : (() {
+                                  final remaining = todaySchedule.plannedWords - loggedToday;
+                                  if (remaining > 0) {
+                                    if (loggedToday > 0) {
+                                      return 'Progress: $loggedToday / ${todaySchedule.plannedWords} words.\n✨ $remaining words remaining. You can do it!';
+                                    } else {
+                                      return '$remaining words left today.\nKeep going—you\'ve almost made it!';
+                                    }
+                                  }
+                                  return 'Progress: $loggedToday / ${todaySchedule.plannedWords} words.';
+                                })(),
                           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
                         ),
                         const SizedBox(height: 16),
@@ -1043,6 +1076,16 @@ class _ThisWeekTab extends ConsumerWidget {
                   final s = weekSchedules[index];
                   final isToday = s.date.day == cleanToday.day;
 
+                  DailyLogModel? dayLog;
+                  try {
+                    dayLog = allLogs.firstWhere(
+                      (l) => l.date.year == s.date.year &&
+                             l.date.month == s.date.month &&
+                             l.date.day == s.date.day,
+                    );
+                  } catch (_) {}
+                  final logged = dayLog?.actualWords ?? 0;
+
                   return Card(
                     color: isToday ? theme.colorScheme.primaryContainer.withOpacity(0.3) : null,
                     shape: isToday
@@ -1069,7 +1112,7 @@ class _ThisWeekTab extends ConsumerWidget {
                         style: isToday ? const TextStyle(fontWeight: FontWeight.bold) : null,
                       ),
                       subtitle: Text(
-                        s.isRestDay ? 'Rest Day' : '${s.plannedWords} words planned',
+                        s.isRestDay ? 'Rest Day' : '$logged / ${s.plannedWords} words',
                       ),
                       trailing: isToday
                           ? Card(

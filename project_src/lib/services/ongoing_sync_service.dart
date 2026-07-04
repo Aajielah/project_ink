@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/project.dart';
 import '../models/schedule.dart';
+import '../models/daily_log.dart';
 import '../shared/providers.dart';
 
 final ongoingSyncServiceProvider = Provider((ref) => OngoingSyncService(ref));
@@ -62,10 +63,11 @@ class OngoingSyncService {
         continue;
       }
 
-      // Case 2: Finalize past unlocked schedules (convert to automatic Rest Days)
+      // Case 2: Finalize past schedules (convert to automatic Rest Days if not completed)
+      final logRepo = _ref.read(dailyLogRepositoryProvider);
       final List<ScheduleModel> toUpdate = [];
       for (final s in schedules) {
-        if (s.date.isBefore(cleanToday) && !s.locked) {
+        if (s.date.isBefore(cleanToday) && !s.completed && (!s.isRestDay || s.plannedWords > 0)) {
           toUpdate.add(s.copyWith(
             plannedWords: 0,
             isRestDay: true,
@@ -73,6 +75,15 @@ class OngoingSyncService {
             completed: false,
             locked: true,
           ));
+          
+          final existingLog = await logRepo.getLogForDate(project.id, s.date);
+          if (existingLog != null) {
+            await logRepo.insertLog(existingLog.copyWith(
+              plannedWords: 0,
+              backlogCreated: 0,
+              completed: false,
+            ));
+          }
         }
       }
 
@@ -130,6 +141,69 @@ class OngoingSyncService {
       }
       if (toInsert.isNotEmpty) {
         await schedRepo.insertSchedules(toInsert);
+      }
+    }
+  }
+
+  /// Incremental rollover for Fixed Goal projects.
+  /// Scans for past uncompleted writing days and moves their remaining targets to backlog.
+  Future<void> syncFixedGoalBacklogs(List<ProjectModel> activeProjects) async {
+    final schedRepo = _ref.read(scheduleRepositoryProvider);
+    final logRepo = _ref.read(dailyLogRepositoryProvider);
+    final projRepo = _ref.read(projectRepositoryProvider);
+    
+    final today = DateTime.now();
+    final cleanToday = DateTime(today.year, today.month, today.day);
+    final uuid = const Uuid();
+
+    for (final project in activeProjects) {
+      if (project.projectType == ProjectType.ongoing) continue;
+
+      final schedules = await schedRepo.getSchedulesForProject(project.id);
+      final pastWritingSchedules = schedules.where((s) => s.date.isBefore(cleanToday) && !s.isRestDay).toList();
+
+      int calculatedBacklog = 0;
+
+      for (final s in pastWritingSchedules) {
+        final existingLog = await logRepo.getLogForDate(project.id, s.date);
+        
+        if (existingLog != null) {
+          final target = s.plannedWords;
+          final actual = existingLog.actualWords;
+          if (actual < target) {
+            final backlogCreated = target - actual;
+            if (existingLog.backlogCreated != backlogCreated) {
+              await logRepo.insertLog(existingLog.copyWith(
+                backlogCreated: backlogCreated,
+              ));
+            }
+            calculatedBacklog += backlogCreated;
+          }
+        } else {
+          final backlogCreated = s.plannedWords;
+          if (backlogCreated > 0) {
+            await logRepo.insertLog(DailyLogModel(
+              id: uuid.v4(),
+              projectId: project.id,
+              scheduleId: s.id,
+              date: s.date,
+              plannedWords: s.plannedWords,
+              actualWords: 0,
+              carryForwardWords: 0,
+              backlogCreated: backlogCreated,
+              completed: false,
+              loggedAt: s.date,
+            ));
+            calculatedBacklog += backlogCreated;
+          }
+        }
+      }
+
+      if (project.backlogWords != calculatedBacklog) {
+        final updatedProject = project.copyWith(
+          backlogWords: calculatedBacklog,
+        );
+        await projRepo.updateProject(updatedProject);
       }
     }
   }

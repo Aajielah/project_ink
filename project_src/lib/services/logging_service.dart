@@ -76,10 +76,9 @@ class LoggingService {
     final isOngoing = project.projectType == ProjectType.ongoing;
     final plannedWords = schedule.plannedWords;
     final isExcess = actualWords > plannedWords;
-    final isUnder = isOngoing ? false : (actualWords < plannedWords);
     final excessWords = isExcess ? actualWords - plannedWords : 0;
-    final backlogCreated = isUnder ? plannedWords - actualWords : 0;
-    final isCompleted = isOngoing ? (actualWords > 0) : (actualWords >= plannedWords);
+    final backlogCreated = 0; // Today is still in progress, backlog is only generated after rollover.
+    final isCompleted = actualWords >= plannedWords;
 
     // 3. Create/Update Daily Log row
     final existingLog = await _logRepo.getLogForDate(projectId, cleanDate);
@@ -132,13 +131,13 @@ class LoggingService {
     final bool wasCompletedBefore = existingLog?.completed ?? false;
     
     int newStreak = project.projectStreak;
+    final yesterdayStreak = await _calculateStreakBeforeToday(projectId, cleanDate);
     if (isCompleted) {
       if (!wasCompletedBefore) {
-        final yesterdayStreak = await _calculateStreakBeforeToday(projectId, cleanDate);
         newStreak = yesterdayStreak + 1;
       }
     } else {
-      newStreak = 0; // broke the streak
+      newStreak = yesterdayStreak; // keep streak up to yesterday since today is still ongoing
     }
     final newLongestStreak = max(project.longestProjectStreak, newStreak);
 
@@ -216,44 +215,6 @@ class LoggingService {
         checkDate = checkDate.subtract(const Duration(days: 1));
       } else {
         break;
-      }
-    }
-    return streak;
-  }
-
-  Future<int> _calculateGlobalStreakBeforeToday(DateTime cleanToday) async {
-    int streak = 0;
-    var checkDate = cleanToday.subtract(const Duration(days: 1));
-    while (true) {
-      final allProjects = await _projectRepo.getAllProjects();
-      bool hasAnyCompleted = false;
-      bool hasAnyWritingScheduled = false;
-      bool foundAnySchedule = false;
-
-      for (final p in allProjects) {
-        final sched = await _scheduleRepo.getScheduleForDate(p.id, checkDate);
-        if (sched == null) continue;
-        foundAnySchedule = true;
-        if (!sched.isRestDay) {
-          hasAnyWritingScheduled = true;
-        }
-        final log = await _logRepo.getLogForDate(p.id, checkDate);
-        if (log != null && log.completed) {
-          hasAnyCompleted = true;
-        }
-      }
-
-      if (!foundAnySchedule) {
-        break; // reached start of timeline for all projects
-      }
-
-      if (hasAnyCompleted) {
-        streak++;
-        checkDate = checkDate.subtract(const Duration(days: 1));
-      } else if (hasAnyWritingScheduled) {
-        break;
-      } else {
-        checkDate = checkDate.subtract(const Duration(days: 1));
       }
     }
     return streak;
