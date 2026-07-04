@@ -523,6 +523,14 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('fixed'));
+  static const VerificationMeta _pendingCarryForwardMeta =
+      const VerificationMeta('pendingCarryForward');
+  @override
+  late final GeneratedColumn<int> pendingCarryForward = GeneratedColumn<int>(
+      'pending_carry_forward', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -547,7 +555,8 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         updatedAt,
         coverImagePath,
         coverType,
-        projectType
+        projectType,
+        pendingCarryForward
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -702,6 +711,12 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           projectType.isAcceptableOrUnknown(
               data['project_type']!, _projectTypeMeta));
     }
+    if (data.containsKey('pending_carry_forward')) {
+      context.handle(
+          _pendingCarryForwardMeta,
+          pendingCarryForward.isAcceptableOrUnknown(
+              data['pending_carry_forward']!, _pendingCarryForwardMeta));
+    }
     return context;
   }
 
@@ -758,6 +773,8 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           .read(DriftSqlType.string, data['${effectivePrefix}cover_type']),
       projectType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}project_type'])!,
+      pendingCarryForward: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}pending_carry_forward'])!,
     );
   }
 
@@ -791,6 +808,7 @@ class Project extends DataClass implements Insertable<Project> {
   final String? coverImagePath;
   final String? coverType;
   final String projectType;
+  final int pendingCarryForward;
   const Project(
       {required this.id,
       required this.name,
@@ -814,7 +832,8 @@ class Project extends DataClass implements Insertable<Project> {
       required this.updatedAt,
       this.coverImagePath,
       this.coverType,
-      required this.projectType});
+      required this.projectType,
+      required this.pendingCarryForward});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -849,6 +868,7 @@ class Project extends DataClass implements Insertable<Project> {
       map['cover_type'] = Variable<String>(coverType);
     }
     map['project_type'] = Variable<String>(projectType);
+    map['pending_carry_forward'] = Variable<int>(pendingCarryForward);
     return map;
   }
 
@@ -885,6 +905,7 @@ class Project extends DataClass implements Insertable<Project> {
           ? const Value.absent()
           : Value(coverType),
       projectType: Value(projectType),
+      pendingCarryForward: Value(pendingCarryForward),
     );
   }
 
@@ -918,6 +939,8 @@ class Project extends DataClass implements Insertable<Project> {
       coverImagePath: serializer.fromJson<String?>(json['coverImagePath']),
       coverType: serializer.fromJson<String?>(json['coverType']),
       projectType: serializer.fromJson<String>(json['projectType']),
+      pendingCarryForward:
+          serializer.fromJson<int>(json['pendingCarryForward']),
     );
   }
   @override
@@ -947,6 +970,7 @@ class Project extends DataClass implements Insertable<Project> {
       'coverImagePath': serializer.toJson<String?>(coverImagePath),
       'coverType': serializer.toJson<String?>(coverType),
       'projectType': serializer.toJson<String>(projectType),
+      'pendingCarryForward': serializer.toJson<int>(pendingCarryForward),
     };
   }
 
@@ -973,7 +997,8 @@ class Project extends DataClass implements Insertable<Project> {
           DateTime? updatedAt,
           Value<String?> coverImagePath = const Value.absent(),
           Value<String?> coverType = const Value.absent(),
-          String? projectType}) =>
+          String? projectType,
+          int? pendingCarryForward}) =>
       Project(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1001,6 +1026,7 @@ class Project extends DataClass implements Insertable<Project> {
             coverImagePath.present ? coverImagePath.value : this.coverImagePath,
         coverType: coverType.present ? coverType.value : this.coverType,
         projectType: projectType ?? this.projectType,
+        pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
       );
   Project copyWithCompanion(ProjectsCompanion data) {
     return Project(
@@ -1053,6 +1079,9 @@ class Project extends DataClass implements Insertable<Project> {
       coverType: data.coverType.present ? data.coverType.value : this.coverType,
       projectType:
           data.projectType.present ? data.projectType.value : this.projectType,
+      pendingCarryForward: data.pendingCarryForward.present
+          ? data.pendingCarryForward.value
+          : this.pendingCarryForward,
     );
   }
 
@@ -1081,7 +1110,8 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('updatedAt: $updatedAt, ')
           ..write('coverImagePath: $coverImagePath, ')
           ..write('coverType: $coverType, ')
-          ..write('projectType: $projectType')
+          ..write('projectType: $projectType, ')
+          ..write('pendingCarryForward: $pendingCarryForward')
           ..write(')'))
         .toString();
   }
@@ -1110,7 +1140,8 @@ class Project extends DataClass implements Insertable<Project> {
         updatedAt,
         coverImagePath,
         coverType,
-        projectType
+        projectType,
+        pendingCarryForward
       ]);
   @override
   bool operator ==(Object other) =>
@@ -1138,7 +1169,8 @@ class Project extends DataClass implements Insertable<Project> {
           other.updatedAt == this.updatedAt &&
           other.coverImagePath == this.coverImagePath &&
           other.coverType == this.coverType &&
-          other.projectType == this.projectType);
+          other.projectType == this.projectType &&
+          other.pendingCarryForward == this.pendingCarryForward);
 }
 
 class ProjectsCompanion extends UpdateCompanion<Project> {
@@ -1165,6 +1197,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<String?> coverImagePath;
   final Value<String?> coverType;
   final Value<String> projectType;
+  final Value<int> pendingCarryForward;
   final Value<int> rowid;
   const ProjectsCompanion({
     this.id = const Value.absent(),
@@ -1190,6 +1223,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.coverImagePath = const Value.absent(),
     this.coverType = const Value.absent(),
     this.projectType = const Value.absent(),
+    this.pendingCarryForward = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectsCompanion.insert({
@@ -1216,6 +1250,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.coverImagePath = const Value.absent(),
     this.coverType = const Value.absent(),
     this.projectType = const Value.absent(),
+    this.pendingCarryForward = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1252,6 +1287,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<String>? coverImagePath,
     Expression<String>? coverType,
     Expression<String>? projectType,
+    Expression<int>? pendingCarryForward,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1280,6 +1316,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (coverImagePath != null) 'cover_image_path': coverImagePath,
       if (coverType != null) 'cover_type': coverType,
       if (projectType != null) 'project_type': projectType,
+      if (pendingCarryForward != null)
+        'pending_carry_forward': pendingCarryForward,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1308,6 +1346,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       Value<String?>? coverImagePath,
       Value<String?>? coverType,
       Value<String>? projectType,
+      Value<int>? pendingCarryForward,
       Value<int>? rowid}) {
     return ProjectsCompanion(
       id: id ?? this.id,
@@ -1333,6 +1372,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       coverImagePath: coverImagePath ?? this.coverImagePath,
       coverType: coverType ?? this.coverType,
       projectType: projectType ?? this.projectType,
+      pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1410,6 +1450,9 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (projectType.present) {
       map['project_type'] = Variable<String>(projectType.value);
     }
+    if (pendingCarryForward.present) {
+      map['pending_carry_forward'] = Variable<int>(pendingCarryForward.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1442,6 +1485,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('coverImagePath: $coverImagePath, ')
           ..write('coverType: $coverType, ')
           ..write('projectType: $projectType, ')
+          ..write('pendingCarryForward: $pendingCarryForward, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1921,7 +1965,7 @@ class $DailyLogsTable extends DailyLogs
       'schedule_id', aliasedName, true,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      $customConstraints: 'REFERENCES schedules(id) ON DELETE SET NULL');
+      $customConstraints: 'REFERENCES schedules(id) ON DELETE CASCADE');
   static const VerificationMeta _dateMeta = const VerificationMeta('date');
   @override
   late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
@@ -2060,10 +2104,6 @@ class $DailyLogsTable extends DailyLogs
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-        {projectId, date},
-      ];
   @override
   DailyLog map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -3924,7 +3964,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
             on: TableUpdateQuery.onTableName('schedules',
                 limitUpdateKind: UpdateKind.delete),
             result: [
-              TableUpdate('daily_logs', kind: UpdateKind.update),
+              TableUpdate('daily_logs', kind: UpdateKind.delete),
             ],
           ),
         ],
@@ -4138,6 +4178,7 @@ typedef $$ProjectsTableCreateCompanionBuilder = ProjectsCompanion Function({
   Value<String?> coverImagePath,
   Value<String?> coverType,
   Value<String> projectType,
+  Value<int> pendingCarryForward,
   Value<int> rowid,
 });
 typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
@@ -4164,6 +4205,7 @@ typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
   Value<String?> coverImagePath,
   Value<String?> coverType,
   Value<String> projectType,
+  Value<int> pendingCarryForward,
   Value<int> rowid,
 });
 
@@ -4287,6 +4329,10 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<String> get projectType => $composableBuilder(
       column: $table.projectType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get pendingCarryForward => $composableBuilder(
+      column: $table.pendingCarryForward,
+      builder: (column) => ColumnFilters(column));
 
   Expression<bool> schedulesRefs(
       Expression<bool> Function($$SchedulesTableFilterComposer f) f) {
@@ -4419,6 +4465,10 @@ class $$ProjectsTableOrderingComposer
 
   ColumnOrderings<String> get projectType => $composableBuilder(
       column: $table.projectType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get pendingCarryForward => $composableBuilder(
+      column: $table.pendingCarryForward,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$ProjectsTableAnnotationComposer
@@ -4498,6 +4548,9 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<String> get projectType => $composableBuilder(
       column: $table.projectType, builder: (column) => column);
+
+  GeneratedColumn<int> get pendingCarryForward => $composableBuilder(
+      column: $table.pendingCarryForward, builder: (column) => column);
 
   Expression<T> schedulesRefs<T extends Object>(
       Expression<T> Function($$SchedulesTableAnnotationComposer a) f) {
@@ -4588,6 +4641,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<String?> coverImagePath = const Value.absent(),
             Value<String?> coverType = const Value.absent(),
             Value<String> projectType = const Value.absent(),
+            Value<int> pendingCarryForward = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion(
@@ -4614,6 +4668,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             coverImagePath: coverImagePath,
             coverType: coverType,
             projectType: projectType,
+            pendingCarryForward: pendingCarryForward,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -4640,6 +4695,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<String?> coverImagePath = const Value.absent(),
             Value<String?> coverType = const Value.absent(),
             Value<String> projectType = const Value.absent(),
+            Value<int> pendingCarryForward = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion.insert(
@@ -4666,6 +4722,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             coverImagePath: coverImagePath,
             coverType: coverType,
             projectType: projectType,
+            pendingCarryForward: pendingCarryForward,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

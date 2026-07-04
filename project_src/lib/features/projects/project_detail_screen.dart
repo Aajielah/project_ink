@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +12,7 @@ import '../../models/schedule.dart';
 import '../../models/daily_log.dart';
 import '../../services/ongoing_sync_service.dart';
 import 'project_duration_type.dart';
+import '../../shared/completion_messages.dart';
 
 class ProjectDetailScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -29,6 +31,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadTodayLog();
+  }
+
+  Future<void> _loadTodayLog() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final log = await ref.read(dailyLogRepositoryProvider).getLogForDate(widget.projectId, today);
+    if (log != null && mounted) {
+      _logController.text = log.actualWords.toString();
+    }
   }
 
   @override
@@ -36,6 +48,67 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
     _tabController.dispose();
     _logController.dispose();
     super.dispose();
+  }
+
+  void _showCompletionDialog(BuildContext context, String projectName) {
+    final message = CompletionMessages.getRandomMessage();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.stars, color: Colors.amber, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Today\'s Goal Complete!',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'You finished writing for "$projectName" today.',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                '"$message"',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Great!'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _logWords(int planned) async {
@@ -50,24 +123,62 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
       return;
     }
 
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Today's Log"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Words entered: $actual"),
+            const SizedBox(height: 12),
+            const Text("Are you sure these are today's words?"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     final loggingService = ref.read(loggingServiceProvider);
     try {
-      await loggingService.logWords(
+      final wasCompleted = await loggingService.logWords(
         projectId: widget.projectId,
         date: DateTime.now(),
         actualWords: actual,
       );
       
       _logController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Words logged successfully!')),
-      );
+      _loadTodayLog();
 
       ref.invalidate(projectsProvider);
       ref.invalidate(statisticsProvider);
       ref.invalidate(homeQuoteProvider(widget.projectId));
       ref.invalidate(homeEncouragementProvider(widget.projectId));
       setState(() {});
+
+      if (wasCompleted) {
+        final projectAsync = ref.read(projectDetailProvider(widget.projectId));
+        final project = projectAsync.value;
+        if (mounted && project != null) {
+          _showCompletionDialog(context, project.name);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Words logged successfully!')),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
@@ -862,28 +973,54 @@ class _ThisWeekTab extends ConsumerWidget {
                           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: logController,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Words written today',
-                                  border: OutlineInputBorder(),
+                        if (todaySchedule.completed) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green.withOpacity(0.4), width: 1),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  '✓ Completed Today',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: logController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Words written today',
+                                    border: OutlineInputBorder(),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton(
-                              onPressed: () => onLogSubmitted(todaySchedule?.plannedWords ?? 0),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                onPressed: () => onLogSubmitted(todaySchedule?.plannedWords ?? 0),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                                ),
+                                child: const Text('Log'),
                               ),
-                              child: const Text('Log'),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1011,24 +1148,131 @@ class _HistoryTab extends ConsumerWidget {
                 subtitle: Text(
                   'Wrote: ${l.actualWords} / ${l.plannedWords} planned',
                 ),
-                trailing: Text(
-                  isExcess
-                      ? '+${diff} words'
-                      : diff < 0
-                          ? '${diff} words'
-                          : 'On target',
-                  style: TextStyle(
-                    color: isExcess
-                        ? theme.colorScheme.primary
-                        : diff < 0
-                            ? theme.colorScheme.error
-                            : theme.colorScheme.secondary,
-                    fontWeight: FontWeight.bold,
-                  ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      isExcess
+                          ? '+${diff} words'
+                          : diff < 0
+                              ? '${diff} words'
+                              : 'On target',
+                      style: TextStyle(
+                        color: isExcess
+                            ? theme.colorScheme.primary
+                            : diff < 0
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.secondary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (l.date.year == DateTime.now().year &&
+                        l.date.month == DateTime.now().month &&
+                        l.date.day == DateTime.now().day) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20),
+                        tooltip: "Edit today's log",
+                        onPressed: () {
+                          _showEditLogDialog(context, ref, l);
+                        },
+                      ),
+                    ],
+                  ],
                 ),
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showEditLogDialog(BuildContext context, WidgetRef ref, DailyLogModel log) {
+    final controller = TextEditingController(text: log.actualWords.toString());
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit Today's Log"),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: 'Words Written Today',
+              suffixText: 'words',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final text = controller.text.trim();
+                if (text.isEmpty) return;
+                final words = int.tryParse(text) ?? 0;
+                if (words < 0) return;
+
+                Navigator.pop(context);
+
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text("Confirm Today's Log Edit"),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("New words entered: $words"),
+                        const SizedBox(height: 12),
+                        const Text("Are you sure you want to update today's log?"),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Confirm'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirmed == true) {
+                  try {
+                    await ref.read(loggingServiceProvider).logWords(
+                      projectId: log.projectId,
+                      date: DateTime.now(),
+                      actualWords: words,
+                    );
+                    
+                    ref.invalidate(projectsProvider);
+                    ref.invalidate(statisticsProvider);
+                    ref.invalidate(homeQuoteProvider(log.projectId));
+                    ref.invalidate(homeEncouragementProvider(log.projectId));
+                    ref.invalidate(projectDetailProvider(log.projectId));
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Log updated successfully!')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to update log: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Continue'),
+            ),
+          ],
         );
       },
     );

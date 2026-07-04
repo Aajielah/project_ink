@@ -38,6 +38,7 @@ class Projects extends Table {
   TextColumn get coverImagePath => text().nullable()();
   TextColumn get coverType => text().nullable()();
   TextColumn get projectType => text().withDefault(const Constant('fixed'))();
+  IntColumn get pendingCarryForward => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -66,7 +67,7 @@ class Schedules extends Table {
 class DailyLogs extends Table {
   TextColumn get id => text()();
   TextColumn get projectId => text().customConstraint('REFERENCES projects(id) ON DELETE CASCADE')();
-  TextColumn get scheduleId => text().nullable().customConstraint('REFERENCES schedules(id) ON DELETE SET NULL')();
+  TextColumn get scheduleId => text().nullable().customConstraint('REFERENCES schedules(id) ON DELETE CASCADE')();
   DateTimeColumn get date => dateTime()();
   IntColumn get plannedWords => integer()();
   IntColumn get actualWords => integer()();
@@ -77,11 +78,6 @@ class DailyLogs extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
-
-  @override
-  List<Set<Column>> get uniqueKeys => [
-        {projectId, date},
-      ];
 }
 
 class StatisticsTable extends Table {
@@ -147,7 +143,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -162,6 +158,9 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 3) {
           await m.addColumn(projects, projects.projectType);
+        }
+        if (from < 4) {
+          await m.addColumn(projects, projects.pendingCarryForward);
         }
       },
       beforeOpen: (details) async {

@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database.dart';
@@ -108,14 +110,19 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     state = const AsyncValue.loading();
     try {
       final list = await _projectRepo.getAllProjects();
-      final activeOngoing = list.where((p) => p.status == ProjectStatus.active && p.projectType == ProjectType.ongoing).toList();
+      final active = list.where((p) => p.status == ProjectStatus.active).toList();
+      final activeOngoing = active.where((p) => p.projectType == ProjectType.ongoing).toList();
+      
       if (activeOngoing.isNotEmpty) {
         await _syncService.syncOngoingSchedules(activeOngoing);
-        final updatedList = await _projectRepo.getAllProjects();
-        state = AsyncValue.data(updatedList);
-      } else {
-        state = AsyncValue.data(list);
       }
+      
+      // Apply pending carry forward credit for active projects (both fixed and ongoing)
+      final loggingService = _ref.read(loggingServiceProvider);
+      await loggingService.checkAndApplyPendingCarryForward(active);
+
+      final updatedList = await _projectRepo.getAllProjects();
+      state = AsyncValue.data(updatedList);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -260,6 +267,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       await loadProjects();
       await _statsRepo.recalculateStatistics();
       _invalidateAllDependentProviders();
+      await cleanupOrphanedCovers();
       return null;
     } catch (e) {
       return 'Failed to save project: $e';
@@ -270,6 +278,27 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     _ref.invalidate(statisticsProvider);
     _ref.invalidate(homeEncouragementProvider);
     _ref.invalidate(homeQuoteProvider);
+  }
+
+  Future<void> cleanupOrphanedCovers() async {
+    try {
+      final list = await _projectRepo.getAllProjects();
+      final activePaths = list
+          .where((p) => p.coverType == 'uploaded' && p.coverImagePath != null)
+          .map((p) => p.coverImagePath!)
+          .toSet();
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final files = appDir.listSync();
+      for (final entity in files) {
+        if (entity is File) {
+          final filename = entity.path.split('/').last.split('\\').last;
+          if (filename.startsWith('cover_') && !activePaths.contains(entity.path)) {
+            await entity.delete();
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> deleteProject(String id) async {
@@ -283,6 +312,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       await _statsRepo.recalculateStatistics();
       _invalidateAllDependentProviders();
       await loadProjects();
+      await cleanupOrphanedCovers();
     } catch (_) {}
   }
 
@@ -324,6 +354,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       await loadProjects();
       await _statsRepo.recalculateStatistics();
       _invalidateAllDependentProviders();
+      await cleanupOrphanedCovers();
     } catch (_) {}
   }
 }

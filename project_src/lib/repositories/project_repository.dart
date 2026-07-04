@@ -32,6 +32,7 @@ class ProjectRepository {
       updatedAt: data.updatedAt,
       coverImagePath: data.coverImagePath,
       coverType: data.coverType,
+      pendingCarryForward: data.pendingCarryForward,
     );
   }
 
@@ -60,6 +61,7 @@ class ProjectRepository {
       updatedAt: Value(model.updatedAt),
       coverImagePath: Value(model.coverImagePath),
       coverType: Value(model.coverType),
+      pendingCarryForward: Value(model.pendingCarryForward),
     );
   }
 

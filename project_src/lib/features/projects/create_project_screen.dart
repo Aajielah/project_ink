@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../shared/cover_matching_helper.dart';
 
 import '../../shared/providers.dart';
 import '../../models/project.dart';
@@ -101,19 +102,29 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
 
   Future<void> _pickCustomCover() async {
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.image);
-      if (result != null && result.files.single.path != null) {
-        final pickedPath = result.files.single.path!;
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        final pickedPath = pickedFile.path;
         final appDir = await getApplicationDocumentsDirectory();
         
-        // Generate unique filename preserving extension
-        final extensionName = p.extension(pickedPath);
-        final fileName = 'cover_${DateTime.now().millisecondsSinceEpoch}$extensionName';
-        final savedFile = await File(pickedPath).copy('${appDir.path}/$fileName');
+        // Check if an identical image already exists to avoid duplication
+        final existingPath = await findExistingMatchingCover(File(pickedPath), appDir);
+        
+        String finalPath;
+        if (existingPath != null) {
+          finalPath = existingPath;
+        } else {
+          // Generate unique filename preserving extension
+          final extensionName = p.extension(pickedPath);
+          final fileName = 'cover_${DateTime.now().millisecondsSinceEpoch}$extensionName';
+          final savedFile = await File(pickedPath).copy('${appDir.path}/$fileName');
+          finalPath = savedFile.path;
+        }
         
         setState(() {
           _coverType = 'uploaded';
-          _coverImagePath = savedFile.path;
+          _coverImagePath = finalPath;
         });
       }
     } catch (e) {

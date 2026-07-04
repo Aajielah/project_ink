@@ -45,6 +45,20 @@ class BackupService {
         'dailyQuotesEnabled': u.dailyQuotesEnabled
       }).toList());
 
+      // Copy all referenced cover files to backupFolder/covers
+      final coversFolder = Directory('${backupFolder.path}/covers');
+      coversFolder.createSync(recursive: true);
+
+      for (final p in projects) {
+        if (p.coverImagePath != null) {
+          final coverFile = File(p.coverImagePath!);
+          if (coverFile.existsSync()) {
+            final filename = p.coverImagePath!.split('/').last.split('\\').last;
+            coverFile.copySync('${coversFolder.path}/$filename');
+          }
+        }
+      }
+
       writeJsonFile('projects.json', projects.map((p) => {
         'id': p.id, 'name': p.name, 'description': p.description, 'status': p.status,
         'targetWords': p.targetWords, 'writtenWords': p.writtenWords, 'remainingWords': p.remainingWords,
@@ -55,8 +69,12 @@ class BackupService {
         'projectStreak': p.projectStreak, 'longestProjectStreak': p.longestProjectStreak,
         'currentWeek': p.currentWeek, 'createdAt': p.createdAt.toIso8601String(),
         'updatedAt': p.updatedAt.toIso8601String(),
-        'coverImagePath': p.coverImagePath, 'coverType': p.coverType,
-        'projectType': p.projectType
+        // Save relative path inside covers/ folder
+        'coverImagePath': (p.coverImagePath != null && File(p.coverImagePath!).existsSync())
+            ? 'covers/${p.coverImagePath!.split('/').last.split('\\').last}'
+            : p.coverImagePath,
+        'coverType': p.coverType,
+        'projectType': p.projectType, 'pendingCarryForward': p.pendingCarryForward
       }).toList());
 
 
@@ -94,14 +112,14 @@ class BackupService {
         'backupReminder': s.backupReminder, 'vibration': s.vibration
       }).toList());
 
-      // Zip the folder using the archive library
+      // Zip the folder recursively using the archive library
       final archive = Archive();
-      final files = backupFolder.listSync();
+      final files = backupFolder.listSync(recursive: true);
       for (final file in files) {
         if (file is File) {
-          final filename = file.path.split('/').last.split('\\').last;
+          final relativePath = file.path.replaceFirst('${backupFolder.path}/', '').replaceFirst('${backupFolder.path}\\', '');
           final bytes = file.readAsBytesSync();
-          archive.addFile(ArchiveFile(filename, bytes.length, bytes));
+          archive.addFile(ArchiveFile(relativePath, bytes.length, bytes));
         }
       }
 
@@ -144,25 +162,34 @@ class BackupService {
 
       for (final file in archive) {
         if (file.isFile) {
-          final content = utf8.decode(file.content as List<int>);
-          final json = jsonDecode(content);
-          
-          if (file.name == 'user.json') {
-            decodedUser = (json as List).isNotEmpty ? json.first : null;
-          } else if (file.name == 'projects.json') {
-            decodedProjects = json as List;
-          } else if (file.name == 'schedule.json') {
-            decodedSchedules = json as List;
-          } else if (file.name == 'logs.json') {
-            decodedLogs = json as List;
-          } else if (file.name == 'statistics.json') {
-            decodedStats = json as List;
-          } else if (file.name == 'achievements.json') {
-            decodedAchievements = json as List;
-          } else if (file.name == 'quotes.json') {
-            decodedQuotes = json as List;
-          } else if (file.name == 'settings.json') {
-            decodedSettings = json as List;
+          if (file.name.endsWith('.json')) {
+            final content = utf8.decode(file.content as List<int>);
+            final json = jsonDecode(content);
+            
+            if (file.name == 'user.json') {
+              decodedUser = (json as List).isNotEmpty ? json.first : null;
+            } else if (file.name == 'projects.json') {
+              decodedProjects = json as List;
+            } else if (file.name == 'schedule.json') {
+              decodedSchedules = json as List;
+            } else if (file.name == 'logs.json') {
+              decodedLogs = json as List;
+            } else if (file.name == 'statistics.json') {
+              decodedStats = json as List;
+            } else if (file.name == 'achievements.json') {
+              decodedAchievements = json as List;
+            } else if (file.name == 'quotes.json') {
+              decodedQuotes = json as List;
+            } else if (file.name == 'settings.json') {
+              decodedSettings = json as List;
+            }
+          } else {
+            // Restore cover image flatly to private documents directory
+            final appDir = await getApplicationDocumentsDirectory();
+            final bytes = file.content as List<int>;
+            final filename = file.name.split('/').last.split('\\').last;
+            final outFile = File('${appDir.path}/$filename');
+            await outFile.writeAsBytes(bytes);
           }
         }
       }
@@ -193,7 +220,14 @@ class BackupService {
 
         // Restore Projects
         if (decodedProjects != null) {
+          final appDir = await getApplicationDocumentsDirectory();
           for (final p in decodedProjects) {
+            String? restoredCoverPath = p['coverImagePath'];
+            if (p['coverType'] == 'uploaded' && restoredCoverPath != null) {
+              final filename = restoredCoverPath.split('/').last.split('\\').last;
+              restoredCoverPath = '${appDir.path}/$filename';
+            }
+
             await _db.into(_db.projects).insert(ProjectsCompanion.insert(
               id: p['id'],
               name: p['name'],
@@ -215,9 +249,10 @@ class BackupService {
               currentWeek: Value(p['currentWeek'] ?? 1),
               createdAt: DateTime.parse(p['createdAt']),
               updatedAt: DateTime.parse(p['updatedAt']),
-              coverImagePath: Value(p['coverImagePath']),
+              coverImagePath: Value(restoredCoverPath),
               coverType: Value(p['coverType']),
               projectType: Value(p['projectType'] ?? 'fixed'),
+              pendingCarryForward: Value(p['pendingCarryForward'] ?? 0),
             ));
           }
         }

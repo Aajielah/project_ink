@@ -28,6 +28,7 @@ class ProjectModel {
   final DateTime updatedAt;
   final String? coverImagePath;
   final String? coverType;
+  final int pendingCarryForward;
 
   const ProjectModel({
     required this.id,
@@ -53,6 +54,7 @@ class ProjectModel {
     required this.updatedAt,
     this.coverImagePath,
     this.coverType,
+    this.pendingCarryForward = 0,
   });
 
 
@@ -81,6 +83,7 @@ class ProjectModel {
     DateTime? updatedAt,
     String? coverImagePath,
     String? coverType,
+    int? pendingCarryForward,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -106,6 +109,7 @@ class ProjectModel {
       updatedAt: updatedAt ?? this.updatedAt,
       coverImagePath: coverImagePath ?? this.coverImagePath,
       coverType: coverType ?? this.coverType,
+      pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
     );
   }
 
@@ -134,6 +138,7 @@ class ProjectModel {
       'updatedAt': updatedAt.toIso8601String(),
       'coverImagePath': coverImagePath,
       'coverType': coverType,
+      'pendingCarryForward': pendingCarryForward,
     };
   }
 
@@ -164,6 +169,7 @@ class ProjectModel {
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       coverImagePath: json['coverImagePath'] as String?,
       coverType: json['coverType'] as String?,
+      pendingCarryForward: json['pendingCarryForward'] as int? ?? 0,
     );
   }
 }

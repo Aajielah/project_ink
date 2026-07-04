@@ -11,6 +11,7 @@ import '../../models/schedule.dart';
 import '../../models/daily_log.dart';
 import '../../models/quote.dart';
 import '../projects/widgets/book_cover_widget.dart';
+import '../../shared/completion_messages.dart';
 
 class TodayWritingTask {
   final ProjectModel project;
@@ -178,7 +179,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showSingleLogDialog(TodayWritingTask task) {
-    final controller = TextEditingController();
+    final controller = TextEditingController(
+      text: task.log != null ? task.log!.actualWords.toString() : '',
+    );
     showDialog(
       context: context,
       builder: (context) {
@@ -210,9 +213,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (words <= 0) return;
 
                 Navigator.pop(context);
-                await _submitLog(task.project.id, words);
+                
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text("Confirm Today's Log"),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Book: ${task.project.name}"),
+                        const SizedBox(height: 8),
+                        Text("Words entered: $words"),
+                        const SizedBox(height: 12),
+                        const Text("Are you sure these are today's words?"),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Confirm'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirmed == true) {
+                  await _submitLog(task.project.id, words);
+                }
               },
-              child: const Text('Save'),
+              child: const Text('Continue'),
             )
           ],
         );
@@ -487,7 +521,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     final val = int.tryParse(totalController.text) ?? 0;
                     if (selectedMethod != 'manual' && val <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -495,15 +529,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       );
                       return;
                     }
-                    Navigator.pop(context);
-                    if (selectedMethod == 'even') {
-                      _applyEvenSplit(tasks, val);
-                    } else if (selectedMethod == 'proportional') {
-                      _applyProportionalSplit(tasks, val);
-                    } else if (selectedMethod == 'smart') {
-                      _applySmartSplit(tasks, val);
-                    } else if (selectedMethod == 'manual') {
+                    
+                    if (selectedMethod == 'manual') {
+                      Navigator.pop(context);
                       _showManualAllocationDialog(tasks);
+                      return;
+                    }
+
+                    Map<String, int> allocations = {};
+                    String strategyLabel = '';
+                    if (selectedMethod == 'even') {
+                      allocations = _calculateEvenSplit(tasks, val);
+                      strategyLabel = 'Even Split';
+                    } else if (selectedMethod == 'proportional') {
+                      allocations = _calculateProportionalSplit(tasks, val);
+                      strategyLabel = 'By Today\'s Targets';
+                    } else if (selectedMethod == 'smart') {
+                      allocations = _calculateSmartSplit(tasks, val);
+                      strategyLabel = 'Smart Split';
+                    }
+
+                    Navigator.pop(context);
+                    
+                    final confirmed = await _showSplitPreviewConfirmDialog(tasks, val, strategyLabel, allocations);
+                    if (confirmed == true) {
+                      await _applyAllocations(tasks, allocations, val, strategyLabel);
                     }
                   },
                   child: const Text('Log Words'),
@@ -517,7 +567,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showManualAllocationDialog(List<TodayWritingTask> tasks) {
-    final controllers = {for (var t in tasks) t.project.id: TextEditingController()};
+    final controllers = {
+      for (var t in tasks)
+        t.project.id: TextEditingController(
+          text: t.log != null ? t.log!.actualWords.toString() : '',
+        )
+    };
 
     showDialog(
       context: context,
@@ -552,28 +607,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             FilledButton(
               onPressed: () async {
-                Navigator.pop(context);
-                
+                final Map<String, int> allocations = {};
+                int totalManual = 0;
                 for (final t in tasks) {
                   final text = controllers[t.project.id]!.text.trim();
-                  if (text.isNotEmpty) {
-                    final words = int.tryParse(text) ?? 0;
-                    if (words > 0) {
-                      await ref.read(loggingServiceProvider).logWords(
-                            projectId: t.project.id,
-                            date: DateTime.now(),
-                            actualWords: words,
-                          );
-                    }
+                  final words = int.tryParse(text) ?? 0;
+                  if (words > 0) {
+                    allocations[t.project.id] = words;
+                    totalManual += words;
                   }
                 }
                 
-                _refreshAll();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Manual logs saved successfully!')),
-                );
+                if (allocations.isEmpty) return;
+
+                Navigator.pop(context);
+
+                final confirmed = await _showSplitPreviewConfirmDialog(tasks, totalManual, 'Manual Allocation', allocations);
+                if (confirmed == true) {
+                  await _applyAllocations(tasks, allocations, totalManual, 'Manual Allocation');
+                }
               },
-              child: const Text('Save All'),
+              child: const Text('Continue'),
             )
           ],
         );
@@ -583,15 +637,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _submitLog(String projectId, int words) async {
     try {
-      await ref.read(loggingServiceProvider).logWords(
+      final wasCompleted = await ref.read(loggingServiceProvider).logWords(
             projectId: projectId,
             date: DateTime.now(),
             actualWords: words,
           );
       _refreshAll();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Successfully logged $words words!')),
-      );
+      if (wasCompleted) {
+        final project = ref.read(projectsProvider).value?.firstWhere((p) => p.id == projectId);
+        if (context.mounted && project != null) {
+          _showCompletionDialog(context, project.name);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Successfully logged $words words!')),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to log words: $e')),
@@ -599,34 +660,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _applyEvenSplit(List<TodayWritingTask> tasks, int totalWords) async {
+  Future<void> _applyAllocations(
+    List<TodayWritingTask> tasks,
+    Map<String, int> allocations,
+    int totalWords,
+    String strategyLabel,
+  ) async {
+    final loggingService = ref.read(loggingServiceProvider);
+    final List<String> newlyCompletedBooks = [];
+
+    for (final entry in allocations.entries) {
+      if (entry.value > 0) {
+        try {
+          final wasCompleted = await loggingService.logWords(
+            projectId: entry.key,
+            date: DateTime.now(),
+            actualWords: entry.value,
+          );
+          if (wasCompleted) {
+            final task = tasks.firstWhere((t) => t.project.id == entry.key);
+            newlyCompletedBooks.add(task.project.name);
+          }
+        } catch (_) {}
+      }
+    }
+
+    _refreshAll();
+    
+    if (newlyCompletedBooks.isNotEmpty) {
+      if (context.mounted) {
+        _showCompletionDialog(context, newlyCompletedBooks.join(', '));
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Successfully logged $totalWords words via $strategyLabel!')),
+      );
+    }
+  }
+
+  Map<String, int> _calculateEvenSplit(List<TodayWritingTask> tasks, int totalWords) {
     final count = tasks.length;
     final splitWords = totalWords ~/ count;
     final remainder = totalWords % count;
-
+    final Map<String, int> allocations = {};
     for (int i = 0; i < count; i++) {
-      final task = tasks[i];
-      final wordsToLog = i == 0 ? splitWords + remainder : splitWords;
-      await ref.read(loggingServiceProvider).logWords(
-            projectId: task.project.id,
-            date: DateTime.now(),
-            actualWords: wordsToLog,
-          );
+      allocations[tasks[i].project.id] = i == 0 ? splitWords + remainder : splitWords;
     }
-    
-    _refreshAll();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Evenly distributed $totalWords words across $count projects!')),
-    );
+    return allocations;
   }
 
-  void _applyProportionalSplit(List<TodayWritingTask> tasks, int totalWords) async {
+  Map<String, int> _calculateProportionalSplit(List<TodayWritingTask> tasks, int totalWords) {
     final totalPlanned = tasks.fold<int>(0, (sum, t) => sum + t.schedule.plannedWords);
     if (totalPlanned <= 0) {
-      _applyEvenSplit(tasks, totalWords);
-      return;
+      return _calculateEvenSplit(tasks, totalWords);
     }
-
+    final Map<String, int> allocations = {};
     int remainingToLog = totalWords;
     for (int i = 0; i < tasks.length; i++) {
       final task = tasks[i];
@@ -637,25 +725,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         wordsToLog = (task.schedule.plannedWords / totalPlanned * totalWords).round();
         remainingToLog -= wordsToLog;
       }
-      if (wordsToLog > 0) {
-        await ref.read(loggingServiceProvider).logWords(
-              projectId: task.project.id,
-              date: DateTime.now(),
-              actualWords: wordsToLog,
-            );
-      }
+      allocations[task.project.id] = wordsToLog;
     }
-
-    _refreshAll();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Distributed $totalWords words proportionally based on targets!')),
-    );
+    return allocations;
   }
 
-  void _applySmartSplit(List<TodayWritingTask> tasks, int totalWords) async {
+  Map<String, int> _calculateSmartSplit(List<TodayWritingTask> tasks, int totalWords) {
     int remainingWords = totalWords;
     final Map<String, int> allocations = {for (var t in tasks) t.project.id: 0};
 
+    // 1. Fill backlogs
     for (final t in tasks) {
       if (remainingWords <= 0) break;
       final backlog = t.project.backlogWords;
@@ -666,6 +745,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
+    // 2. Fill planned targets
     for (final t in tasks) {
       if (remainingWords <= 0) break;
       final target = t.schedule.plannedWords;
@@ -676,6 +756,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
+    // 3. Even split of remainder
     if (remainingWords > 0) {
       final split = remainingWords ~/ tasks.length;
       final rem = remainingWords % tasks.length;
@@ -685,20 +766,219 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         allocations[t.project.id] = (allocations[t.project.id] ?? 0) + add;
       }
     }
+    return allocations;
+  }
 
-    for (final entry in allocations.entries) {
-      if (entry.value > 0) {
-        await ref.read(loggingServiceProvider).logWords(
-              projectId: entry.key,
-              date: DateTime.now(),
-              actualWords: entry.value,
-            );
-      }
-    }
+  Future<bool?> _showSplitPreviewConfirmDialog(
+    List<TodayWritingTask> tasks,
+    int totalWords,
+    String strategyLabel,
+    Map<String, int> allocations,
+  ) async {
+    final theme = Theme.of(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Global Log"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                "Total Words: $totalWords",
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                strategyLabel,
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              ...tasks.map((t) {
+                final allocated = allocations[t.project.id] ?? 0;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          t.project.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        "$allocated words",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: allocated > 0 ? theme.colorScheme.primary : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text(
+                "These words will be distributed as shown above.\n\nAre you sure?",
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+  }
 
-    _refreshAll();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Smart split completed! Backlogs filled first.')),
+  void _showEditTodayLogDialog(TodayWritingTask task) {
+    final controller = TextEditingController(
+      text: task.log != null ? task.log!.actualWords.toString() : '',
+    );
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Today\'s Log for "${task.project.name}"'),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: 'Words Written Today',
+              hintText: 'e.g. 500',
+              suffixText: 'words',
+              helperText: 'Target today: ${task.schedule.plannedWords} words',
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final text = controller.text.trim();
+                if (text.isEmpty) return;
+                final words = int.tryParse(text) ?? 0;
+                if (words < 0) return;
+
+                Navigator.pop(context);
+                
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text("Confirm Today's Log Edit"),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Book: ${task.project.name}"),
+                        const SizedBox(height: 8),
+                        Text("New words entered: $words"),
+                        const SizedBox(height: 12),
+                        const Text("Are you sure you want to update today's log?"),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Confirm'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirmed == true) {
+                  await _submitLog(task.project.id, words);
+                }
+              },
+              child: const Text('Continue'),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCompletionDialog(BuildContext context, String projectName) {
+    final message = CompletionMessages.getRandomMessage();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.stars, color: Colors.amber, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Today\'s Goal Complete!',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'You finished writing for "$projectName" today.',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                '"$message"',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Great!'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1031,87 +1311,120 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               final target = task.schedule.plannedWords;
                               final progress = target > 0 ? min(1.0, logged / target) : 0.0;
 
-                              return Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Row(
-                                    children: [
-                                      BookCoverWidget(
-                                        title: task.project.name,
-                                        coverImagePath: task.project.coverImagePath,
-                                        coverType: task.project.coverType,
-                                        width: 60,
-                                        height: 80,
-                                        borderRadius: 6.0,
-                                        showTitle: false,
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              task.project.name,
-                                              style: theme.textTheme.titleMedium?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            if (isRest)
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: theme.colorScheme.secondaryContainer,
-                                                  borderRadius: BorderRadius.circular(4),
+                              final isCompletedToday = task.schedule.completed;
+                              return GestureDetector(
+                                onLongPress: () {
+                                  if (isCompletedToday) {
+                                    _showEditTodayLogDialog(task);
+                                  }
+                                },
+                                child: Card(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Row(
+                                      children: [
+                                        BookCoverWidget(
+                                          title: task.project.name,
+                                          coverImagePath: task.project.coverImagePath,
+                                          coverType: task.project.coverType,
+                                          width: 60,
+                                          height: 80,
+                                          borderRadius: 6.0,
+                                          showTitle: false,
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                task.project.name,
+                                                style: theme.textTheme.titleMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
                                                 ),
-                                                child: Text(
-                                                  '🏝 REST DAY',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              if (isRest)
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: theme.colorScheme.secondaryContainer,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    '🏝 REST DAY',
+                                                    style: theme.textTheme.labelSmall?.copyWith(
+                                                      color: theme.colorScheme.onSecondaryContainer,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                )
+                                              else ...[
+                                                Text(
+                                                  task.project.projectType == ProjectType.ongoing
+                                                      ? "Today's Habit"
+                                                      : "Today's Goal",
                                                   style: theme.textTheme.labelSmall?.copyWith(
-                                                    color: theme.colorScheme.onSecondaryContainer,
+                                                    color: theme.colorScheme.primary,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
-                                              )
-                                            else ...[
-                                              Text(
-                                                task.project.projectType == ProjectType.ongoing
-                                                    ? "Today's Habit"
-                                                    : "Today's Goal",
-                                                style: theme.textTheme.labelSmall?.copyWith(
-                                                  color: theme.colorScheme.primary,
-                                                  fontWeight: FontWeight.bold,
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  '$logged / $target words',
+                                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
                                                 ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '$logged / $target words',
-                                                style: theme.textTheme.bodyMedium?.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              if (task.project.projectType != ProjectType.ongoing) ...[
-                                                const SizedBox(height: 6),
-                                                LinearProgressIndicator(
-                                                  value: progress,
-                                                  minHeight: 6,
-                                                  borderRadius: BorderRadius.circular(3),
-                                                ),
-                                              ],
-                                            ]
-                                          ],
+                                                if (task.project.projectType != ProjectType.ongoing) ...[
+                                                  const SizedBox(height: 6),
+                                                  LinearProgressIndicator(
+                                                    value: progress,
+                                                    minHeight: 6,
+                                                    borderRadius: BorderRadius.circular(3),
+                                                  ),
+                                                ],
+                                              ]
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      if (!isRest) ...[
-                                        const SizedBox(width: 8),
-                                        IconButton.filledTonal(
-                                          onPressed: () => _showSingleLogDialog(task),
-                                          icon: const Icon(Icons.add),
-                                          tooltip: 'Log words',
-                                        ),
-                                      ]
-                                    ],
+                                        if (!isRest) ...[
+                                          const SizedBox(width: 8),
+                                          if (isCompletedToday)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.withOpacity(0.12),
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: Border.all(color: Colors.green.withOpacity(0.4), width: 1),
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.check_circle_outline, color: Colors.green, size: 14),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'Completed Today',
+                                                    style: TextStyle(
+                                                      color: Colors.green,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            )
+                                          else
+                                            IconButton.filledTonal(
+                                              onPressed: () => _showSingleLogDialog(task),
+                                              icon: const Icon(Icons.add),
+                                              tooltip: 'Log words',
+                                            ),
+                                        ]
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );

@@ -28,7 +28,8 @@ class LoggingService {
 
   /// Logs writing progress for a project on a specific date.
   /// Handles Carry-Forward, Backlog creation, Streaks, and Statistics updates.
-  Future<void> logWords({
+  /// Returns [true] if the writing goal is completed today.
+  Future<bool> logWords({
     required String projectId,
     required DateTime date,
     required int actualWords,
@@ -107,33 +108,10 @@ class LoggingService {
     );
     await _scheduleRepo.updateSchedule(updatedSchedule);
 
-    // 5. Carry Forward Logic (if there are excess words and project is Fixed Goal)
+    // 5. Carry Forward Calculation (cap to one day's target, store as pending credit)
+    int pendingCarryForward = 0;
     if (excessWords > 0 && !isOngoing) {
-      final futureSchedules = await _scheduleRepo.getSchedulesForProject(projectId);
-      final List<ScheduleModel> schedulesToUpdate = [];
-      int remainingExcess = excessWords;
-
-      for (final sched in futureSchedules) {
-        if (sched.date.isAfter(cleanDate) && !sched.locked && !sched.isRestDay && !sched.completed) {
-          final planned = sched.plannedWords;
-          if (planned > 0) {
-            final reduction = min(remainingExcess, planned);
-            final newPlanned = planned - reduction;
-            
-            schedulesToUpdate.add(sched.copyWith(
-              plannedWords: newPlanned,
-              completed: newPlanned == 0, // mark complete if reduced to 0
-            ));
-            
-            remainingExcess -= reduction;
-            if (remainingExcess <= 0) break;
-          }
-        }
-      }
-      
-      if (schedulesToUpdate.isNotEmpty) {
-        await _scheduleRepo.insertSchedules(schedulesToUpdate);
-      }
+      pendingCarryForward = min(excessWords, project.dailyWordTarget);
     }
 
     // 6. Recalculate Project Progress & Backlog
@@ -164,6 +142,9 @@ class LoggingService {
     }
     final newLongestStreak = max(project.longestProjectStreak, newStreak);
 
+    final isProjectCompleted = !isOngoing && newRemainingWords == 0;
+    final finalPendingCarryForward = isProjectCompleted ? 0 : pendingCarryForward;
+
     final updatedProject = project.copyWith(
       writtenWords: newWrittenWords,
       remainingWords: newRemainingWords,
@@ -172,6 +153,7 @@ class LoggingService {
       actualFinishDate: actualFinish,
       projectStreak: newStreak,
       longestProjectStreak: newLongestStreak,
+      pendingCarryForward: finalPendingCarryForward,
       updatedAt: DateTime.now(),
     );
 
@@ -184,6 +166,36 @@ class LoggingService {
       _ref!.invalidate(statisticsProvider);
       _ref!.invalidate(homeEncouragementProvider);
       _ref!.invalidate(homeQuoteProvider);
+    }
+
+    return isCompleted;
+  }
+
+  /// Automatically applies any pending carry forward credit to today's active writing task
+  Future<void> checkAndApplyPendingCarryForward(List<ProjectModel> activeProjects) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    for (final project in activeProjects) {
+      if (project.pendingCarryForward > 0) {
+        final schedule = await _scheduleRepo.getScheduleForDate(project.id, today);
+        if (schedule != null && !schedule.isRestDay && !schedule.completed) {
+          final credit = project.pendingCarryForward;
+          
+          // Reset the credit on the project first to prevent double application
+          final updatedProj = project.copyWith(
+            pendingCarryForward: 0,
+            updatedAt: DateTime.now(),
+          );
+          await _projectRepo.updateProject(updatedProj);
+          
+          // Log the credit for today
+          await logWords(
+            projectId: project.id,
+            date: today,
+            actualWords: credit,
+          );
+        }
+      }
     }
   }
 

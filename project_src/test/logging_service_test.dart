@@ -192,7 +192,7 @@ void main() {
       expect(updatedProject?.projectStreak, 0); // streak reset
     });
 
-    test('logging over target: carry-forward reduces future targets', () async {
+    test('logging over target: carry-forward saves to pendingCarryForward and does not modify future targets', () async {
       // Today (planned 500)
       final schedToday = ScheduleModel(
         id: 's_today', projectId: 'p1', date: cleanToday, plannedWords: 500,
@@ -212,9 +212,13 @@ void main() {
       final updatedToday = await scheduleRepo.getScheduleForDate('p1', cleanToday);
       expect(updatedToday?.completed, isTrue);
 
-      // Verify tomorrow is reduced by 300 words (500 - 300 = 200)
+      // Verify tomorrow is NOT reduced (still 500)
       final updatedTomorrow = await scheduleRepo.getScheduleForDate('p1', cleanToday.add(const Duration(days: 1)));
-      expect(updatedTomorrow?.plannedWords, 200);
+      expect(updatedTomorrow?.plannedWords, 500);
+
+      // Verify project has 300 words pending carry forward
+      final updatedProject = await projectRepo.getProjectById('p1');
+      expect(updatedProject?.pendingCarryForward, 300);
     });
 
     test('logging multiple times in a single day updates the log and does not double-increment streak', () async {
