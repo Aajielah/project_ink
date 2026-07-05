@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../shared/cover_matching_helper.dart';
 
 import '../../shared/providers.dart';
+import '../../shared/date_utils.dart';
 import '../../models/project.dart';
 import 'project_duration_type.dart';
 import 'widgets/book_cover_widget.dart';
@@ -155,7 +156,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
       if (_endDate == null) return 0;
       final cleanStart = DateTime(_startDate.year, _startDate.month, _startDate.day);
       final cleanEnd = DateTime(_endDate!.year, _endDate!.month, _endDate!.day);
-      return cleanEnd.difference(cleanStart).inDays + 1;
+      return getDaysDifference(cleanStart, cleanEnd) + 1;
     }
     final qty = int.tryParse(_qtyController.text) ?? 0;
     if (_durationType == DurationType.weeks) return qty * 7;

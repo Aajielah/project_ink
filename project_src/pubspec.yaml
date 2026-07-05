@@ -1,6 +1,6 @@
 name: project_ink
 description: An offline-first personal writing productivity system.
-version: 2.2.0+1
+version: 2.3.0+1
 
 publish_to: 'none'
 

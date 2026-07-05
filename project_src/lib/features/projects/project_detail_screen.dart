@@ -207,7 +207,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
     DateTime editExpectedFinishDate = project.expectedFinishDate;
     
     // Calculate initial duration days
-    final int initialDurationDays = project.expectedFinishDate.difference(project.startDate).inDays + 1;
+    final int initialDurationDays = getDaysDifference(project.startDate, project.expectedFinishDate) + 1;
     final qtyController = TextEditingController(text: initialDurationDays.toString());
     DurationType editDurationType = DurationType.days;
     DateTime? editEndDate = project.expectedFinishDate;
@@ -237,7 +237,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
             int getCalculatedDays() {
               if (editDurationType == DurationType.customRange) {
                 if (editEndDate == null) return 1;
-                return editEndDate!.difference(editStartDate).inDays + 1;
+                return getDaysDifference(editStartDate, editEndDate!) + 1;
               }
               final qty = int.tryParse(qtyController.text) ?? 30;
               if (editDurationType == DurationType.days) return qty;
@@ -1265,6 +1265,7 @@ class _HistoryTab extends ConsumerWidget {
             final diff = l.actualWords - l.plannedWords;
             final isExcess = diff > 0;
             final isCompleted = l.completed;
+            final logicalToday = getLogicalToday();
 
             return Card(
               child: ListTile(
@@ -1320,7 +1321,6 @@ class _HistoryTab extends ConsumerWidget {
                         ],
                       ),
                     ],
-                    final logicalToday = getLogicalToday();
                     if (l.date.year == logicalToday.year &&
                         l.date.month == logicalToday.month &&
                         l.date.day == logicalToday.day) ...[

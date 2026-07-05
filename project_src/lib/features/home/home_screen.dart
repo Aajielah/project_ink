@@ -128,7 +128,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
       case 'deadline':
         for (final p in activeProjects) {
-          final daysToDeadline = p.expectedFinishDate.difference(today).inDays;
+          final daysToDeadline = getDaysDifference(today, p.expectedFinishDate);
           final score = (365 - daysToDeadline).clamp(0, 365).toDouble();
           scored.add(_ProjectWithScore(
             project: p,
@@ -152,7 +152,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
       case 'rotate':
         for (final p in activeProjects) {
-          final daysSinceUpdate = today.difference(p.updatedAt).inDays;
+          final daysSinceUpdate = getDaysDifference(p.updatedAt, today);
           scored.add(_ProjectWithScore(
             project: p,
             score: daysSinceUpdate.toDouble(),
@@ -179,12 +179,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
           final double score1 = rem > 0 ? (10000 - rem).clamp(0, 10000) / 10000.0 : 0.0;
 
-          final daysToDeadline = p.expectedFinishDate.difference(today).inDays;
+          final daysToDeadline = getDaysDifference(today, p.expectedFinishDate);
           final double score2 = (365 - daysToDeadline).clamp(0, 365) / 365.0;
 
           final double score3 = p.backlogWords.clamp(0, 10000) / 10000.0;
 
-          final daysSinceUpdate = today.difference(p.updatedAt).inDays;
+          final daysSinceUpdate = getDaysDifference(p.updatedAt, today);
           final double score4 = daysSinceUpdate.clamp(0, 30) / 30.0;
 
           final double score5 = p.dailyWordTarget.clamp(0, 5000) / 5000.0;
@@ -246,6 +246,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       'reason': chosen.reason,
       'confidence': chosen.confidence,
       'project': chosen.project,
+    };
   }
 
   void _triggerQuickLog(List<TodayWritingTask> tasks) {

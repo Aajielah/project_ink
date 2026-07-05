@@ -13,6 +13,13 @@ DateTime getLogicalToday() {
   return DateTime(now.year, now.month, now.day);
 }
 
+/// Safely calculates difference in days between two dates, avoiding daylight saving offsets.
+int getDaysDifference(DateTime start, DateTime end) {
+  final utcStart = DateTime.utc(start.year, start.month, start.day);
+  final utcEnd = DateTime.utc(end.year, end.month, end.day);
+  return utcEnd.difference(utcStart).inDays;
+}
+
 /// Distributes total allowed rest days as evenly as possible across project weeks.
 int getFlexibleAllocationForWeek({
   required int allowedRestDays,
@@ -51,13 +58,10 @@ int getAvailableFlexibleRestDays({
   required DateTime logicalToday,
 }) {
   if (project.startDate == null || project.expectedFinishDate == null) return 0;
-  final durationDays = project.expectedFinishDate.difference(project.startDate).inDays + 1;
+  final durationDays = getDaysDifference(project.startDate, project.expectedFinishDate) + 1;
   if (durationDays <= 0) return 0;
 
-  final cleanStart = DateTime(project.startDate.year, project.startDate.month, project.startDate.day);
-  final cleanToday = DateTime(logicalToday.year, logicalToday.month, logicalToday.day);
-
-  final diffDays = cleanToday.difference(cleanStart).inDays;
+  final diffDays = getDaysDifference(project.startDate, logicalToday);
   final currentWeekIndex = max(1, (diffDays ~/ 7) + 1);
 
   final totalWeeks = (durationDays / 7.0).ceil();
@@ -69,6 +73,7 @@ int getAvailableFlexibleRestDays({
     targetWeek: targetWeek,
   );
 
+  final cleanToday = DateTime(logicalToday.year, logicalToday.month, logicalToday.day);
   final totalConsumed = schedules.where((s) =>
     s.isRestDay &&
     (s.locked || s.date.isBefore(cleanToday) || s.date.isAtSameMomentAs(cleanToday))
@@ -79,10 +84,9 @@ int getAvailableFlexibleRestDays({
 
 /// Calculates the start date of the project week containing the given date.
 DateTime getProjectWeekStart(DateTime projectStartDate, DateTime date) {
-  final cleanStart = DateTime(projectStartDate.year, projectStartDate.month, projectStartDate.day);
-  final cleanDate = DateTime(date.year, date.month, date.day);
-  final diffDays = cleanDate.difference(cleanStart).inDays;
+  final diffDays = getDaysDifference(projectStartDate, date);
   final weekIndex = diffDays ~/ 7;
+  final cleanStart = DateTime(projectStartDate.year, projectStartDate.month, projectStartDate.day);
   return cleanStart.add(Duration(days: weekIndex * 7));
 }
 
