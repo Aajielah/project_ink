@@ -107,7 +107,7 @@ void main() {
       await dailyLogRepo.insertLog(DailyLogModel(
         id: uuid.v4(), projectId: fixedProjId, scheduleId: 's2',
         date: date2, plannedWords: 500, actualWords: 300,
-        carryForwardWords: 0, backlogCreated: 200, completed: false, loggedAt: DateTime.now(),
+        carryForwardWords: 0, backlogCreated: 1200, completed: false, loggedAt: DateTime.now(),
       ));
 
       // Log 3: Date 1 for ongoing (400 words) - same day as Log 1

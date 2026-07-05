@@ -13,6 +13,7 @@ import '../../models/daily_log.dart';
 import '../../services/ongoing_sync_service.dart';
 import 'project_duration_type.dart';
 import '../../shared/completion_messages.dart';
+import '../../shared/date_utils.dart';
 
 class ProjectDetailScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -701,10 +702,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
 
     return projectsAsync.when(
       data: (projects) {
-        final project = projects.firstWhere(
-          (p) => p.id == widget.projectId,
-          orElse: () => throw StateError('Project not found'),
-        );
+        ProjectModel? project;
+        try {
+          project = projects.firstWhere((p) => p.id == widget.projectId);
+        } catch (_) {}
+
+        if (project == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
         return Scaffold(
           appBar: AppBar(
@@ -931,7 +938,7 @@ class _ThisWeekTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final today = DateTime.now();
+    final today = getLogicalToday();
     final cleanToday = DateTime(today.year, today.month, today.day);
 
     // Calculate current week date bounds
@@ -944,7 +951,7 @@ class _ThisWeekTab extends ConsumerWidget {
 
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
-        schedRepo.getSchedulesForDateRange(project.id, monday, sunday),
+        schedRepo.getSchedulesForProject(project.id),
         logRepo.getLogsForProject(project.id),
       ]),
       builder: (context, snapshot) {
@@ -952,8 +959,13 @@ class _ThisWeekTab extends ConsumerWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final weekSchedules = snapshot.data![0] as List<ScheduleModel>;
+        final allSchedules = snapshot.data![0] as List<ScheduleModel>;
         final allLogs = snapshot.data![1] as List<DailyLogModel>;
+
+        final weekSchedules = allSchedules.where((s) =>
+          (s.date.isAtSameMomentAs(monday) || s.date.isAfter(monday)) &&
+          (s.date.isAtSameMomentAs(sunday) || s.date.isBefore(sunday))
+        ).toList();
 
         ScheduleModel? todaySchedule;
         try {
@@ -1087,47 +1099,117 @@ class _ThisWeekTab extends ConsumerWidget {
                   } catch (_) {}
                   final logged = dayLog?.actualWords ?? 0;
 
-                  return Card(
-                    color: isToday ? theme.colorScheme.primaryContainer.withOpacity(0.3) : null,
-                    shape: isToday
-                        ? RoundedRectangleBorder(
-                            side: BorderSide(color: theme.colorScheme.primary, width: 2),
-                            borderRadius: BorderRadius.circular(12),
-                          )
-                        : null,
-                    child: ListTile(
-                      leading: Icon(
-                        s.isRestDay
-                            ? Icons.coffee
-                            : s.completed
-                                ? Icons.check_circle
-                                : Icons.radio_button_unchecked,
-                        color: s.completed
-                            ? theme.colorScheme.primary
-                            : s.isRestDay
-                                ? theme.colorScheme.outline
-                                : null,
-                      ),
-                      title: Text(
-                        DateFormat('EEEE, MMM d').format(s.date),
-                        style: isToday ? const TextStyle(fontWeight: FontWeight.bold) : null,
-                      ),
-                      subtitle: Text(
-                        s.isRestDay ? 'Rest Day' : '$logged / ${s.plannedWords} words',
-                      ),
-                      trailing: isToday
-                          ? Card(
-                              elevation: 0,
-                              color: theme.colorScheme.primary,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                child: Text(
-                                  'TODAY',
-                                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  final isFlexOrRandom = project.restMode == RestMode.flexible || project.restMode == RestMode.random;
+
+                  bool hasAvailableRestDay() {
+                    if (project.restMode == RestMode.flexible) {
+                      return getAvailableFlexibleRestDays(
+                        project: project,
+                        schedules: allSchedules,
+                        logicalToday: cleanToday,
+                      ) > 0;
+                    } else if (project.restMode == RestMode.random) {
+                      final weekStart = getProjectWeekStart(project.startDate, cleanToday);
+                      final weekEnd = getProjectWeekEnd(project.startDate, cleanToday);
+                      final usedInCurrentWeek = allSchedules.where((w) =>
+                        w.isRestDay &&
+                        (w.date.isAtSameMomentAs(weekStart) || w.date.isAfter(weekStart)) &&
+                        (w.date.isAtSameMomentAs(weekEnd) || w.date.isBefore(weekEnd))
+                      ).length;
+                      return usedInCurrentWeek < project.allowedRestDays;
+                    }
+                    return false;
+                  }
+
+                  return GestureDetector(
+                    onLongPress: () {
+                      if (isFlexOrRandom && isToday && !s.isRestDay) {
+                        final hasRest = hasAvailableRestDay();
+                        if (!hasRest) {
+                          final msg = project.restMode == RestMode.flexible
+                              ? "You have already used all available Flexible Rest Days for this week."
+                              : "You have already used all available Rest Days.";
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text("No Rest Days Available"),
+                              content: Text(msg),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text("OK"),
                                 ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text("Convert today into a Rest Day?"),
+                              content: const Text(
+                                "This will use one of your available Rest Days and redistribute today's words across the remaining writing days."
                               ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text("Cancel"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    ref.read(projectsProvider.notifier).convertDayToRestDay(project, s);
+                                  },
+                                  child: const Text("Convert"),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: Card(
+                      color: isToday ? theme.colorScheme.primaryContainer.withOpacity(0.3) : null,
+                      shape: isToday
+                          ? RoundedRectangleBorder(
+                              side: BorderSide(color: theme.colorScheme.primary, width: 2),
+                              borderRadius: BorderRadius.circular(12),
                             )
                           : null,
+                      child: ListTile(
+                        leading: Icon(
+                          s.isRestDay
+                              ? Icons.coffee
+                              : s.completed
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked,
+                          color: s.completed
+                              ? theme.colorScheme.primary
+                              : s.isRestDay
+                                  ? theme.colorScheme.outline
+                                  : null,
+                        ),
+                        title: Text(
+                          DateFormat('EEEE, MMM d').format(s.date),
+                          style: isToday ? const TextStyle(fontWeight: FontWeight.bold) : null,
+                        ),
+                        subtitle: Text(
+                          s.isRestDay ? 'Rest Day' : '$logged / ${s.plannedWords} words',
+                        ),
+                        trailing: isToday
+                            ? Card(
+                                elevation: 0,
+                                color: theme.colorScheme.primary,
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  child: Text(
+                                    'TODAY',
+                                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
                     ),
                   );
                 },
@@ -1192,7 +1274,11 @@ class _HistoryTab extends ConsumerWidget {
                 ),
                 title: Text(DateFormat('EEEE, MMM d, yyyy').format(l.date)),
                 subtitle: Text(
-                  'Wrote: ${l.actualWords} / ${l.plannedWords} planned',
+                  l.backlogCreated > 0
+                      ? 'Wrote: ${l.actualWords} / ${l.plannedWords} planned\nBacklog remaining: ${l.backlogCreated} words'
+                      : l.backlogCreated == -1
+                          ? 'Wrote: ${l.actualWords} / ${l.plannedWords} planned\nAll backlog resolved!'
+                          : 'Wrote: ${l.actualWords} / ${l.plannedWords} planned',
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1212,9 +1298,32 @@ class _HistoryTab extends ConsumerWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (l.date.year == DateTime.now().year &&
-                        l.date.month == DateTime.now().month &&
-                        l.date.day == DateTime.now().day) ...[
+                    if (l.backlogCreated > 0) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.playlist_add_check, color: Colors.orange, size: 20),
+                        tooltip: "Resolve backlog",
+                        onPressed: () {
+                          _showResolveBacklogDialog(context, ref, l);
+                        },
+                      ),
+                    ] else if (l.backlogCreated == -1) ...[
+                      const SizedBox(width: 8),
+                      const Row(
+                        children: [
+                          Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            "Backlog Resolved",
+                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ],
+                    final logicalToday = getLogicalToday();
+                    if (l.date.year == logicalToday.year &&
+                        l.date.month == logicalToday.month &&
+                        l.date.day == logicalToday.day) ...[
                       const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.edit, size: 20),
@@ -1229,6 +1338,112 @@ class _HistoryTab extends ConsumerWidget {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showResolveBacklogDialog(BuildContext context, WidgetRef ref, DailyLogModel log) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Resolve Backlog"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Backlog remaining: ${log.backlogCreated} words"),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: 'Words written to resolve backlog',
+                  suffixText: 'words',
+                  helperText: 'Max allowed: ${log.backlogCreated} words',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final text = controller.text.trim();
+                if (text.isEmpty) return;
+                final words = int.tryParse(text) ?? 0;
+                if (words <= 0 || words > log.backlogCreated) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please enter a value between 1 and ${log.backlogCreated}')),
+                  );
+                  return;
+                }
+
+                Navigator.pop(context);
+                
+                final db = ref.read(dbProvider);
+                final logRepo = ref.read(dailyLogRepositoryProvider);
+                final schedRepo = ref.read(scheduleRepositoryProvider);
+                final projRepo = ref.read(projectRepositoryProvider);
+                final statsRepo = ref.read(statisticsRepositoryProvider);
+                
+                final project = await projRepo.getProjectById(log.projectId);
+                if (project == null) return;
+
+                final schedule = await schedRepo.getScheduleForDate(log.projectId, log.date);
+
+                await db.transaction(() async {
+                  final newActual = log.actualWords + words;
+                  int newBacklog = log.backlogCreated - words;
+                  if (newBacklog == 0) {
+                    newBacklog = -1; // Special flag for fully resolved
+                  }
+                  final isCompleted = newActual >= log.plannedWords;
+                  
+                  await logRepo.insertLog(log.copyWith(
+                    actualWords: newActual,
+                    backlogCreated: newBacklog,
+                    completed: isCompleted,
+                  ));
+
+                  if (schedule != null) {
+                    await schedRepo.updateSchedule(schedule.copyWith(
+                      completed: isCompleted,
+                    ));
+                  }
+
+                  final newWritten = project.writtenWords + words;
+                  final newBacklogWords = max(0, project.backlogWords - words);
+                  final newRemaining = max(0, project.targetWords - newWritten);
+                  
+                  await projRepo.updateProject(project.copyWith(
+                    writtenWords: newWritten,
+                    backlogWords: newBacklogWords,
+                    remainingWords: newRemaining,
+                    updatedAt: DateTime.now(),
+                  ));
+                });
+
+                await statsRepo.recalculateStatistics();
+                
+                ref.invalidate(projectsProvider);
+                ref.invalidate(statisticsProvider);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Resolved $words words of backlog!')),
+                );
+              },
+              child: const Text('Submit'),
+            )
+          ],
         );
       },
     );
@@ -1424,8 +1639,8 @@ class _ManageTab extends ConsumerWidget {
                   );
 
                   if (confirm == true) {
-                    await ref.read(projectsProvider.notifier).deleteProject(project.id);
-                    context.pop(); // Go back to listings
+                    context.pop(); // Go back to listings immediately
+                    ref.read(projectsProvider.notifier).deleteProject(project.id);
                   }
                 },
               ),

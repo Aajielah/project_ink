@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/project.dart';
+import '../shared/date_utils.dart';
 import '../models/daily_log.dart';
 import '../models/schedule.dart';
 import '../models/statistics.dart';
@@ -40,7 +41,7 @@ class LoggingService {
     }
 
     final cleanDate = DateTime(date.year, date.month, date.day);
-    final now = DateTime.now();
+    final now = getLogicalToday();
     final today = DateTime(now.year, now.month, now.day);
     if (cleanDate != today) {
       throw StateError('Words can only be logged for today.');
@@ -175,7 +176,7 @@ class LoggingService {
 
   /// Automatically applies any pending carry forward credit to today's active writing task
   Future<void> checkAndApplyPendingCarryForward(List<ProjectModel> activeProjects) async {
-    final now = DateTime.now();
+    final now = getLogicalToday();
     final today = DateTime(now.year, now.month, now.day);
     for (final project in activeProjects) {
       if (project.pendingCarryForward > 0) {

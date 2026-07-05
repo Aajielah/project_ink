@@ -85,6 +85,11 @@ class FakeDailyLogRepository implements DailyLogRepository {
   }
 
   @override
+  Future<List<DailyLogModel>> getLogsForProject(String projectId) async {
+    return db.where((l) => l.projectId == projectId).toList();
+  }
+
+  @override
   Future<void> insertLog(DailyLogModel log) async {
     db.removeWhere((l) => l.id == log.id);
     db.add(log);

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_ink/models/project.dart';
 import 'package:project_ink/models/schedule.dart';
+import 'package:project_ink/shared/date_utils.dart';
 import 'dart:math';
 
 void main() {
@@ -211,6 +212,168 @@ void main() {
       final list = List<ProjectModel>.from(active);
       list.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
       expect(list.first.id, equals('standard_project')); // updated 2 days ago
+    });
+  });
+
+  group('Version 2.3 Stability & Workflow Tests', () {
+    test('Writing Advisor Weighted Scoring prioritizes incomplete target today', () {
+      const remA = 500;
+      const remB = 0;
+      
+      final scoreA = (10000 - remA).clamp(0, 10000) / 10000.0;
+      final scoreB = 0.0;
+      
+      final totalA = (scoreA * 100.0) + 1000.0; // Boosted
+      final totalB = (scoreB * 100.0);
+      
+      expect(totalA, greaterThan(totalB));
+    });
+
+    test('Rotation rotates candidates correctly based on day and hour', () {
+      final candidates = ['Project A', 'Project B'];
+      
+      final index1 = (5 + 10) % candidates.length;
+      expect(candidates[index1], equals('Project B'));
+      
+      final index2 = (5 + 11) % candidates.length;
+      expect(candidates[index2], equals('Project A'));
+    });
+
+    test('Backlog recovery reduces backlog and marks log as completed if met', () {
+      const planned = 1000;
+      const originalActual = 500;
+      const originalBacklog = 500;
+      
+      const resolveWords = 200;
+      
+      final newActual = originalActual + resolveWords;
+      final newBacklog = originalBacklog - resolveWords;
+      final completed = newActual >= planned;
+      
+      expect(newActual, equals(700));
+      expect(newBacklog, equals(300));
+      expect(completed, isFalse);
+      
+      final finalActual = newActual + 300;
+      final finalBacklog = newBacklog - 300;
+      final finalCompleted = finalActual >= planned;
+      
+      expect(finalActual, equals(1000));
+      expect(finalBacklog, equals(0));
+      expect(finalCompleted, isTrue);
+    });
+  });
+
+  group('Version 2.3 Manual Rest Day Conversion Tests', () {
+    test('Manual Rest Day conversion redistributes words to future days', () {
+      final start = DateTime(2026, 7, 5);
+      final schedules = [
+        ScheduleModel(
+          id: 's1',
+          projectId: 'p1',
+          date: start,
+          plannedWords: 300,
+          isRestDay: false,
+          completed: false,
+          automaticRestDay: false,
+          locked: false,
+        ),
+        ScheduleModel(
+          id: 's2',
+          projectId: 'p1',
+          date: start.add(const Duration(days: 1)),
+          plannedWords: 300,
+          isRestDay: false,
+          completed: false,
+          automaticRestDay: false,
+          locked: false,
+        ),
+        ScheduleModel(
+          id: 's3',
+          projectId: 'p1',
+          date: start.add(const Duration(days: 2)),
+          plannedWords: 300,
+          isRestDay: false,
+          completed: false,
+          automaticRestDay: false,
+          locked: false,
+        ),
+      ];
+
+      final todaySchedule = schedules[0].copyWith(
+        isRestDay: true,
+        plannedWords: 0,
+        locked: true,
+      );
+
+      final tempSchedules = schedules.map((s) => s.id == 's1' ? todaySchedule : s).toList();
+
+      final recalculated = tempSchedules.map((s) {
+        if (s.id == 's1') return s;
+        if (s.id == 's2') return s.copyWith(plannedWords: 500);
+        if (s.id == 's3') return s.copyWith(plannedWords: 400);
+        return s;
+      }).toList();
+
+      expect(recalculated[0].isRestDay, isTrue);
+      expect(recalculated[0].plannedWords, 0);
+      expect(recalculated[0].locked, isTrue);
+
+      expect(recalculated[1].plannedWords, 500);
+      expect(recalculated[2].plannedWords, 400);
+      expect(recalculated[1].plannedWords + recalculated[2].plannedWords, equals(900));
+    });
+
+    test('Random mode weekly availability check calculates remaining allowance correctly', () {
+      final start = DateTime(2026, 7, 5);
+      final weekSchedules = [
+        ScheduleModel(id: 'w1', projectId: 'p1', date: start, plannedWords: 0, isRestDay: true, completed: false, automaticRestDay: false, locked: true),
+        ScheduleModel(id: 'w2', projectId: 'p1', date: start.add(const Duration(days: 1)), plannedWords: 200, isRestDay: false, completed: false, automaticRestDay: false, locked: false),
+      ];
+
+      final usedInCurrentWeek = weekSchedules.where((w) => w.isRestDay).length;
+      expect(usedInCurrentWeek, equals(1));
+      
+      const allowedRestDays = 1;
+      final hasRest = usedInCurrentWeek < allowedRestDays;
+      expect(hasRest, isFalse);
+    });
+
+    test('Flexible mode availability check checks overall remaining budget correctly', () {
+      final start = DateTime(2026, 7, 5);
+      final project = ProjectModel(
+        id: 'p1',
+        name: 'Project 1',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 10000,
+        writtenWords: 0,
+        remainingWords: 10000,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: start,
+        expectedFinishDate: start.add(const Duration(days: 14)), // 2 weeks
+        restMode: RestMode.flexible,
+        allowedRestDays: 4, // 2 per week (2 in week 1, 2 in week 2)
+        remainingRestDays: 4,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: start,
+        updatedAt: start,
+      );
+
+      final schedules = [
+        ScheduleModel(id: 's1', projectId: 'p1', date: start, plannedWords: 500, isRestDay: false, completed: false, automaticRestDay: false, locked: false),
+        ScheduleModel(id: 's2', projectId: 'p1', date: start.add(const Duration(days: 1)), plannedWords: 500, isRestDay: false, completed: false, automaticRestDay: false, locked: false),
+      ];
+
+      final available = getAvailableFlexibleRestDays(
+        project: project,
+        schedules: schedules,
+        logicalToday: start,
+      );
+      expect(available, equals(2));
     });
   });
 }

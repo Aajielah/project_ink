@@ -12,6 +12,21 @@ import '../../models/daily_log.dart';
 import '../../models/quote.dart';
 import '../projects/widgets/book_cover_widget.dart';
 import '../../shared/completion_messages.dart';
+import '../../shared/date_utils.dart';
+
+class _ProjectWithScore {
+  final ProjectModel project;
+  final double score;
+  final String reason;
+  final int confidence;
+
+  const _ProjectWithScore({
+    required this.project,
+    required this.score,
+    required this.reason,
+    required this.confidence,
+  });
+}
 
 class TodayWritingTask {
   final ProjectModel project;
@@ -32,8 +47,27 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   String _selectedStrategy = 'smart';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(projectsProvider.notifier).loadProjects(silent: true);
+    }
+  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -45,7 +79,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<List<TodayWritingTask>> _fetchTodayTasks(List<ProjectModel> activeProjects) async {
     final schedRepo = ref.read(scheduleRepositoryProvider);
     final logRepo = ref.read(dailyLogRepositoryProvider);
-    final today = DateTime.now();
+    final today = getLogicalToday();
     final cleanToday = DateTime(today.year, today.month, today.day);
 
     final List<TodayWritingTask> tasks = [];
@@ -59,7 +93,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return tasks;
   }
 
-  Map<String, dynamic> _computeRecommendation(List<ProjectModel> activeProjects) {
+  Map<String, dynamic> _computeRecommendation(
+    List<ProjectModel> activeProjects,
+    List<TodayWritingTask> todayTasks,
+  ) {
     if (activeProjects.isEmpty) {
       return {
         'name': 'No Active Projects',
@@ -69,96 +106,146 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       };
     }
 
+    final today = getLogicalToday();
     double getProgress(ProjectModel p) => p.targetWords > 0 ? p.writtenWords / p.targetWords : 0.0;
+
+    final List<_ProjectWithScore> scored = [];
 
     switch (_selectedStrategy) {
       case 'near':
         final unfinished = activeProjects.where((p) => getProgress(p) < 1.0).toList();
-        if (unfinished.isEmpty) break;
-        unfinished.sort((a, b) => getProgress(b).compareTo(getProgress(a)));
-        final p = unfinished.first;
-        return {
-          'name': p.name,
-          'reason': 'This book is nearest to completion (${(getProgress(p)*100).toInt()}%). Focus here to cross the finish line!',
-          'confidence': 90,
-          'project': p,
-        };
+        final list = unfinished.isEmpty ? activeProjects : unfinished;
+        for (final p in list) {
+          final progress = getProgress(p);
+          scored.add(_ProjectWithScore(
+            project: p,
+            score: progress,
+            reason: 'This book is nearest to completion (${(progress * 100).toInt()}% done). Focus here to cross the finish line!',
+            confidence: 90,
+          ));
+        }
+        break;
 
       case 'deadline':
-        final list = List<ProjectModel>.from(activeProjects);
-        list.sort((a, b) => a.expectedFinishDate.compareTo(b.expectedFinishDate));
-        final p = list.first;
-        return {
-          'name': p.name,
-          'reason': 'This manuscript has the earliest expected finish date (${DateFormat('MMM d').format(p.expectedFinishDate)}). Stay on schedule!',
-          'confidence': 85,
-          'project': p,
-        };
+        for (final p in activeProjects) {
+          final daysToDeadline = p.expectedFinishDate.difference(today).inDays;
+          final score = (365 - daysToDeadline).clamp(0, 365).toDouble();
+          scored.add(_ProjectWithScore(
+            project: p,
+            score: score,
+            reason: 'This manuscript has the earliest expected finish date (${DateFormat('MMM d').format(p.expectedFinishDate)}). Stay on schedule!',
+            confidence: 85,
+          ));
+        }
+        break;
 
       case 'target':
-        final list = List<ProjectModel>.from(activeProjects);
-        list.sort((a, b) => b.dailyWordTarget.compareTo(a.dailyWordTarget));
-        final p = list.first;
-        return {
-          'name': p.name,
-          'reason': 'This project requires the highest daily output (${p.dailyWordTarget} words/day) to stay on path.',
-          'confidence': 80,
-          'project': p,
-        };
+        for (final p in activeProjects) {
+          scored.add(_ProjectWithScore(
+            project: p,
+            score: p.dailyWordTarget.toDouble(),
+            reason: 'This project requires the highest daily output (${p.dailyWordTarget} words/day) to stay on path.',
+            confidence: 80,
+          ));
+        }
+        break;
 
       case 'rotate':
-        final list = List<ProjectModel>.from(activeProjects);
-        list.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
-        final p = list.first;
-        return {
-          'name': p.name,
-          'reason': 'You haven\'t logged words here recently. Rotate back to keep the narrative draft fresh!',
-          'confidence': 75,
-          'project': p,
-        };
+        for (final p in activeProjects) {
+          final daysSinceUpdate = today.difference(p.updatedAt).inDays;
+          scored.add(_ProjectWithScore(
+            project: p,
+            score: daysSinceUpdate.toDouble(),
+            reason: 'You haven\'t logged words here recently. Rotate back to keep the narrative draft fresh!',
+            confidence: 75,
+          ));
+        }
+        break;
 
       case 'smart':
       default:
-        final backlogged = activeProjects.where((p) => p.backlogWords > 0).toList();
-        if (backlogged.isNotEmpty) {
-          backlogged.sort((a, b) => b.backlogWords.compareTo(a.backlogWords));
-          final p = backlogged.first;
-          return {
-            'name': p.name,
-            'reason': 'Urgent: This book has a backlog of ${p.backlogWords} words. Clean this first to secure your writing schedule!',
-            'confidence': 98,
-            'project': p,
-          };
+        for (final p in activeProjects) {
+          final task = todayTasks.firstWhere((t) => t.project.id == p.id, orElse: () => TodayWritingTask(
+            project: p,
+            schedule: ScheduleModel(
+              id: '', projectId: p.id, date: today, plannedWords: 0,
+              isRestDay: true, completed: false, automaticRestDay: false, locked: false,
+            ),
+          ));
+          int rem = 0;
+          if (!task.schedule.isRestDay && !task.schedule.completed) {
+            rem = max(0, task.schedule.plannedWords - (task.log?.actualWords ?? 0));
+          }
+
+          final double score1 = rem > 0 ? (10000 - rem).clamp(0, 10000) / 10000.0 : 0.0;
+
+          final daysToDeadline = p.expectedFinishDate.difference(today).inDays;
+          final double score2 = (365 - daysToDeadline).clamp(0, 365) / 365.0;
+
+          final double score3 = p.backlogWords.clamp(0, 10000) / 10000.0;
+
+          final daysSinceUpdate = today.difference(p.updatedAt).inDays;
+          final double score4 = daysSinceUpdate.clamp(0, 30) / 30.0;
+
+          final double score5 = p.dailyWordTarget.clamp(0, 5000) / 5000.0;
+
+          double totalScore = (score1 * 100.0) + (score2 * 80.0) + (score3 * 60.0) + (score4 * 40.0) + (score5 * 20.0);
+          if (rem > 0) {
+            totalScore += 1000.0; // Incomplete daily target boost
+          }
+
+          String reason = "Keep your writing streak active on this book!";
+          int confidence = 70;
+
+          if (rem > 0) {
+            reason = 'Finish today\'s target: only $rem words remaining on "${p.name}" today!';
+            confidence = 95;
+          } else if (p.backlogWords > 0) {
+            reason = 'Urgent backlog: "${p.name}" has ${p.backlogWords} words of backlog to catch up.';
+            confidence = 90;
+          } else if (daysToDeadline < 7) {
+            reason = 'Approaching deadline: "${p.name}" is due on ${DateFormat('MMM d').format(p.expectedFinishDate)}.';
+            confidence = 85;
+          } else if (daysSinceUpdate >= 3) {
+            reason = 'Keep it fresh: rotate back to "${p.name}" as you haven\'t logged words here recently.';
+            confidence = 75;
+          } else {
+            reason = 'Consistent output: maintain your daily momentum on "${p.name}" with a target of ${p.dailyWordTarget} words.';
+            confidence = 70;
+          }
+
+          scored.add(_ProjectWithScore(
+            project: p,
+            score: totalScore,
+            reason: reason,
+            confidence: confidence,
+          ));
         }
-        final highProgress = activeProjects.where((p) => getProgress(p) >= 0.8 && getProgress(p) < 1.0).toList();
-        if (highProgress.isNotEmpty) {
-          highProgress.sort((a, b) => getProgress(b).compareTo(getProgress(a)));
-          final p = highProgress.first;
-          return {
-            'name': p.name,
-            'reason': 'Highly Recommended: Crossed the 80% mark (${(getProgress(p)*100).toInt()}% done). Focus on final drafting!',
-            'confidence': 92,
-            'project': p,
-          };
-        }
-        final list = List<ProjectModel>.from(activeProjects);
-        list.sort((a, b) => a.expectedFinishDate.compareTo(b.expectedFinishDate));
-        final p = list.first;
-        return {
-          'name': p.name,
-          'reason': 'Priority schedule: Closest upcoming deadline (${DateFormat('MMM d').format(p.expectedFinishDate)}).',
-          'confidence': 88,
-          'project': p,
-        };
+        break;
     }
 
-    final p = activeProjects.first;
+    if (scored.isEmpty) {
+      final p = activeProjects.first;
+      return {
+        'name': p.name,
+        'reason': 'Keep your daily writing streak active on this book!',
+        'confidence': 70,
+        'project': p,
+      };
+    }
+
+    scored.sort((a, b) => b.score.compareTo(a.score));
+    final maxScore = scored.first.score;
+    final candidates = scored.where((s) => (maxScore - s.score).abs() < 0.01).toList();
+
+    final rotationIndex = (today.day + DateTime.now().hour) % candidates.length;
+    final chosen = candidates[rotationIndex];
+
     return {
-      'name': p.name,
-      'reason': 'Keep your daily writing streak active on this book!',
-      'confidence': 70,
-      'project': p,
-    };
+      'name': chosen.project.name,
+      'reason': chosen.reason,
+      'confidence': chosen.confidence,
+      'project': chosen.project,
   }
 
   void _triggerQuickLog(List<TodayWritingTask> tasks) {
@@ -1083,149 +1170,149 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-
               // Writing Advisor Section (First thing the user sees below greeting)
               projectsAsync.when(
                 data: (projects) {
                   final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
-                  final rec = _computeRecommendation(activeProjects);
-                  final ProjectModel? recProject = rec['project'];
+                  if (activeProjects.isEmpty) return const SizedBox();
 
-                  return Card(
-                    color: theme.colorScheme.tertiaryContainer.withOpacity(0.25),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: theme.colorScheme.tertiary.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  return FutureBuilder<List<TodayWritingTask>>(
+                    future: _fetchTodayTasks(activeProjects),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox();
+                      final rec = _computeRecommendation(activeProjects, snapshot.data!);
+                      final ProjectModel? recProject = rec['project'];
+
+                      return Card(
+                        color: theme.colorScheme.tertiaryContainer.withOpacity(0.25),
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(color: theme.colorScheme.tertiary.withOpacity(0.3)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Icon(Icons.auto_awesome, color: theme.colorScheme.tertiary),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Writing Advisor',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.onTertiaryContainer,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              DropdownButton<String>(
-                                value: _selectedStrategy,
-                                dropdownColor: theme.colorScheme.surface,
-                                underline: const SizedBox(),
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                items: const [
-                                  DropdownMenuItem(value: 'smart', child: Text('🧠 Smart Strategy')),
-                                  DropdownMenuItem(value: 'near', child: Text('🏁 Finish Near')),
-                                  DropdownMenuItem(value: 'deadline', child: Text('📅 Deadline')),
-                                  DropdownMenuItem(value: 'target', child: Text('🚀 High Target')),
-                                  DropdownMenuItem(value: 'rotate', child: Text('🔄 Rotate')),
-                                ],
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() {
-                                      _selectedStrategy = val;
-                                    });
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 20),
-                          if (recProject != null)
-                            Row(
-                              children: [
-                                // Mini book cover of recommended project
-                                BookCoverWidget(
-                                  title: recProject.name,
-                                  coverImagePath: recProject.coverImagePath,
-                                  coverType: recProject.coverType,
-                                  width: 60,
-                                  height: 80,
-                                  borderRadius: 6.0,
-                                  showTitle: false,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  Row(
                                     children: [
+                                      Icon(Icons.psychology, color: theme.colorScheme.tertiary),
+                                      const SizedBox(width: 8),
                                       Text(
-                                        'RECOMMENDED FOCUS:',
-                                        style: theme.textTheme.labelSmall?.copyWith(
+                                        'Writing Advisor',
+                                        style: theme.textTheme.titleMedium?.copyWith(
                                           fontWeight: FontWeight.bold,
                                           color: theme.colorScheme.tertiary,
                                         ),
                                       ),
-                                      Text(
-                                        rec['name'] as String,
-                                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        rec['reason'] as String,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                // Confidence gauge
-                                Column(
+                                  // Dropdown selector for strategy
+                                  DropdownButton<String>(
+                                    value: _selectedStrategy,
+                                    items: const [
+                                      DropdownMenuItem(value: 'smart', child: Text('Smart Strategy')),
+                                      DropdownMenuItem(value: 'near', child: Text('Finish Near')),
+                                      DropdownMenuItem(value: 'deadline', child: Text('Closest Deadline')),
+                                      DropdownMenuItem(value: 'target', child: Text('High Target')),
+                                      DropdownMenuItem(value: 'rotate', child: Text('Rotate Book')),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() {
+                                          _selectedStrategy = val;
+                                        });
+                                      }
+                                    },
+                                    underline: const SizedBox(),
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              if (recProject != null)
+                                Row(
                                   children: [
-                                    Stack(
-                                      alignment: Alignment.center,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            recProject.name,
+                                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            rec['reason'] as String,
+                                            style: theme.textTheme.bodyMedium?.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          ElevatedButton.icon(
+                                            onPressed: () {
+                                              context.go('/projects/${recProject.id}');
+                                            },
+                                            icon: const Icon(Icons.edit, size: 16),
+                                            label: const Text('Start Writing'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: theme.colorScheme.tertiary,
+                                              foregroundColor: theme.colorScheme.onTertiary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Column(
                                       children: [
-                                        SizedBox(
-                                          width: 44,
-                                          height: 44,
-                                          child: CircularProgressIndicator(
-                                            value: (rec['confidence'] as int) / 100.0,
-                                            color: theme.colorScheme.tertiary,
-                                            backgroundColor: theme.colorScheme.tertiary.withOpacity(0.15),
-                                            strokeWidth: 4,
-                                          ),
+                                        Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            SizedBox(
+                                              width: 56,
+                                              height: 56,
+                                              child: CircularProgressIndicator(
+                                                value: (rec['confidence'] as int) / 100.0,
+                                                backgroundColor: theme.colorScheme.surfaceVariant,
+                                                color: theme.colorScheme.tertiary,
+                                                strokeWidth: 6.0,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${rec['confidence']}%',
+                                              style: theme.textTheme.labelLarge?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.colorScheme.tertiary,
+                                              ),
+                                            ),
+                                          ],
                                         ),
+                                        const SizedBox(height: 4),
                                         Text(
-                                          '${rec['confidence']}%',
-                                          style: theme.textTheme.labelSmall?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.onTertiaryContainer,
-                                          ),
+                                          'CONFIDENCE',
+                                          style: theme.textTheme.labelSmall?.copyWith(fontSize: 8.0),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'CONFIDENCE',
-                                      style: theme.textTheme.labelSmall?.copyWith(fontSize: 8.0),
-                                    ),
                                   ],
+                                )
+                              else
+                                Text(
+                                  rec['reason'] as String,
+                                  style: theme.textTheme.bodyMedium,
                                 ),
-                              ],
-                            )
-                          else
-                            Text(
-                              rec['reason'] as String,
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                        ],
-                      ),
-                    ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
                 loading: () => const SizedBox(),

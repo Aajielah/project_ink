@@ -35,8 +35,20 @@ class SchedulingService {
           restDaysEstimate++;
         }
       }
-    } else {
-      // Flexible or Random rest days budget
+    } else if (restMode == RestMode.flexible) {
+      if (allowedRestDays < 0) {
+        return 'Rest Days cannot be negative.';
+      }
+      final minimumWritingDays = (targetWords / dailyWordTarget).ceil();
+      final maximumRestDays = durationDays - minimumWritingDays;
+      if (allowedRestDays > maximumRestDays) {
+        return 'The chosen number of Rest Days ($allowedRestDays) exceeds the maximum allowed ($maximumRestDays) to complete the project at this daily target.';
+      }
+      restDaysEstimate = allowedRestDays;
+    } else if (restMode == RestMode.random) {
+      if (allowedRestDays < 0) {
+        return 'Rest Days cannot be negative.';
+      }
       restDaysEstimate = allowedRestDays * weeks;
     }
 
@@ -79,22 +91,7 @@ class SchedulingService {
         }
       }
     } else if (restMode == RestMode.random) {
-      // Assign allowedRestDays randomly per 7-day week blocks
-      final random = Random();
-      for (int weekStart = 0; weekStart < durationDays; weekStart += 7) {
-        final weekEnd = min(weekStart + 7, durationDays);
-        final weekLength = weekEnd - weekStart;
-        final restCount = min(allowedRestDays, weekLength);
-
-        // Get indices of days in this week
-        final List<int> indices = List.generate(weekLength, (index) => weekStart + index);
-        indices.shuffle(random);
-
-        // Select the first restCount indices as rest days
-        for (int r = 0; r < restCount; r++) {
-          restDayMap[indices[r]] = true;
-        }
-      }
+      // Random: initially no rest days are pre-assigned in calendar under new spec.
     } else {
       // Flexible: initially no rest days are pre-assigned in calendar.
       // The user marks them as rest days dynamically up to their budget.
@@ -183,24 +180,7 @@ class SchedulingService {
         }
       }
     } else if (restMode == RestMode.random) {
-      // Calculate remaining budget
-      final weeksLeft = (totalFutureDays / 7.0).ceil();
-      final remainingRestBudget = max(0, allowedRestDaysBudget - restDaysUsed);
-      final restPerWeek = min(remainingRestBudget, allowedRestDaysBudget); // cap at weekly limit
-
-      final random = Random();
-      for (int weekStart = 0; weekStart < totalFutureDays; weekStart += 7) {
-        final weekEnd = min(weekStart + 7, totalFutureDays);
-        final weekLength = weekEnd - weekStart;
-        final restCount = min(restPerWeek, weekLength);
-
-        final List<int> indices = List.generate(weekLength, (index) => weekStart + index);
-        indices.shuffle(random);
-
-        for (int r = 0; r < restCount; r++) {
-          newRestMap[indices[r]] = true;
-        }
-      }
+      // Random: initially no rest days are pre-assigned in calendar under new spec.
     }
 
     // Reallocate remaining words across future writing days

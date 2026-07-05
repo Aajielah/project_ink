@@ -22,6 +22,9 @@ import '../services/logging_service.dart';
 import '../services/encouragement_service.dart';
 import '../services/backup_service.dart';
 import '../services/ongoing_sync_service.dart';
+import '../services/notification_service.dart';
+import 'date_utils.dart';
+import 'package:flutter/foundation.dart';
 
 // --- Database & Connection Provider ---
 final dbProvider = Provider<AppDatabase>((ref) {
@@ -130,8 +133,48 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
 
       final updatedList = await _projectRepo.getAllProjects();
       state = AsyncValue.data(updatedList);
+      await _updateNotificationSchedule(updatedList);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> _updateNotificationSchedule(List<ProjectModel> projects) async {
+    try {
+      final settings = await _ref.read(settingsRepositoryProvider).getSettings();
+      if (settings == null || !settings.notifications) {
+        await NotificationService.instance.cancelDaily12AMNotification();
+        return;
+      }
+
+      final active = projects.where((p) => p.status == ProjectStatus.active).toList();
+      if (active.isEmpty) {
+        await NotificationService.instance.cancelDaily12AMNotification();
+        return;
+      }
+
+      final today = getLogicalToday();
+      bool allCompletedToday = true;
+
+      for (final p in active) {
+        final schedule = await _scheduleRepo.getScheduleForDate(p.id, today);
+        if (schedule != null && !schedule.isRestDay) {
+          final log = await _dailyLogRepo.getLogForDate(p.id, today);
+          final logged = log?.actualWords ?? 0;
+          if (logged < schedule.plannedWords) {
+            allCompletedToday = false;
+            break;
+          }
+        }
+      }
+
+      if (allCompletedToday) {
+        await NotificationService.instance.cancelDaily12AMNotification();
+      } else {
+        await NotificationService.instance.scheduleDaily12AMNotification();
+      }
+    } catch (e) {
+      debugPrint('Error updating notification schedule: $e');
     }
   }
 
@@ -164,7 +207,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     try {
       final uuid = const Uuid();
       final projectId = uuid.v4();
-      final today = DateTime.now();
+      final today = getLogicalToday();
       final cleanStartDate = DateTime(startDate.year, startDate.month, startDate.day);
       final cleanToday = DateTime(today.year, today.month, today.day);
 
@@ -392,6 +435,72 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       await cleanupOrphanedCovers();
     } catch (_) {}
   }
+
+  Future<void> convertDayToRestDay(ProjectModel project, ScheduleModel todaySchedule) async {
+    try {
+      final today = getLogicalToday();
+      
+      // 1. Get all schedules for the project
+      final schedules = await _scheduleRepo.getSchedulesForProject(project.id);
+      
+      // 2. Filter future schedules starting from today (unlocked)
+      final cleanToday = DateTime(today.year, today.month, today.day);
+      final futureSchedules = schedules
+          .where((s) => !s.locked && (s.date.isAfter(cleanToday) || s.date.isAtSameMomentAs(cleanToday)))
+          .toList();
+          
+      // Calculate total planned words from unlocked future schedules
+      final totalFuturePlannedWords = futureSchedules.fold<int>(0, (sum, s) => sum + s.plannedWords);
+
+      // 3. Update today's schedule row (Rest Day, 0 planned words, locked)
+      final updatedTodaySchedule = todaySchedule.copyWith(
+        isRestDay: true,
+        plannedWords: 0,
+        locked: true,
+        completed: false,
+      );
+
+      // Create a temporary list replacing today's schedule
+      final tempSchedules = schedules.map((s) => s.id == todaySchedule.id ? updatedTodaySchedule : s).toList();
+
+      // 4. Recalculate schedules from tomorrow onwards
+      final tomorrow = cleanToday.add(const Duration(days: 1));
+      
+      // Count rest days used in history and today
+      final restDaysUsed = tempSchedules.where((s) => (s.isRestDay || s.automaticRestDay) && (s.locked || s.date.isBefore(tomorrow))).length;
+
+      final recalculatedSchedules = _schedulingService.recalculateFutureSchedule(
+        existingSchedules: tempSchedules,
+        recalculateFromDate: tomorrow,
+        newDailyTarget: project.dailyWordTarget,
+        totalRemainingWords: totalFuturePlannedWords,
+        fixedRestWeekdays: const [],
+        restMode: project.restMode,
+        allowedRestDaysBudget: project.allowedRestDays,
+        restDaysUsed: restDaysUsed,
+      );
+
+      // 5. Update schedules and project in a database transaction
+      final db = _ref.read(dbProvider);
+      await db.transaction(() async {
+        for (final s in recalculatedSchedules) {
+          await _scheduleRepo.updateSchedule(s);
+        }
+        
+        final updatedProject = project.copyWith(
+          updatedAt: DateTime.now(),
+        );
+        await _projectRepo.updateProject(updatedProject);
+      });
+
+      // 6. Recalculate statistics
+      await _statsRepo.recalculateStatistics();
+      _invalidateAllDependentProviders();
+      await loadProjects(silent: true);
+    } catch (e, st) {
+      debugPrint('Error converting day to rest day: $e\n$st');
+    }
+  }
 }
 
 
@@ -411,8 +520,9 @@ final projectsProvider =
 // Settings Notifier
 class SettingsNotifier extends StateNotifier<AsyncValue<SettingsModel>> {
   final SettingsRepository _settingsRepo;
+  final Ref _ref;
 
-  SettingsNotifier(this._settingsRepo) : super(const AsyncValue.loading()) {
+  SettingsNotifier(this._settingsRepo, this._ref) : super(const AsyncValue.loading()) {
     loadSettings();
   }
 
@@ -440,6 +550,7 @@ class SettingsNotifier extends StateNotifier<AsyncValue<SettingsModel>> {
       final updated = current.copyWith(notifications: val);
       await _settingsRepo.updateSettings(updated);
       state = AsyncValue.data(updated);
+      await _ref.read(projectsProvider.notifier).loadProjects(silent: true);
     }
   }
 
@@ -464,7 +575,7 @@ class SettingsNotifier extends StateNotifier<AsyncValue<SettingsModel>> {
 
 final settingsProvider =
     StateNotifierProvider<SettingsNotifier, AsyncValue<SettingsModel>>((ref) {
-  return SettingsNotifier(ref.watch(settingsRepositoryProvider));
+  return SettingsNotifier(ref.watch(settingsRepositoryProvider), ref);
 });
 
 // Statistics Provider

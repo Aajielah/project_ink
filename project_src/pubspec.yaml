@@ -30,6 +30,10 @@ dependencies:
   intl: ^0.19.0
   uuid: ^4.3.3
 
+  # Notifications & Date Utilities
+  flutter_local_notifications: ^17.2.0
+  timezone: ^0.9.4
+
   # File Management & Backup
   archive: ^3.6.1
   file_picker: ^8.0.3

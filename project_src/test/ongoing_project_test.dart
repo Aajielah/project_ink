@@ -6,11 +6,13 @@ import '../lib/models/daily_log.dart';
 import '../lib/models/statistics.dart';
 import '../lib/services/ongoing_sync_service.dart';
 import '../lib/services/logging_service.dart';
+import '../lib/services/scheduling_service.dart';
 import '../lib/repositories/project_repository.dart';
 import '../lib/repositories/schedule_repository.dart';
 import '../lib/repositories/daily_log_repository.dart';
 import '../lib/repositories/statistics_repository.dart';
 import '../lib/shared/providers.dart';
+import '../lib/shared/date_utils.dart';
 
 // --- FAKE IN-MEMORY REPOSITORIES ---
 
@@ -82,6 +84,11 @@ class FakeDailyLogRepository implements DailyLogRepository {
     } catch (_) {
       return null;
     }
+  }
+
+  @override
+  Future<List<DailyLogModel>> getLogsForProject(String projectId) async {
+    return db.where((l) => l.projectId == projectId).toList();
   }
 
   @override
@@ -488,6 +495,384 @@ void main() {
       final updatedLog = await logRepo.getLogForDate('p_ongoing', yesterday);
       expect(updatedLog?.plannedWords, 0);
       expect(updatedLog?.backlogCreated, 0);
+    });
+  });
+
+  group('Automatic Rest Day Consumption Tests', () {
+    test('Flexible projects automatically consume an available Rest Day and redistribute', () async {
+      final yesterday = cleanToday.subtract(const Duration(days: 1));
+      final tomorrow = cleanToday.add(const Duration(days: 1));
+
+      final project = ProjectModel(
+        id: 'p_flex_auto',
+        name: 'Flex Auto Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 1000,
+        writtenWords: 0,
+        remainingWords: 1000,
+        dailyWordTarget: 1000,
+        backlogWords: 0,
+        startDate: yesterday,
+        expectedFinishDate: tomorrow,
+        restMode: RestMode.flexible,
+        allowedRestDays: 2,
+        remainingRestDays: 2,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: yesterday,
+        updatedAt: yesterday,
+      );
+      projectRepo.db['p_flex_auto'] = project;
+
+      final s1 = ScheduleModel(
+        id: 's_yesterday',
+        projectId: 'p_flex_auto',
+        date: yesterday,
+        plannedWords: 500,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      final s2 = ScheduleModel(
+        id: 's_today',
+        projectId: 'p_flex_auto',
+        date: cleanToday,
+        plannedWords: 500,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      await scheduleRepo.insertSchedules([s1, s2]);
+
+      await syncService.syncFixedGoalBacklogs([project]);
+
+      final updatedS1 = await scheduleRepo.getScheduleForDate('p_flex_auto', yesterday);
+      expect(updatedS1?.isRestDay, isTrue);
+      expect(updatedS1?.plannedWords, 0);
+      expect(updatedS1?.locked, isTrue);
+
+      final updatedProj = await projectRepo.getProjectById('p_flex_auto');
+      final updatedSchedules = await scheduleRepo.getSchedulesForProject('p_flex_auto');
+      expect(getAvailableFlexibleRestDays(project: updatedProj!, schedules: updatedSchedules, logicalToday: yesterday), 1);
+      expect(updatedProj.backlogWords, 0);
+
+      final updatedS2 = await scheduleRepo.getScheduleForDate('p_flex_auto', cleanToday);
+      expect(updatedS2?.plannedWords, 1000);
+    });
+
+    test('Flexible projects generate backlog if no rest days remain', () async {
+      final yesterday = cleanToday.subtract(const Duration(days: 1));
+
+      final project = ProjectModel(
+        id: 'p_flex_backlog',
+        name: 'Flex Backlog Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 1000,
+        writtenWords: 0,
+        remainingWords: 1000,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: yesterday,
+        expectedFinishDate: cleanToday,
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: yesterday,
+        updatedAt: yesterday,
+      );
+      projectRepo.db['p_flex_backlog'] = project;
+
+      final s1 = ScheduleModel(
+        id: 's_yesterday',
+        projectId: 'p_flex_backlog',
+        date: yesterday,
+        plannedWords: 500,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      await scheduleRepo.insertSchedules([s1]);
+
+      await syncService.syncFixedGoalBacklogs([project]);
+
+      final updatedS1 = await scheduleRepo.getScheduleForDate('p_flex_backlog', yesterday);
+      expect(updatedS1?.isRestDay, isFalse);
+
+      final updatedProj = await projectRepo.getProjectById('p_flex_backlog');
+      expect(updatedProj?.backlogWords, 500);
+    });
+
+    test('Random projects automatically consume an available weekly Rest Day', () async {
+      final yesterday = cleanToday.subtract(const Duration(days: 1));
+      final tomorrow = cleanToday.add(const Duration(days: 1));
+
+      final project = ProjectModel(
+        id: 'p_random_auto',
+        name: 'Random Auto Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 1000,
+        writtenWords: 0,
+        remainingWords: 1000,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: yesterday,
+        expectedFinishDate: tomorrow,
+        restMode: RestMode.random,
+        allowedRestDays: 1,
+        remainingRestDays: 2,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: yesterday,
+        updatedAt: yesterday,
+      );
+      projectRepo.db['p_random_auto'] = project;
+
+      final s1 = ScheduleModel(
+        id: 's_yesterday',
+        projectId: 'p_random_auto',
+        date: yesterday,
+        plannedWords: 500,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      final s2 = ScheduleModel(
+        id: 's_today',
+        projectId: 'p_random_auto',
+        date: cleanToday,
+        plannedWords: 500,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      await scheduleRepo.insertSchedules([s1, s2]);
+
+      await syncService.syncFixedGoalBacklogs([project]);
+
+      final updatedS1 = await scheduleRepo.getScheduleForDate('p_random_auto', yesterday);
+      expect(updatedS1?.isRestDay, isTrue);
+
+      final updatedProj = await projectRepo.getProjectById('p_random_auto');
+      expect(updatedProj?.remainingRestDays, 1);
+    });
+
+    test('Random projects generate backlog if weekly Rest Day allowance is exhausted', () async {
+      final day1 = cleanToday.subtract(const Duration(days: 2));
+      final day2 = cleanToday.subtract(const Duration(days: 1));
+
+      final project = ProjectModel(
+        id: 'p_random_backlog',
+        name: 'Random Backlog Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 1500,
+        writtenWords: 0,
+        remainingWords: 1500,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: day1,
+        expectedFinishDate: cleanToday,
+        restMode: RestMode.random,
+        allowedRestDays: 1,
+        remainingRestDays: 2,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: day1,
+        updatedAt: day1,
+      );
+      projectRepo.db['p_random_backlog'] = project;
+
+      final s1 = ScheduleModel(
+        id: 's_day1',
+        projectId: 'p_random_backlog',
+        date: day1,
+        plannedWords: 0,
+        isRestDay: true,
+        completed: false,
+        automaticRestDay: false,
+        locked: true,
+      );
+      final s2 = ScheduleModel(
+        id: 's_day2',
+        projectId: 'p_random_backlog',
+        date: day2,
+        plannedWords: 500,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      await scheduleRepo.insertSchedules([s1, s2]);
+
+      await syncService.syncFixedGoalBacklogs([project]);
+
+      final updatedS2 = await scheduleRepo.getScheduleForDate('p_random_backlog', day2);
+      expect(updatedS2?.isRestDay, isFalse);
+
+      final updatedProj = await projectRepo.getProjectById('p_random_backlog');
+      expect(updatedProj?.backlogWords, 500);
+    });
+  });
+
+  group('Flexible Rest Day Budget & Weekly Allocation Tests', () {
+    test('getFlexibleAllocationForWeek distributes rest days correctly', () {
+      expect(getFlexibleAllocationForWeek(allowedRestDays: 5, durationDays: 21, weekIndex: 1), equals(2));
+      expect(getFlexibleAllocationForWeek(allowedRestDays: 5, durationDays: 21, weekIndex: 2), equals(2));
+      expect(getFlexibleAllocationForWeek(allowedRestDays: 5, durationDays: 21, weekIndex: 3), equals(1));
+
+      expect(getFlexibleAllocationForWeek(allowedRestDays: 2, durationDays: 14, weekIndex: 1), equals(1));
+      expect(getFlexibleAllocationForWeek(allowedRestDays: 2, durationDays: 14, weekIndex: 2), equals(1));
+    });
+
+    test('Project creation allowed rest days validation', () {
+      final service = const SchedulingService();
+      
+      final errValid = service.validateInputs(
+        targetWords: 8000,
+        dailyWordTarget: 1000,
+        durationDays: 10,
+        restMode: RestMode.flexible,
+        allowedRestDays: 2,
+      );
+      expect(errValid, isNull);
+
+      final errInvalid = service.validateInputs(
+        targetWords: 8000,
+        dailyWordTarget: 1000,
+        durationDays: 10,
+        restMode: RestMode.flexible,
+        allowedRestDays: 3,
+      );
+      expect(errInvalid, isNotNull);
+      expect(errInvalid, contains('exceeds the maximum allowed'));
+    });
+
+    test('Flexible Rest Days carry over and respect weekly limits', () {
+      final start = DateTime(2026, 7, 5);
+      final week2 = start.add(const Duration(days: 7));
+
+      final project = ProjectModel(
+        id: 'p_budget',
+        name: 'Budget Project',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 15000,
+        writtenWords: 0,
+        remainingWords: 15000,
+        dailyWordTarget: 1000,
+        backlogWords: 0,
+        startDate: start,
+        expectedFinishDate: start.add(const Duration(days: 20)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 5,
+        remainingRestDays: 5,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: start,
+        updatedAt: start,
+      );
+
+      final schedules = [
+        ScheduleModel(id: 's1', projectId: 'p_budget', date: start, plannedWords: 1000, isRestDay: false, completed: false, automaticRestDay: false, locked: false),
+        ScheduleModel(id: 's2', projectId: 'p_budget', date: start.add(const Duration(days: 1)), plannedWords: 1000, isRestDay: false, completed: false, automaticRestDay: false, locked: false),
+        ScheduleModel(id: 's3', projectId: 'p_budget', date: week2, plannedWords: 1000, isRestDay: false, completed: false, automaticRestDay: false, locked: false),
+      ];
+
+      expect(getAvailableFlexibleRestDays(project: project, schedules: schedules, logicalToday: start), equals(2));
+
+      final schedulesWithOneUsed = schedules.map((s) => s.id == 's1' ? s.copyWith(isRestDay: true, locked: true) : s).toList();
+      expect(getAvailableFlexibleRestDays(project: project, schedules: schedulesWithOneUsed, logicalToday: start), equals(1));
+
+      final schedulesWithTwoUsed = schedulesWithOneUsed.map((s) => s.id == 's2' ? s.copyWith(isRestDay: true, locked: true) : s).toList();
+      expect(getAvailableFlexibleRestDays(project: project, schedules: schedulesWithTwoUsed, logicalToday: start), equals(0));
+
+      expect(getAvailableFlexibleRestDays(project: project, schedules: schedulesWithTwoUsed, logicalToday: week2), equals(2));
+
+      expect(getAvailableFlexibleRestDays(project: project, schedules: schedules, logicalToday: week2), equals(4));
+    });
+  });
+
+  group('Random Rest Mode Behavior Tests', () {
+    test('Random mode generates initial schedule with 0 pre-assigned rest days', () {
+      final service = const SchedulingService();
+      final start = DateTime(2026, 7, 5);
+      final schedules = service.generateInitialSchedule(
+        projectId: 'p_random_test',
+        startDate: start,
+        targetWords: 5000,
+        dailyWordTarget: 1000,
+        durationDays: 14,
+        restMode: RestMode.random,
+        fixedRestWeekdays: const [],
+        allowedRestDays: 2,
+      );
+
+      final restDays = schedules.where((s) => s.isRestDay).length;
+      expect(restDays, equals(0));
+      expect(schedules.length, equals(14));
+      
+      final totalPlanned = schedules.fold<int>(0, (sum, s) => sum + s.plannedWords);
+      expect(totalPlanned, equals(5000));
+    });
+
+    test('Random mode respects weekly budget limit and does not carry over unused rest days', () async {
+      final start = cleanToday.subtract(const Duration(days: 10));
+
+      final project = ProjectModel(
+        id: 'p_random_budget',
+        name: 'Random Budget Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 10000,
+        writtenWords: 0,
+        remainingWords: 10000,
+        dailyWordTarget: 1000,
+        backlogWords: 0,
+        startDate: start,
+        expectedFinishDate: start.add(const Duration(days: 13)),
+        restMode: RestMode.random,
+        allowedRestDays: 2,
+        remainingRestDays: 4,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: start,
+        updatedAt: start,
+      );
+      projectRepo.db['p_random_budget'] = project;
+
+      final s1 = ScheduleModel(id: 's1', projectId: 'p_random_budget', date: start, plannedWords: 0, isRestDay: true, completed: false, automaticRestDay: false, locked: true);
+      final s2 = ScheduleModel(id: 's2', projectId: 'p_random_budget', date: start.add(const Duration(days: 1)), plannedWords: 0, isRestDay: true, completed: false, automaticRestDay: false, locked: true);
+      final s3 = ScheduleModel(id: 's3', projectId: 'p_random_budget', date: start.add(const Duration(days: 2)), plannedWords: 1000, isRestDay: false, completed: false, automaticRestDay: false, locked: false);
+      final s4 = ScheduleModel(id: 's4', projectId: 'p_random_budget', date: start.add(const Duration(days: 9)), plannedWords: 1000, isRestDay: false, completed: false, automaticRestDay: false, locked: false);
+
+      await scheduleRepo.insertSchedules([s1, s2, s3, s4]);
+
+      await syncService.syncFixedGoalBacklogs([project]);
+
+      final updatedS3 = await scheduleRepo.getScheduleForDate('p_random_budget', start.add(const Duration(days: 2)));
+      expect(updatedS3?.isRestDay, isFalse);
+
+      final updatedProj = await projectRepo.getProjectById('p_random_budget');
+      expect(updatedProj?.backlogWords, 1000);
+
+      final updatedS4 = await scheduleRepo.getScheduleForDate('p_random_budget', start.add(const Duration(days: 9)));
+      expect(updatedS4?.isRestDay, isTrue);
     });
   });
 }

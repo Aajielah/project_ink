@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database.dart';
 import '../models/statistics.dart';
+import '../shared/date_utils.dart';
 
 class StatisticsRepository {
   final AppDatabase _db;
@@ -43,16 +44,28 @@ class StatisticsRepository {
     // 2. Count completed projects
     final projectsCompletedCount = projects.where((p) => p.status == 'completed').length;
 
+    // 4. Fetch all logs
+    final logs = await _db.select(_db.dailyLogs).get();
+
     // 3. Calculate currentBacklog (excluding ongoing projects!)
     int currentBacklogVal = 0;
     for (final p in projects) {
-      if (p.status == 'active' && p.projectType == 'fixed') {
-        currentBacklogVal += p.backlogWords;
+      if (p.projectType == 'fixed') {
+        final projectLogs = logs.where((l) => l.projectId == p.id).toList();
+        final calculatedBacklog = projectLogs.fold<int>(0, (sum, l) => sum + (l.backlogCreated > 0 ? l.backlogCreated : 0));
+        
+        if (p.backlogWords != calculatedBacklog) {
+          final companion = ProjectsCompanion(
+            backlogWords: Value(calculatedBacklog),
+          );
+          await (_db.update(_db.projects)..where((t) => t.id.equals(p.id))).write(companion);
+        }
+        
+        if (p.status == 'active') {
+          currentBacklogVal += calculatedBacklog;
+        }
       }
     }
-
-    // 4. Fetch all logs
-    final logs = await _db.select(_db.dailyLogs).get();
 
     // 5. Calculate lifetimeWords
     int lifetimeWordsVal = 0;
@@ -78,7 +91,7 @@ class StatisticsRepository {
     int restDaysUsedVal = 0;
     for (final s in schedules) {
       if (s.isRestDay || s.automaticRestDay) {
-        final today = DateTime.now();
+        final today = getLogicalToday();
         final cleanToday = DateTime(today.year, today.month, today.day);
         final cleanSchedDate = DateTime(s.date.year, s.date.month, s.date.day);
         if (cleanSchedDate.isBefore(cleanToday) || (cleanSchedDate.isAtSameMomentAs(cleanToday) && s.locked)) {
@@ -97,7 +110,7 @@ class StatisticsRepository {
       }
       
       final cleanMin = DateTime(minDate.year, minDate.month, minDate.day);
-      final today = DateTime.now();
+      final today = getLogicalToday();
       final cleanToday = DateTime(today.year, today.month, today.day);
 
       final Map<String, List<Schedule>> schedulesByDate = {};

@@ -32,7 +32,7 @@ void main() {
         targetWords: 1000,
         dailyWordTarget: 100,
         durationDays: 10,
-        restMode: RestMode.flexible,
+        restMode: RestMode.random,
         allowedRestDays: 1,
       );
       expect(err, isNotNull);
@@ -95,11 +95,11 @@ void main() {
       
       // Count rest days in first week (first 7 days)
       final week1Rest = list.sublist(0, 7).where((s) => s.isRestDay).length;
-      expect(week1Rest, 2);
+      expect(week1Rest, 0);
 
       // Count rest days in second week block (remaining 3 days)
       final week2Rest = list.sublist(7, 10).where((s) => s.isRestDay).length;
-      expect(week2Rest, 2); // clamped to allowedRestDays (2)
+      expect(week2Rest, 0);
     });
   });
 
