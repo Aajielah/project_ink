@@ -224,6 +224,14 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         );
 
         final finishDate = schedules.last.date;
+        final durationDaysActual = getDaysDifference(cleanStartDate, finishDate) + 1;
+        final initialRemainingRestDays = restMode == RestMode.fixed
+            ? 0
+            : _schedulingService.getWeeklyAllocation(
+                totalRestDays: allowedRestDays,
+                durationDays: durationDaysActual,
+                week: 1,
+              );
 
         final project = ProjectModel(
           id: projectId,
@@ -242,7 +250,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           expectedFinishDate: finishDate,
           restMode: restMode,
           allowedRestDays: allowedRestDays,
-          remainingRestDays: allowedRestDays,
+          remainingRestDays: initialRemainingRestDays,
           projectStreak: 0,
           longestProjectStreak: 0,
           currentWeek: 1,
@@ -440,6 +448,26 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     try {
       final today = getLogicalToday();
       
+      if (project.projectType == ProjectType.ongoing) {
+        final updatedTodaySchedule = todaySchedule.copyWith(
+          isRestDay: true,
+          plannedWords: 0,
+          locked: true,
+          completed: true,
+          automaticRestDay: false,
+        );
+
+        final db = _ref.read(dbProvider);
+        await db.transaction(() async {
+          await _scheduleRepo.updateSchedule(updatedTodaySchedule);
+        });
+
+        await _statsRepo.recalculateStatistics();
+        _invalidateAllDependentProviders();
+        await loadProjects(silent: true);
+        return;
+      }
+
       // 1. Get all schedules for the project
       final schedules = await _scheduleRepo.getSchedulesForProject(project.id);
       
@@ -488,6 +516,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         }
         
         final updatedProject = project.copyWith(
+          remainingRestDays: project.remainingRestDays - 1 < 0 ? 0 : project.remainingRestDays - 1,
           updatedAt: DateTime.now(),
         );
         await _projectRepo.updateProject(updatedProject);

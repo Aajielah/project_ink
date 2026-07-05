@@ -1,6 +1,15 @@
 enum ProjectStatus { upcoming, active, paused, frozen, completed }
 
-enum RestMode { fixed, flexible, random }
+enum RestMode { fixed, flexible, adaptive }
+
+/// Parses the RestMode string in a backward-compatible manner.
+RestMode parseRestMode(String value) {
+  final lower = value.toLowerCase();
+  if (lower == 'random') {
+    return RestMode.adaptive;
+  }
+  return RestMode.values.byName(lower);
+}
 
 enum ProjectType { fixed, ongoing }
 
@@ -159,7 +168,7 @@ class ProjectModel {
       actualFinishDate: json['actualFinishDate'] != null
           ? DateTime.parse(json['actualFinishDate'] as String)
           : null,
-      restMode: RestMode.values.byName(json['restMode'] as String),
+      restMode: parseRestMode(json['restMode'] as String),
       allowedRestDays: json['allowedRestDays'] as int,
       remainingRestDays: json['remainingRestDays'] as int,
       projectStreak: json['projectStreak'] as int,

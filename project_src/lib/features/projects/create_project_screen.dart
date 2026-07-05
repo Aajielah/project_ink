@@ -570,15 +570,15 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                           items: const [
                             DropdownMenuItem(
                               value: RestMode.fixed,
-                              child: Text('Fixed (Specific days of the week)'),
+                              child: Text('Fixed Rest Days'),
                             ),
                             DropdownMenuItem(
                               value: RestMode.flexible,
-                              child: Text('Flexible (Budget allowed per week)'),
+                              child: Text('Flexible Rest Days'),
                             ),
                             DropdownMenuItem(
-                              value: RestMode.random,
-                              child: Text('Random (Distributed by system per week)'),
+                              value: RestMode.adaptive,
+                              child: Text('Adaptive Rest Days'),
                             ),
                           ],
                           onChanged: (val) {
@@ -612,22 +612,20 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                           TextFormField(
                             initialValue: _allowedRestDays.toString(),
                             keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              labelText: 'Rest Days Allowed Per Week',
-                              helperText: _restMode == RestMode.random
-                                  ? 'The scheduling engine will randomly assign these rest days in your calendar.'
-                                  : 'You can manually activate up to this many rest days each week.',
-                              border: const OutlineInputBorder(),
+                            decoration: const InputDecoration(
+                              labelText: 'Total Rest Days',
+                              helperText: 'Choose how many rest days you want throughout this entire project. Project Ink will distribute them automatically across your writing schedule.',
+                              border: OutlineInputBorder(),
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) return 'Required.';
                               final val = int.tryParse(value);
-                              if (val == null || val < 0 || val > 6) return 'Must be between 0 and 6 days.';
+                              if (val == null || val < 0) return 'Must be 0 or greater.';
                               return null;
                             },
                             onChanged: (val) {
                               final parsed = int.tryParse(val);
-                              if (parsed != null && parsed >= 0 && parsed <= 6) {
+                              if (parsed != null && parsed >= 0) {
                                 _allowedRestDays = parsed;
                               }
                             },

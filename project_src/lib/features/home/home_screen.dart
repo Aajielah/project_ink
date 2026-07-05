@@ -1240,6 +1240,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                               if (recProject != null)
                                 Row(
                                   children: [
+                                    BookCoverWidget(
+                                      title: recProject.name,
+                                      coverImagePath: recProject.coverImagePath,
+                                      coverType: recProject.coverType,
+                                      width: 60,
+                                      height: 80,
+                                      borderRadius: 6.0,
+                                      showTitle: false,
+                                    ),
+                                    const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1444,7 +1454,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                                     borderRadius: BorderRadius.circular(4),
                                                   ),
                                                   child: Text(
-                                                    '🏝 REST DAY',
+                                                    task.schedule.automaticRestDay
+                                                        ? '🏝 REST DAY\n(Adaptive)'
+                                                        : '🏝 REST DAY\n(Manual)',
+                                                    textAlign: TextAlign.center,
                                                     style: theme.textTheme.labelSmall?.copyWith(
                                                       color: theme.colorScheme.onSecondaryContainer,
                                                       fontWeight: FontWeight.bold,

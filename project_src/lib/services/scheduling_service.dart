@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:uuid/uuid.dart';
 import '../models/project.dart';
 import '../models/schedule.dart';
+import '../shared/date_utils.dart';
 
 class SchedulingService {
   const SchedulingService();
@@ -19,8 +20,6 @@ class SchedulingService {
     if (dailyWordTarget <= 0) return 'Daily word target must be greater than zero.';
     if (durationDays <= 0) return 'Duration must be at least 1 day.';
 
-    // Calculate approximate number of weeks
-    final weeks = (durationDays / 7.0).ceil();
     int restDaysEstimate = 0;
 
     if (restMode == RestMode.fixed) {
@@ -35,21 +34,15 @@ class SchedulingService {
           restDaysEstimate++;
         }
       }
-    } else if (restMode == RestMode.flexible) {
+    } else if (restMode == RestMode.flexible || restMode == RestMode.adaptive) {
       if (allowedRestDays < 0) {
         return 'Rest Days cannot be negative.';
       }
-      final minimumWritingDays = (targetWords / dailyWordTarget).ceil();
-      final maximumRestDays = durationDays - minimumWritingDays;
-      if (allowedRestDays > maximumRestDays) {
-        return 'The chosen number of Rest Days ($allowedRestDays) exceeds the maximum allowed ($maximumRestDays) to complete the project at this daily target.';
+      final writingDays = durationDays - allowedRestDays;
+      if (writingDays <= 0 || writingDays * dailyWordTarget < targetWords) {
+        return 'This configuration cannot complete your project. Reduce your total rest days, increase your daily target, or extend the project duration.';
       }
       restDaysEstimate = allowedRestDays;
-    } else if (restMode == RestMode.random) {
-      if (allowedRestDays < 0) {
-        return 'Rest Days cannot be negative.';
-      }
-      restDaysEstimate = allowedRestDays * weeks;
     }
 
     final writingDays = durationDays - restDaysEstimate;
@@ -63,6 +56,65 @@ class SchedulingService {
     }
 
     return null;
+  }
+
+  /// Returns the weekly allocation for a given week of a project.
+  int getWeeklyAllocation({
+    required int totalRestDays,
+    required int durationDays,
+    required int week,
+  }) {
+    final weeks = (durationDays / 7.0).ceil();
+    if (week < 1 || week > weeks) return 0;
+    final base = totalRestDays ~/ weeks;
+    final remainder = totalRestDays % weeks;
+    return base + ((week - 1) < remainder ? 1 : 0);
+  }
+
+  /// Calculates the available rest days for a project on a given logical date.
+  int getAvailableRestDays({
+    required ProjectModel project,
+    required List<ScheduleModel> schedules,
+    required DateTime logicalToday,
+  }) {
+    if (project.projectType == ProjectType.ongoing) {
+      return 9999;
+    }
+    final durationDays = getDaysDifference(project.startDate, project.expectedFinishDate) + 1;
+    final currentWeek = (getDaysDifference(project.startDate, logicalToday) ~/ 7) + 1;
+
+    final totalUsed = schedules.where((s) => s.isRestDay).length;
+
+    if (project.restMode == RestMode.flexible) {
+      int totalAllocatedUpToNow = 0;
+      for (int w = 1; w <= currentWeek; w++) {
+        totalAllocatedUpToNow += getWeeklyAllocation(
+          totalRestDays: project.allowedRestDays,
+          durationDays: durationDays,
+          week: w,
+        );
+      }
+      return max(0, totalAllocatedUpToNow - totalUsed);
+    } else if (project.restMode == RestMode.adaptive) {
+      final allocatedCurrentWeek = getWeeklyAllocation(
+        totalRestDays: project.allowedRestDays,
+        durationDays: durationDays,
+        week: currentWeek,
+      );
+      int usedCurrentWeek = 0;
+      for (final s in schedules) {
+        if (s.isRestDay) {
+          final diff = getDaysDifference(project.startDate, s.date);
+          final w = (diff ~/ 7) + 1;
+          if (w == currentWeek) {
+            usedCurrentWeek++;
+          }
+        }
+      }
+      final overallRemaining = max(0, project.allowedRestDays - totalUsed);
+      return max(0, min(allocatedCurrentWeek - usedCurrentWeek, overallRemaining));
+    }
+    return 0;
   }
 
   /// Generates a new schedule list for a project based on config.
@@ -90,8 +142,8 @@ class SchedulingService {
           restDayMap[i] = true;
         }
       }
-    } else if (restMode == RestMode.random) {
-      // Random: initially no rest days are pre-assigned in calendar under new spec.
+    } else if (restMode == RestMode.adaptive) {
+      // Adaptive: initially no rest days are pre-assigned in calendar under new spec.
     } else {
       // Flexible: initially no rest days are pre-assigned in calendar.
       // The user marks them as rest days dynamically up to their budget.
@@ -179,8 +231,8 @@ class SchedulingService {
           newRestMap[i] = true;
         }
       }
-    } else if (restMode == RestMode.random) {
-      // Random: initially no rest days are pre-assigned in calendar under new spec.
+    } else if (restMode == RestMode.adaptive) {
+      // Adaptive: initially no rest days are pre-assigned in calendar under new spec.
     }
 
     // Reallocate remaining words across future writing days

@@ -403,9 +403,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                         value: editRestMode,
                         decoration: const InputDecoration(labelText: 'Rest Mode', border: OutlineInputBorder()),
                         items: const [
-                          DropdownMenuItem(value: RestMode.fixed, child: Text('Fixed (Weekly Days)')),
-                          DropdownMenuItem(value: RestMode.flexible, child: Text('Flexible (Budget)')),
-                          DropdownMenuItem(value: RestMode.random, child: Text('Random')),
+                          DropdownMenuItem(value: RestMode.fixed, child: Text('Fixed Rest Days')),
+                          DropdownMenuItem(value: RestMode.flexible, child: Text('Flexible Rest Days')),
+                          DropdownMenuItem(value: RestMode.adaptive, child: Text('Adaptive Rest Days')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -464,12 +464,13 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                           initialValue: editAllowedRestDays.toString(),
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'Rest Days Allowed Per Week',
+                            labelText: 'Total Rest Days',
+                            helperText: 'Choose how many rest days you want throughout this entire project. Project Ink will distribute them automatically across your writing schedule.',
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (val) {
                             final parsed = int.tryParse(val);
-                            if (parsed != null && parsed >= 0 && parsed <= 6) {
+                            if (parsed != null && parsed >= 0) {
                               editAllowedRestDays = parsed;
                             }
                           },
@@ -498,6 +499,22 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                         message: 'Project name cannot be empty and daily target must be greater than zero.',
                       );
                       return;
+                    }
+
+                    if (!isOngoing) {
+                      final targetWords = int.tryParse(targetWordsController.text) ?? project.targetWords;
+                      final calcDays = getCalculatedDays();
+                      if (editRestMode == RestMode.flexible || editRestMode == RestMode.adaptive) {
+                        final writingDays = calcDays - editAllowedRestDays;
+                        if (writingDays <= 0 || writingDays * dailyTarget < targetWords) {
+                          _showValidationErrorDialog(
+                            context,
+                            title: 'Schedule Not Possible',
+                            message: 'This configuration cannot complete your project. Reduce your total rest days, increase your daily target, or extend the project duration.',
+                          );
+                          return;
+                        }
+                      }
                     }
 
                     final today = DateTime.now();
@@ -570,17 +587,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                             futureRestDaysCount++;
                           }
                         }
-                      } else if (editRestMode == RestMode.random) {
-                        final totalWeeks = (calcDays / 7.0).ceil();
-                        final restDaysUsed = recalculated.where((s) => s.isRestDay).length;
-                        final remainingRestBudget = max(0, editAllowedRestDays * totalWeeks - restDaysUsed);
-                        futureRestDaysCount = min(remainingRestBudget, futureDates.length);
-                        final random = Random();
-                        final List<int> indices = List.generate(futureDates.length, (index) => index);
-                        indices.shuffle(random);
-                        for (int r = 0; r < futureRestDaysCount; r++) {
-                          restDayMap[indices[r]] = true;
-                        }
+                      } else if (editRestMode == RestMode.adaptive) {
+                        // Adaptive: initially no rest days pre-assigned
                       }
 
                       final futureWritingDays = futureDates.length - futureRestDaysCount;
@@ -832,9 +840,73 @@ class _OverviewTab extends ConsumerWidget {
                             : DateFormat('MMM d, yyyy').format(project.expectedFinishDate),
                         icon: isOngoing ? Icons.mode_edit : Icons.calendar_today,
                         color: theme.colorScheme.secondary,
-                      ),
                     ],
                   ),
+                  if (project.restMode == RestMode.flexible || project.restMode == RestMode.adaptive) ...[
+                    const Divider(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _StatColumn(
+                          label: project.restMode == RestMode.flexible
+                              ? 'Flexible Rest Days Used'
+                              : 'Adaptive Rest Days Used',
+                          value: '${project.allowedRestDays - project.remainingRestDays} days',
+                          icon: Icons.check_circle_outline,
+                          color: theme.colorScheme.primary,
+                        ),
+                        _StatColumn(
+                          label: project.restMode == RestMode.flexible
+                              ? 'Remaining Flexible Rest Days'
+                              : 'Remaining Adaptive Rest Days',
+                          value: '${project.remainingRestDays} days',
+                          icon: Icons.hourglass_full,
+                          color: theme.colorScheme.secondary,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            project.restMode == RestMode.flexible ? 'Rest Days Remaining' : 'Adaptive Rest Budget',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(project.allowedRestDays, (i) {
+                              final isRemaining = i < project.remainingRestDays;
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                child: Text(
+                                  isRemaining ? '■' : '□',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: isRemaining ? theme.colorScheme.primary : theme.colorScheme.outline,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${project.remainingRestDays} of ${project.allowedRestDays} remaining',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1099,57 +1171,29 @@ class _ThisWeekTab extends ConsumerWidget {
                   } catch (_) {}
                   final logged = dayLog?.actualWords ?? 0;
 
-                  final isFlexOrRandom = project.restMode == RestMode.flexible || project.restMode == RestMode.random;
+                  final isOngoing = project.projectType == ProjectType.ongoing;
+                  final isFlex = project.restMode == RestMode.flexible;
 
                   bool hasAvailableRestDay() {
-                    if (project.restMode == RestMode.flexible) {
-                      return getAvailableFlexibleRestDays(
-                        project: project,
-                        schedules: allSchedules,
-                        logicalToday: cleanToday,
-                      ) > 0;
-                    } else if (project.restMode == RestMode.random) {
-                      final weekStart = getProjectWeekStart(project.startDate, cleanToday);
-                      final weekEnd = getProjectWeekEnd(project.startDate, cleanToday);
-                      final usedInCurrentWeek = allSchedules.where((w) =>
-                        w.isRestDay &&
-                        (w.date.isAtSameMomentAs(weekStart) || w.date.isAfter(weekStart)) &&
-                        (w.date.isAtSameMomentAs(weekEnd) || w.date.isBefore(weekEnd))
-                      ).length;
-                      return usedInCurrentWeek < project.allowedRestDays;
-                    }
-                    return false;
+                    if (isOngoing) return true;
+                    if (!isFlex) return false;
+                    final available = ref.read(schedulingServiceProvider).getAvailableRestDays(
+                      project: project,
+                      schedules: allSchedules,
+                      logicalToday: getLogicalToday(),
+                    );
+                    return available > 0;
                   }
 
                   return GestureDetector(
                     onLongPress: () {
-                      if (isFlexOrRandom && isToday && !s.isRestDay) {
-                        final hasRest = hasAvailableRestDay();
-                        if (!hasRest) {
-                          final msg = project.restMode == RestMode.flexible
-                              ? "You have already used all available Flexible Rest Days for this week."
-                              : "You have already used all available Rest Days.";
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text("No Rest Days Available"),
-                              content: Text(msg),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text("OK"),
-                                ),
-                              ],
-                            ),
-                          );
-                        } else {
+                      if ((isFlex || isOngoing) && isToday && !s.isRestDay) {
+                        if (isOngoing) {
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
                               title: const Text("Convert today into a Rest Day?"),
-                              content: const Text(
-                                "This will use one of your available Rest Days and redistribute today's words across the remaining writing days."
-                              ),
+                              content: const Text("This will mark today as a rest day."),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
@@ -1160,11 +1204,49 @@ class _ThisWeekTab extends ConsumerWidget {
                                     Navigator.pop(context);
                                     ref.read(projectsProvider.notifier).convertDayToRestDay(project, s);
                                   },
-                                  child: const Text("Convert"),
+                                  child: const Text("Confirm"),
                                 ),
                               ],
                             ),
                           );
+                        } else {
+                          final hasRest = hasAvailableRestDay();
+                          if (!hasRest) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text("No Flexible Rest Days remaining."),
+                                content: const Text("Today's writing must be completed or it will become backlog."),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text("OK"),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text("Convert today into a Rest Day?"),
+                                content: const Text("This will consume one of your remaining Flexible Rest Days."),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text("Cancel"),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      ref.read(projectsProvider.notifier).convertDayToRestDay(project, s);
+                                    },
+                                    child: const Text("Confirm"),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
                         }
                       }
                     },
@@ -1222,24 +1304,41 @@ class _ThisWeekTab extends ConsumerWidget {
   }
 }
 
-class _HistoryTab extends ConsumerWidget {
+class _HistoryTab extends ConsumerStatefulWidget {
   final String projectId;
 
-  const _HistoryTab({required this.projectId});
+  const _HistoryTab({super.key, required this.projectId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_HistoryTab> createState() => _HistoryTabState();
+}
+
+class _HistoryTabState extends ConsumerState<_HistoryTab> {
+  bool _showRestDays = false;
+
+  @override
+  Widget build(BuildContext context) {
     final logRepo = ref.watch(dailyLogRepositoryProvider);
+    final schedRepo = ref.watch(scheduleRepositoryProvider);
     final theme = Theme.of(context);
 
-    return FutureBuilder<List<DailyLogModel>>(
-      future: logRepo.getLogsForProject(projectId),
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        logRepo.getLogsForProject(widget.projectId),
+        schedRepo.getSchedulesForProject(widget.projectId),
+      ]),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final logs = snapshot.data!.reversed.toList();
+        final logs = (snapshot.data![0] as List<DailyLogModel>).reversed.toList();
+        final schedules = snapshot.data![1] as List<ScheduleModel>;
+
+        final scheduleMap = {
+          for (final s in schedules)
+            DateTime(s.date.year, s.date.month, s.date.day): s
+        };
 
         if (logs.isEmpty) {
           return Center(
@@ -1257,87 +1356,187 @@ class _HistoryTab extends ConsumerWidget {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16.0),
-          itemCount: logs.length,
-          itemBuilder: (context, index) {
-            final l = logs[index];
-            final diff = l.actualWords - l.plannedWords;
-            final isExcess = diff > 0;
-            final isCompleted = l.completed;
-            final logicalToday = getLogicalToday();
+        final filteredLogs = logs.where((l) {
+          final s = scheduleMap[DateTime(l.date.year, l.date.month, l.date.day)];
+          final isRest = s?.isRestDay ?? (l.plannedWords == 0);
+          if (isRest) {
+            return _showRestDays;
+          }
+          return true;
+        }).toList();
 
-            return Card(
-              child: ListTile(
-                leading: Icon(
-                  isCompleted ? Icons.check_circle : Icons.warning_amber_rounded,
-                  color: isCompleted ? theme.colorScheme.primary : theme.colorScheme.error,
-                ),
-                title: Text(DateFormat('EEEE, MMM d, yyyy').format(l.date)),
-                subtitle: Text(
-                  l.backlogCreated > 0
-                      ? 'Wrote: ${l.actualWords} / ${l.plannedWords} planned\nBacklog remaining: ${l.backlogCreated} words'
-                      : l.backlogCreated == -1
-                          ? 'Wrote: ${l.actualWords} / ${l.plannedWords} planned\nAll backlog resolved!'
-                          : 'Wrote: ${l.actualWords} / ${l.plannedWords} planned',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      isExcess
-                          ? '+${diff} words'
-                          : diff < 0
-                              ? '${diff} words'
-                              : 'On target',
-                      style: TextStyle(
-                        color: isExcess
-                            ? theme.colorScheme.primary
-                            : diff < 0
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.secondary,
-                        fontWeight: FontWeight.bold,
-                      ),
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'History Timeline',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    if (l.backlogCreated > 0) ...[
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.playlist_add_check, color: Colors.orange, size: 20),
-                        tooltip: "Resolve backlog",
-                        onPressed: () {
-                          _showResolveBacklogDialog(context, ref, l);
-                        },
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.coffee_outlined, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Show Rest Days',
+                        style: theme.textTheme.bodyMedium,
                       ),
-                    ] else if (l.backlogCreated == -1) ...[
-                      const SizedBox(width: 8),
-                      const Row(
-                        children: [
-                          Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
-                          SizedBox(width: 4),
-                          Text(
-                            "Backlog Resolved",
-                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (l.date.year == logicalToday.year &&
-                        l.date.month == logicalToday.month &&
-                        l.date.day == logicalToday.day) ...[
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.edit, size: 20),
-                        tooltip: "Edit today's log",
-                        onPressed: () {
-                          _showEditLogDialog(context, ref, l);
+                      const SizedBox(width: 4),
+                      Switch.adaptive(
+                        value: _showRestDays,
+                        activeColor: theme.colorScheme.primary,
+                        onChanged: (val) {
+                          setState(() {
+                            _showRestDays = val;
+                          });
                         },
                       ),
                     ],
-                  ],
-                ),
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: filteredLogs.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.history, size: 48, color: theme.colorScheme.outline),
+                            const SizedBox(height: 12),
+                            const Text('No writing events to display. Enable "Show Rest Days" to view rest periods.'),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: filteredLogs.length,
+                      itemBuilder: (context, index) {
+                        final l = filteredLogs[index];
+                        final s = scheduleMap[DateTime(l.date.year, l.date.month, l.date.day)];
+                        final isRest = s?.isRestDay ?? (l.plannedWords == 0);
+                        final logicalToday = getLogicalToday();
+
+                        Widget leadingIcon;
+                        Color accentColor;
+                        String statusTitle;
+                        String statusSubtitle;
+                        String? extraText;
+                        bool isEditable = !isRest;
+
+                        if (isRest) {
+                          leadingIcon = const Icon(Icons.coffee, color: Colors.teal, size: 28);
+                          accentColor = Colors.teal;
+                          statusTitle = s?.automaticRestDay == true ? 'Rest Day (Adaptive)' : 'Rest Day (Manual)';
+                          statusSubtitle = s?.automaticRestDay == true
+                              ? 'Adaptive rest day automatically assigned.\nRecovery is part of consistency.'
+                              : 'You took a planned rest day.\nRecovery is part of consistency.';
+                        } else if (l.plannedWords > 0 && l.actualWords == 0) {
+                          leadingIcon = Icon(Icons.error_outline, color: theme.colorScheme.error, size: 28);
+                          accentColor = theme.colorScheme.error;
+                          statusTitle = 'Missed Day';
+                          statusSubtitle = '0 / ${l.plannedWords} words\n${l.plannedWords} words added to backlog';
+                        } else if (l.plannedWords > 0 && l.actualWords < l.plannedWords) {
+                          leadingIcon = const Icon(Icons.hourglass_bottom, color: Colors.orange, size: 28);
+                          accentColor = Colors.orange;
+                          statusTitle = 'Backlog Remaining';
+                          statusSubtitle = '${l.actualWords} / ${l.plannedWords} words\n${l.plannedWords - l.actualWords} words remaining';
+                          if (l.backlogCreated == -1) {
+                            extraText = 'All backlog resolved!';
+                          }
+                        } else {
+                          leadingIcon = const Icon(Icons.check_circle, color: Colors.green, size: 28);
+                          accentColor = Colors.green;
+                          statusTitle = 'Completed';
+                          statusSubtitle = '${l.actualWords} / ${l.plannedWords} words';
+                          if (l.backlogCreated == -1) {
+                            extraText = 'All backlog resolved!';
+                          }
+                        }
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12.0),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                            leading: leadingIcon,
+                            title: Text(
+                              DateFormat('EEEE, MMM d, yyyy').format(l.date),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 6),
+                                Text(
+                                  statusTitle,
+                                  style: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(statusSubtitle),
+                                if (extraText != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    extraText,
+                                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                                  ),
+                                ]
+                              ],
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (l.backlogCreated > 0) ...[
+                                  IconButton(
+                                    icon: const Icon(Icons.playlist_add_check, color: Colors.orange, size: 24),
+                                    tooltip: "Resolve backlog",
+                                    onPressed: () {
+                                      _showResolveBacklogDialog(context, ref, l);
+                                    },
+                                  ),
+                                ] else if (l.backlogCreated == -1) ...[
+                                  const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        "Resolved",
+                                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                if (isEditable &&
+                                    l.date.year == logicalToday.year &&
+                                    l.date.month == logicalToday.month &&
+                                    l.date.day == logicalToday.day) ...[
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, size: 20),
+                                    tooltip: "Edit today's log",
+                                    onPressed: () {
+                                      _showEditLogDialog(context, ref, l);
+                                    },
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );

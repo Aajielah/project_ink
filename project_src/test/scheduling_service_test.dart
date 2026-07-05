@@ -24,19 +24,15 @@ void main() {
     });
 
     test('rejects impossible target words given duration and daily target', () {
-      // 10 days, 2 rest days (1 allowed per week, ceiling of 10/7 is 2 weeks -> 2 rest days)
-      // Writing days = 10 - 2 = 8 days
-      // Max possible words = 8 * 100 = 800 words
-      // Target is 1000 words -> Impossible!
       final err = schedulingService.validateInputs(
         targetWords: 1000,
         dailyWordTarget: 100,
         durationDays: 10,
-        restMode: RestMode.random,
+        restMode: RestMode.adaptive,
         allowedRestDays: 1,
       );
       expect(err, isNotNull);
-      expect(err, contains('Impossible schedule'));
+      expect(err, contains('This configuration cannot complete your project. Reduce your total rest days, increase your daily target, or extend the project duration.'));
     });
 
     test('accepts valid schedule parameters', () {
@@ -86,7 +82,7 @@ void main() {
         targetWords: 1000,
         dailyWordTarget: 250,
         durationDays: 10,
-        restMode: RestMode.random,
+        restMode: RestMode.adaptive,
         fixedRestWeekdays: const [],
         allowedRestDays: 2,
       );

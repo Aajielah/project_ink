@@ -146,12 +146,11 @@ class OngoingSyncService {
     }
   }
 
-  /// Incremental rollover for Fixed Goal projects.
-  /// Scans for past uncompleted writing days and moves their remaining targets to backlog.
   Future<void> syncFixedGoalBacklogs(List<ProjectModel> activeProjects) async {
     final schedRepo = _ref.read(scheduleRepositoryProvider);
     final logRepo = _ref.read(dailyLogRepositoryProvider);
     final projRepo = _ref.read(projectRepositoryProvider);
+    final schedService = _ref.read(schedulingServiceProvider);
     
     final today = getLogicalToday();
     final cleanToday = DateTime(today.year, today.month, today.day);
@@ -161,124 +160,149 @@ class OngoingSyncService {
       if (project.projectType == ProjectType.ongoing) continue;
 
       List<ScheduleModel> currentSchedules = await schedRepo.getSchedulesForProject(project.id);
-      
-      // Sort past writing schedules chronologically
-      final pastWritingSchedules = currentSchedules
-          .where((s) => s.date.isBefore(cleanToday) && !s.isRestDay && !s.completed)
-          .toList();
-      pastWritingSchedules.sort((a, b) => a.date.compareTo(b.date));
+      if (currentSchedules.isEmpty) continue;
+
+      // Sort current schedules chronologically to find bounds
+      currentSchedules.sort((a, b) => a.date.compareTo(b.date));
+
+      final firstDate = currentSchedules.first.date;
+      final cleanFirst = DateTime(firstDate.year, firstDate.month, firstDate.day);
 
       int currentRemainingRestDays = project.remainingRestDays;
+      int currentWeekNum = project.currentWeek;
       bool projectModified = false;
       List<ScheduleModel> schedulesToUpdateInDb = [];
 
-      for (final s in pastWritingSchedules) {
-        final existingLog = await logRepo.getLogForDate(project.id, s.date);
-        final actual = existingLog?.actualWords ?? 0;
+      final durationDays = getDaysDifference(project.startDate, project.expectedFinishDate) + 1;
 
-        if (actual == 0) {
-          // Check if eligible for automatic rest day conversion
-          final isFlexOrRandom = project.restMode == RestMode.flexible || project.restMode == RestMode.random;
-          
-          bool hasRest = false;
-          if (isFlexOrRandom) {
+      var tempDate = cleanFirst;
+      while (tempDate.isBefore(cleanToday)) {
+        // 1. Check week boundary transitions
+        final weekOfTempDate = (getDaysDifference(project.startDate, tempDate) ~/ 7) + 1;
+        if (weekOfTempDate > currentWeekNum) {
+          while (currentWeekNum < weekOfTempDate) {
+            currentWeekNum++;
+            final weeklyAllocation = schedService.getWeeklyAllocation(
+              totalRestDays: project.allowedRestDays,
+              durationDays: durationDays,
+              week: currentWeekNum,
+            );
             if (project.restMode == RestMode.flexible) {
-              hasRest = getAvailableFlexibleRestDays(
-                project: project,
-                schedules: currentSchedules,
-                logicalToday: s.date,
-              ) > 0;
-            } else if (project.restMode == RestMode.random) {
-              final weekStart = getProjectWeekStart(project.startDate, s.date);
-              final weekEnd = getProjectWeekEnd(project.startDate, s.date);
-              final usedInWeek = currentSchedules.where((x) =>
-                x.isRestDay &&
-                (x.date.isAtSameMomentAs(weekStart) || x.date.isAfter(weekStart)) &&
-                (x.date.isAtSameMomentAs(weekEnd) || x.date.isBefore(weekEnd))
-              ).length;
-              hasRest = usedInWeek < project.allowedRestDays;
+              currentRemainingRestDays += weeklyAllocation;
+            } else if (project.restMode == RestMode.adaptive) {
+              currentRemainingRestDays = weeklyAllocation;
             }
           }
-
-          if (hasRest) {
-            // 1. Mark schedule as Rest Day, planned words = 0, lock it
-            final updatedS = s.copyWith(
-              isRestDay: true,
-              plannedWords: 0,
-              locked: true,
-              completed: false,
-            );
-            
-            // Update in-memory schedules list
-            currentSchedules = currentSchedules.map((x) => x.id == s.id ? updatedS : x).toList();
-            schedulesToUpdateInDb.add(updatedS);
-
-            // 2. Create/Update Daily Log so history reflects 0 planned words and no backlog
-            if (existingLog != null) {
-              await logRepo.insertLog(existingLog.copyWith(
-                plannedWords: 0,
-                backlogCreated: 0,
-                completed: false,
-              ));
-            } else {
-              await logRepo.insertLog(DailyLogModel(
-                id: uuid.v4(),
-                projectId: project.id,
-                scheduleId: s.id,
-                date: s.date,
-                plannedWords: 0,
-                actualWords: 0,
-                carryForwardWords: 0,
-                backlogCreated: 0,
-                completed: false,
-                loggedAt: s.date,
-              ));
-            }
-
-            // 3. Deduct one available rest day
-            if (project.restMode != RestMode.flexible) {
-              currentRemainingRestDays--;
-            }
-            projectModified = true;
-
-            // 4. Redistribute today's planned words (which was s.plannedWords) starting from tomorrow
-            final tomorrow = s.date.add(const Duration(days: 1));
-            
-            // Calculate total future planned words starting from tomorrow (plus the words we just skipped)
-            final futureSchedules = currentSchedules
-                .where((x) => !x.locked && (x.date.isAfter(s.date) || x.date.isAtSameMomentAs(tomorrow)))
-                .toList();
-            final totalFuturePlannedWords = futureSchedules.fold<int>(0, (sum, x) => sum + x.plannedWords) + s.plannedWords;
-
-            final restDaysUsed = currentSchedules.where((x) => (x.isRestDay || x.automaticRestDay) && (x.locked || x.date.isBefore(tomorrow))).length;
-
-            final recalculated = _ref.read(schedulingServiceProvider).recalculateFutureSchedule(
-              existingSchedules: currentSchedules,
-              recalculateFromDate: tomorrow,
-              newDailyTarget: project.dailyWordTarget,
-              totalRemainingWords: totalFuturePlannedWords,
-              fixedRestWeekdays: const [],
-              restMode: project.restMode,
-              allowedRestDaysBudget: project.allowedRestDays,
-              restDaysUsed: restDaysUsed,
-            );
-
-            // Update in-memory list and queue updates for DB
-            currentSchedules = recalculated;
-            for (final r in recalculated) {
-              if (!r.locked) {
-                schedulesToUpdateInDb.add(r);
-              }
-            }
-            continue; // Skip normal backlog creation since this day is resolved!
-          }
+          projectModified = true;
         }
 
-        // Normal backlog creation if no rest days remain or not eligible
-        final target = s.plannedWords;
-        if (target > 0) {
-          final backlogCreated = target - actual;
-          if (backlogCreated > 0) {
+        // 2. Find schedule for tempDate
+        final List<ScheduleModel> matches = currentSchedules.where(
+          (x) => x.date.year == tempDate.year && x.date.month == tempDate.month && x.date.day == tempDate.day
+        ).toList();
+        final s = matches.isNotEmpty ? matches.first : null;
+
+        if (s != null && !s.isRestDay && !s.completed) {
+          final existingLog = await logRepo.getLogForDate(project.id, s.date);
+          final actual = existingLog?.actualWords ?? 0;
+
+          if (actual == 0) {
+            bool hasRest = false;
+            if (!s.locked && project.restMode == RestMode.adaptive) {
+              hasRest = currentRemainingRestDays > 0;
+            }
+
+            if (hasRest) {
+              // Mark schedule as Rest Day
+              final updatedS = s.copyWith(
+                isRestDay: true,
+                plannedWords: 0,
+                locked: true,
+                completed: false,
+                automaticRestDay: true,
+              );
+              
+              currentSchedules = currentSchedules.map((x) => x.id == s.id ? updatedS : x).toList();
+              schedulesToUpdateInDb.add(updatedS);
+
+              if (existingLog != null) {
+                await logRepo.insertLog(existingLog.copyWith(
+                  plannedWords: 0,
+                  backlogCreated: 0,
+                  completed: false,
+                ));
+              } else {
+                await logRepo.insertLog(DailyLogModel(
+                  id: uuid.v4(),
+                  projectId: project.id,
+                  scheduleId: s.id,
+                  date: s.date,
+                  plannedWords: 0,
+                  actualWords: 0,
+                  carryForwardWords: 0,
+                  backlogCreated: 0,
+                  completed: false,
+                  loggedAt: s.date,
+                ));
+              }
+
+              currentRemainingRestDays--;
+              projectModified = true;
+
+              // Redistribute planned words starting from tomorrow
+              final tomorrow = tempDate.add(const Duration(days: 1));
+              final futureSchedules = currentSchedules
+                  .where((x) => !x.locked && (x.date.isAfter(tempDate) || x.date.isAtSameMomentAs(tomorrow)))
+                  .toList();
+              final totalFuturePlannedWords = futureSchedules.fold<int>(0, (sum, x) => sum + x.plannedWords) + s.plannedWords;
+
+              final restDaysUsed = currentSchedules.where((x) => (x.isRestDay || x.automaticRestDay) && (x.locked || x.date.isBefore(tomorrow))).length;
+
+              final recalculated = schedService.recalculateFutureSchedule(
+                existingSchedules: currentSchedules,
+                recalculateFromDate: tomorrow,
+                newDailyTarget: project.dailyWordTarget,
+                totalRemainingWords: totalFuturePlannedWords,
+                fixedRestWeekdays: const [],
+                restMode: project.restMode,
+                allowedRestDaysBudget: project.allowedRestDays,
+                restDaysUsed: restDaysUsed,
+              );
+
+              currentSchedules = recalculated;
+              for (final r in recalculated) {
+                if (!r.locked) {
+                  schedulesToUpdateInDb.add(r);
+                }
+              }
+            } else {
+              // Backlog creation for missed day
+              final target = s.plannedWords;
+              if (target > 0) {
+                final backlogCreated = target;
+                if (existingLog != null) {
+                  await logRepo.insertLog(existingLog.copyWith(
+                    backlogCreated: backlogCreated,
+                  ));
+                } else {
+                  await logRepo.insertLog(DailyLogModel(
+                    id: uuid.v4(),
+                    projectId: project.id,
+                    scheduleId: s.id,
+                    date: s.date,
+                    plannedWords: target,
+                    actualWords: 0,
+                    carryForwardWords: 0,
+                    backlogCreated: backlogCreated,
+                    completed: false,
+                    loggedAt: s.date,
+                  ));
+                }
+              }
+            }
+          } else if (actual < s.plannedWords) {
+            // Backlog remaining
+            final backlogCreated = s.plannedWords - actual;
             if (existingLog != null) {
               await logRepo.insertLog(existingLog.copyWith(
                 backlogCreated: backlogCreated,
@@ -290,7 +314,7 @@ class OngoingSyncService {
                 scheduleId: s.id,
                 date: s.date,
                 plannedWords: s.plannedWords,
-                actualWords: 0,
+                actualWords: actual,
                 carryForwardWords: 0,
                 backlogCreated: backlogCreated,
                 completed: false,
@@ -299,11 +323,31 @@ class OngoingSyncService {
             }
           }
         }
+
+        tempDate = tempDate.add(const Duration(days: 1));
       }
 
-      // Save all schedules to DB
+      // Check today's week transition as well
+      final weekOfToday = (getDaysDifference(project.startDate, cleanToday) ~/ 7) + 1;
+      if (weekOfToday > currentWeekNum) {
+        while (currentWeekNum < weekOfToday) {
+          currentWeekNum++;
+          final weeklyAllocation = schedService.getWeeklyAllocation(
+            totalRestDays: project.allowedRestDays,
+            durationDays: durationDays,
+            week: currentWeekNum,
+          );
+          if (project.restMode == RestMode.flexible) {
+            currentRemainingRestDays += weeklyAllocation;
+          } else if (project.restMode == RestMode.adaptive) {
+            currentRemainingRestDays = weeklyAllocation;
+          }
+        }
+        projectModified = true;
+      }
+
+      // Save schedules to DB
       if (schedulesToUpdateInDb.isNotEmpty) {
-        // De-duplicate schedules to update (only save the latest state for each id)
         final Map<String, ScheduleModel> uniqueUpdates = {};
         for (final s in schedulesToUpdateInDb) {
           uniqueUpdates[s.id] = s;
@@ -322,9 +366,13 @@ class OngoingSyncService {
         }
       }
 
-      if (project.backlogWords != calculatedBacklog || projectModified) {
+      if (project.backlogWords != calculatedBacklog ||
+          project.currentWeek != currentWeekNum ||
+          project.remainingRestDays != currentRemainingRestDays ||
+          projectModified) {
         final updatedProject = project.copyWith(
           backlogWords: calculatedBacklog,
+          currentWeek: currentWeekNum,
           remainingRestDays: currentRemainingRestDays,
           updatedAt: DateTime.now(),
         );

@@ -22,7 +22,7 @@ class ProjectRepository {
       startDate: data.startDate,
       expectedFinishDate: data.expectedFinishDate,
       actualFinishDate: data.actualFinishDate,
-      restMode: RestMode.values.byName(data.restMode),
+      restMode: parseRestMode(data.restMode),
       allowedRestDays: data.allowedRestDays,
       remainingRestDays: data.remainingRestDays,
       projectStreak: data.projectStreak,
