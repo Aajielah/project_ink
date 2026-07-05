@@ -840,6 +840,7 @@ class _OverviewTab extends ConsumerWidget {
                             : DateFormat('MMM d, yyyy').format(project.expectedFinishDate),
                         icon: isOngoing ? Icons.mode_edit : Icons.calendar_today,
                         color: theme.colorScheme.secondary,
+                      ),
                     ],
                   ),
                   if (project.restMode == RestMode.flexible || project.restMode == RestMode.adaptive) ...[
