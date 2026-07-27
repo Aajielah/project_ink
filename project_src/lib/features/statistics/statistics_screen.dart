@@ -102,11 +102,18 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
 
       final scheds = schedsByMonth[key] ?? [];
       
-      // Count distinct calendar dates for rest days
-      final restDays = scheds.where((s) => s.isRestDay)
-          .map((s) => '${s.date.year}-${s.date.month}-${s.date.day}')
-          .toSet()
-          .length;
+      // Count distinct calendar dates for rest days (where ALL active schedules on that date are rest days)
+      final Map<String, List<Schedule>> schedsByDateForRest = {};
+      for (final s in scheds) {
+        final dateKey = '${s.date.year}-${s.date.month}-${s.date.day}';
+        schedsByDateForRest.putIfAbsent(dateKey, () => []).add(s);
+      }
+      int restDays = 0;
+      for (final dayScheds in schedsByDateForRest.values) {
+        if (dayScheds.isNotEmpty && dayScheds.every((s) => s.isRestDay || s.automaticRestDay)) {
+          restDays++;
+        }
+      }
 
       // Calculate longest streak in this month using daily states
       final Map<String, List<Schedule>> schedulesByDate = {};
@@ -114,35 +121,40 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
         final dateKey = '${s.date.year}-${s.date.month}-${s.date.day}';
         schedulesByDate.putIfAbsent(dateKey, () => []).add(s);
       }
-      final Map<String, List<DailyLog>> logsByDate = {};
-      for (final l in logs) {
-        final dateKey = '${l.date.year}-${l.date.month}-${l.date.day}';
-        logsByDate.putIfAbsent(dateKey, () => []).add(l);
-      }
 
       final daysInMonth = DateTime(key.year, key.month + 1, 0).day;
       final List<String> monthlyStates = [];
       for (int day = 1; day <= daysInMonth; day++) {
         final dateKey = '${key.year}-${key.month}-$day';
         final dayScheds = schedulesByDate[dateKey] ?? [];
-        final dayLogs = logsByDate[dateKey] ?? [];
 
-        if (dayScheds.isEmpty && dayLogs.isEmpty) {
+        if (dayScheds.isEmpty) {
           monthlyStates.add('rest');
         } else {
-          bool hasCompleted = dayLogs.any((l) => l.completed);
-          bool hasScheduledWriting = dayScheds.any((s) => !s.isRestDay);
+          final today = DateTime.now();
+          final isToday = (key.year == today.year && key.month == today.month && day == today.day);
+          
+          bool hasUncompletedWriting = false;
+          bool hasCompletedWriting = false;
 
-          if (hasCompleted) {
-            monthlyStates.add('completed');
-          } else if (hasScheduledWriting) {
-            final today = DateTime.now();
-            final isToday = (key.year == today.year && key.month == today.month && day == today.day);
-            if (isToday) {
-              monthlyStates.add('rest');
-            } else {
-              monthlyStates.add('failed');
+          for (final s in dayScheds) {
+            if (!s.isRestDay && !s.automaticRestDay) {
+              if (s.completed) {
+                hasCompletedWriting = true;
+              } else {
+                if (isToday && !s.locked) {
+                  // user still has time to complete
+                } else {
+                  hasUncompletedWriting = true;
+                }
+              }
             }
+          }
+
+          if (hasUncompletedWriting) {
+            monthlyStates.add('failed');
+          } else if (hasCompletedWriting) {
+            monthlyStates.add('completed');
           } else {
             monthlyStates.add('rest');
           }

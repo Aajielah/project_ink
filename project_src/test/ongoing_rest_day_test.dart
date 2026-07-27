@@ -155,9 +155,9 @@ void main() {
         plannedWords: 500, actualWords: 500, carryForwardWords: 0, backlogCreated: 0, completed: true, loggedAt: date1,
       ));
 
-      // Initially streak should be 0 since today's writing target is not completed yet
+      // Today is active and not finalized/locked, so yesterday's streak is preserved
       var stats = await statsRepo.getStatistics();
-      expect(stats.currentGlobalStreak, 0);
+      expect(stats.currentGlobalStreak, 1);
 
       // Mark today as Rest Day
       final notifier = container.read(projectsProvider.notifier);

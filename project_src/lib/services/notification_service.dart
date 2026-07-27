@@ -42,9 +42,48 @@ class NotificationService {
       await _plugin.initialize(
         initializationSettings,
       );
+
+      if (Platform.isAndroid) {
+        final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+        if (androidPlugin != null) {
+          await androidPlugin.requestNotificationsPermission();
+          await androidPlugin.requestExactAlarmsPermission();
+        }
+      }
+
       _initialized = true;
     } catch (e) {
       debugPrint('Failed to initialize NotificationService: $e');
+    }
+  }
+
+  Future<void> showInstantNotification(int id, String title, String body) async {
+    if (!_initialized) await init();
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+
+    try {
+      await _plugin.show(
+        id,
+        title,
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'general_channel',
+            'General Notifications',
+            channelDescription: 'General updates and lifecycle events.',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Failed to show instant notification: $e');
     }
   }
 

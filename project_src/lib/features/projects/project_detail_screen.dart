@@ -721,6 +721,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
           );
         }
 
+        final logRepo = ref.watch(dailyLogRepositoryProvider);
         return Scaffold(
           appBar: AppBar(
             title: Text(project.name),
@@ -734,22 +735,74 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
               ],
             ),
           ),
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              _OverviewTab(project: project),
-              _ThisWeekTab(
-                project: project,
-                logController: _logController,
-                onLogSubmitted: _logWords,
-              ),
-              _HistoryTab(projectId: project.id),
-              _ManageTab(
-                project: project,
-                onEditConfiguration: _showEditProjectDialog,
-              ),
+          body: FutureBuilder<List<DailyLogModel>>(
+            future: logRepo.getLogsForProject(project.id),
+            builder: (context, snapshot) {
+              final logs = snapshot.data ?? [];
+              bool isAutoPaused = false;
+              if (project!.status == ProjectStatus.paused) {
+                final successfulLogs = logs.where((l) => l.actualWords > 0).toList();
+                DateTime lastActivity;
+                if (successfulLogs.isNotEmpty) {
+                  lastActivity = successfulLogs.reduce((a, b) => a.date.isAfter(b.date) ? a : b).date;
+                } else {
+                  final createdAt = project.createdAt;
+                  lastActivity = project.startDate.isAfter(createdAt) ? project.startDate : createdAt;
+                }
+                final gap = getDaysDifference(lastActivity, project.updatedAt);
+                if (gap >= 7) {
+                  isAutoPaused = true;
+                }
+              }
 
-            ],
+              return Column(
+                children: [
+                  if (project.status == ProjectStatus.paused)
+                    Container(
+                      color: isAutoPaused ? Colors.amber.withOpacity(0.12) : theme.colorScheme.primaryContainer.withOpacity(0.3),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isAutoPaused ? Icons.hourglass_disabled : Icons.pause_circle_outline,
+                            color: isAutoPaused ? Colors.orange[800] : theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              isAutoPaused
+                                  ? 'This project was paused automatically due to 7+ days of inactivity.'
+                                  : 'This project is paused manually.',
+                              style: TextStyle(
+                                color: isAutoPaused ? Colors.orange[900] : theme.colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _OverviewTab(project: project),
+                        _ThisWeekTab(
+                          project: project,
+                          logController: _logController,
+                          onLogSubmitted: _logWords,
+                        ),
+                        _HistoryTab(projectId: project.id),
+                        _ManageTab(
+                          project: project,
+                          onEditConfiguration: _showEditProjectDialog,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         );
       },
@@ -770,195 +823,225 @@ class _OverviewTab extends ConsumerWidget {
     final quoteAsync = ref.watch(homeQuoteProvider(project.id));
     final isOngoing = project.projectType == ProjectType.ongoing;
     final progress = project.targetWords > 0 ? project.writtenWords / project.targetWords : 0.0;
+    final logRepo = ref.watch(dailyLogRepositoryProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Project Quote
-          quoteAsync.when(
-            data: (quote) => quote != null
-                ? Card(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        '"${quote.text}"\n— ${quote.author}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  )
-                : const SizedBox(),
-            loading: () => const SizedBox(),
-            error: (_, __) => const SizedBox(),
-          ),
-          const SizedBox(height: 16),
+    return FutureBuilder<List<DailyLogModel>>(
+      future: logRepo.getLogsForProject(project.id),
+      builder: (context, snapshot) {
+        final logs = snapshot.data ?? [];
+        final totalWritingDays = logs.where((l) => l.actualWords > 0).length;
+        final avgWords = totalWritingDays > 0 ? project.writtenWords ~/ totalWritingDays : 0;
 
-          // Main Stats Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _StatColumn(
-                        label: 'Project Streak',
-                        value: '${project.projectStreak} days',
-                        icon: Icons.local_fire_department,
-                        color: theme.colorScheme.primary,
-                      ),
-                      _StatColumn(
-                        label: isOngoing ? 'Longest Streak' : 'Remaining',
-                        value: isOngoing
-                            ? '${project.longestProjectStreak} days'
-                            : '${project.remainingWords} words',
-                        icon: isOngoing ? Icons.workspace_premium : Icons.hourglass_empty,
-                        color: theme.colorScheme.secondary,
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _StatColumn(
-                        label: isOngoing ? 'Lifetime Words' : 'Target Goal',
-                        value: '${project.writtenWords} words',
-                        icon: isOngoing ? Icons.book : Icons.outlined_flag,
-                        color: theme.colorScheme.primary,
-                      ),
-                      _StatColumn(
-                        label: isOngoing ? 'Daily Target' : 'Estimated Finish',
-                        value: isOngoing
-                            ? '${project.dailyWordTarget} words'
-                            : DateFormat('MMM d, yyyy').format(project.expectedFinishDate),
-                        icon: isOngoing ? Icons.mode_edit : Icons.calendar_today,
-                        color: theme.colorScheme.secondary,
-                      ),
-                    ],
-                  ),
-                  if (project.restMode == RestMode.flexible || project.restMode == RestMode.adaptive) ...[
-                    const Divider(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _StatColumn(
-                          label: project.restMode == RestMode.flexible
-                              ? 'Flexible Rest Days Used'
-                              : 'Adaptive Rest Days Used',
-                          value: '${project.allowedRestDays - project.remainingRestDays} days',
-                          icon: Icons.check_circle_outline,
-                          color: theme.colorScheme.primary,
-                        ),
-                        _StatColumn(
-                          label: project.restMode == RestMode.flexible
-                              ? 'Remaining Flexible Rest Days'
-                              : 'Remaining Adaptive Rest Days',
-                          value: '${project.remainingRestDays} days',
-                          icon: Icons.hourglass_full,
-                          color: theme.colorScheme.secondary,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            project.restMode == RestMode.flexible ? 'Rest Days Remaining' : 'Adaptive Rest Budget',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(project.allowedRestDays, (i) {
-                              final isRemaining = i < project.remainingRestDays;
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                                child: Text(
-                                  isRemaining ? '■' : '□',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: isRemaining ? theme.colorScheme.primary : theme.colorScheme.outline,
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${project.remainingRestDays} of ${project.allowedRestDays} remaining',
-                            style: theme.textTheme.bodySmall?.copyWith(
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Project Quote
+              quoteAsync.when(
+                data: (quote) => quote != null
+                    ? Card(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            '"${quote.text}"\n— ${quote.author}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontStyle: FontStyle.italic,
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
+                        ),
+                      )
+                    : const SizedBox(),
+                loading: () => const SizedBox(),
+                error: (_, __) => const SizedBox(),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-          // Progress Card
-          if (!isOngoing)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Overall Progress',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    LinearProgressIndicator(
-                      value: min(1.0, progress),
-                      minHeight: 16,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('${project.writtenWords} words written'),
-                        Text('${(progress * 100).toInt()}%'),
-                      ],
-                    ),
-                    if (project.backlogWords > 0) ...[
-                      const SizedBox(height: 12),
+              // Main Stats Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          Icon(Icons.warning_amber_rounded, size: 16, color: theme.colorScheme.error),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Backlog: ${project.backlogWords} words missed.',
-                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                          _StatColumn(
+                            label: 'Project Streak',
+                            value: '${project.projectStreak} days',
+                            icon: Icons.local_fire_department,
+                            color: theme.colorScheme.primary,
+                          ),
+                          _StatColumn(
+                            label: isOngoing ? 'Longest Streak' : 'Remaining',
+                            value: isOngoing
+                                ? '${project.longestProjectStreak} days'
+                                : '${project.remainingWords} words',
+                            icon: isOngoing ? Icons.workspace_premium : Icons.hourglass_empty,
+                            color: theme.colorScheme.secondary,
                           ),
                         ],
                       ),
+                      const Divider(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _StatColumn(
+                            label: isOngoing ? 'Lifetime Words' : 'Target Goal',
+                            value: '${project.writtenWords} words',
+                            icon: isOngoing ? Icons.book : Icons.outlined_flag,
+                            color: theme.colorScheme.primary,
+                          ),
+                          _StatColumn(
+                            label: isOngoing ? 'Daily Target' : 'Estimated Finish',
+                            value: isOngoing
+                                ? '${project.dailyWordTarget} words'
+                                : DateFormat('MMM d, yyyy').format(project.expectedFinishDate),
+                            icon: isOngoing ? Icons.mode_edit : Icons.calendar_today,
+                            color: theme.colorScheme.secondary,
+                          ),
+                        ],
+                      ),
+                      if (!isOngoing && (project.restMode == RestMode.flexible || project.restMode == RestMode.adaptive)) ...[
+                        const Divider(height: 32),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _StatColumn(
+                              label: project.restMode == RestMode.flexible
+                                  ? 'Flexible Rest Days Used'
+                                  : 'Adaptive Rest Days Used',
+                              value: '${project.allowedRestDays - project.remainingRestDays} days',
+                              icon: Icons.check_circle_outline,
+                              color: theme.colorScheme.primary,
+                            ),
+                            _StatColumn(
+                              label: project.restMode == RestMode.flexible
+                                  ? 'Remaining Flexible Rest Days'
+                                  : 'Remaining Adaptive Rest Days',
+                              value: '${project.remainingRestDays} days',
+                              icon: Icons.hourglass_full,
+                              color: theme.colorScheme.secondary,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                project.restMode == RestMode.flexible ? 'Rest Days Remaining' : 'Adaptive Rest Budget',
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(project.allowedRestDays, (i) {
+                                  final isRemaining = i < project.remainingRestDays;
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                    child: Text(
+                                      isRemaining ? '■' : '□',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: isRemaining ? theme.colorScheme.primary : theme.colorScheme.outline,
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${project.remainingRestDays} of ${project.allowedRestDays} remaining',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (isOngoing) ...[
+                        const Divider(height: 32),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _StatColumn(
+                              label: 'Total Writing Days',
+                              value: '$totalWritingDays days',
+                              icon: Icons.calendar_month,
+                              color: theme.colorScheme.primary,
+                            ),
+                            _StatColumn(
+                              label: 'Average Words/Day',
+                              value: '$avgWords words',
+                              icon: Icons.analytics,
+                              color: theme.colorScheme.secondary,
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
+              const SizedBox(height: 16),
+
+              // Progress Card
+              if (!isOngoing)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Overall Progress',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 16),
+                        LinearProgressIndicator(
+                          value: min(1.0, progress),
+                          minHeight: 16,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('${project.writtenWords} words written'),
+                            Text('${(progress * 100).toInt()}%'),
+                          ],
+                        ),
+                        if (project.backlogWords > 0) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, size: 16, color: theme.colorScheme.error),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Backlog: ${project.backlogWords} words missed.',
+                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -1433,7 +1516,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                         String statusTitle;
                         String statusSubtitle;
                         String? extraText;
-                        bool isEditable = !isRest;
+                        bool isEditable = !isRest && (l.actualWords < l.plannedWords);
 
                         if (isRest) {
                           leadingIcon = const Icon(Icons.coffee, color: Colors.teal, size: 28);

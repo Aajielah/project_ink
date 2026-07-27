@@ -29,10 +29,13 @@ class OngoingSyncService {
 
       final schedules = await schedRepo.getSchedulesForProject(project.id);
 
-      // Case 1: Brand new ongoing project, check and fill dates from startDate up to today
+      // Case 1: Brand new ongoing project, check and fill dates from startDate up to Sunday of current week
       if (schedules.isEmpty) {
         final cleanStart = DateTime(project.startDate.year, project.startDate.month, project.startDate.day);
-        if (cleanToday.isAtSameMomentAs(cleanStart) || cleanToday.isAfter(cleanStart)) {
+        final mondayOfToday = cleanToday.subtract(Duration(days: cleanToday.weekday - 1));
+        final sundayOfToday = mondayOfToday.add(const Duration(days: 6));
+
+        if (cleanToday.isAtSameMomentAs(cleanStart) || cleanToday.isAfter(cleanStart) || sundayOfToday.isAfter(cleanStart) || sundayOfToday.isAtSameMomentAs(cleanStart)) {
           final List<ScheduleModel> initialTasks = [];
           var tempDate = cleanStart;
           while (tempDate.isBefore(cleanToday)) {
@@ -48,17 +51,19 @@ class OngoingSyncService {
             ));
             tempDate = tempDate.add(const Duration(days: 1));
           }
-          // Add today's habit task
-          initialTasks.add(ScheduleModel(
-            id: uuid.v4(),
-            projectId: project.id,
-            date: cleanToday,
-            plannedWords: project.dailyWordTarget,
-            isRestDay: false,
-            completed: false,
-            automaticRestDay: false,
-            locked: false,
-          ));
+          while (tempDate.isBefore(sundayOfToday) || tempDate.isAtSameMomentAs(sundayOfToday)) {
+            initialTasks.add(ScheduleModel(
+              id: uuid.v4(),
+              projectId: project.id,
+              date: tempDate,
+              plannedWords: project.dailyWordTarget,
+              isRestDay: false,
+              completed: false,
+              automaticRestDay: false,
+              locked: false,
+            ));
+            tempDate = tempDate.add(const Duration(days: 1));
+          }
           await schedRepo.insertSchedules(initialTasks);
         }
         continue;
@@ -88,52 +93,62 @@ class OngoingSyncService {
         }
       }
 
-      // Case 3: Check for calendar gaps between the latest generated date and today
+      // Case 3: Check for calendar gaps / future generation up to Sunday of current week
       final latestDate = schedules.fold<DateTime>(
         schedules.first.date,
         (latest, s) => s.date.isAfter(latest) ? s.date : latest,
       );
       final List<ScheduleModel> toInsert = [];
 
-      if (latestDate.isBefore(cleanToday)) {
+      final mondayOfToday = cleanToday.subtract(Duration(days: cleanToday.weekday - 1));
+      final sundayOfToday = mondayOfToday.add(const Duration(days: 6));
+
+      if (latestDate.isBefore(sundayOfToday)) {
         var tempDate = latestDate.add(const Duration(days: 1));
-        while (tempDate.isBefore(cleanToday)) {
-          toInsert.add(ScheduleModel(
-            id: uuid.v4(),
-            projectId: project.id,
-            date: tempDate,
-            plannedWords: 0,
-            isRestDay: true,
-            automaticRestDay: true,
-            completed: false,
-            locked: true,
-          ));
+        while (tempDate.isBefore(sundayOfToday) || tempDate.isAtSameMomentAs(sundayOfToday)) {
+          if (tempDate.isBefore(cleanToday)) {
+            toInsert.add(ScheduleModel(
+              id: uuid.v4(),
+              projectId: project.id,
+              date: tempDate,
+              plannedWords: 0,
+              isRestDay: true,
+              automaticRestDay: true,
+              completed: false,
+              locked: true,
+            ));
+          } else {
+            toInsert.add(ScheduleModel(
+              id: uuid.v4(),
+              projectId: project.id,
+              date: tempDate,
+              plannedWords: project.dailyWordTarget,
+              isRestDay: false,
+              completed: false,
+              automaticRestDay: false,
+              locked: false,
+            ));
+          }
           tempDate = tempDate.add(const Duration(days: 1));
         }
-        toInsert.add(ScheduleModel(
-          id: uuid.v4(),
-          projectId: project.id,
-          date: cleanToday,
-          plannedWords: project.dailyWordTarget,
-          isRestDay: false,
-          completed: false,
-          automaticRestDay: false,
-          locked: false,
-        ));
       } else {
-        // Safety check: ensure today has a habit task if not yet present
-        final hasToday = schedules.any((s) => s.date.isAtSameMomentAs(cleanToday));
-        if (!hasToday) {
-          toInsert.add(ScheduleModel(
-            id: uuid.v4(),
-            projectId: project.id,
-            date: cleanToday,
-            plannedWords: project.dailyWordTarget,
-            isRestDay: false,
-            completed: false,
-            automaticRestDay: false,
-            locked: false,
-          ));
+        // Safety check: ensure all dates from cleanToday to sundayOfToday exist
+        var tempDate = cleanToday;
+        while (tempDate.isBefore(sundayOfToday) || tempDate.isAtSameMomentAs(sundayOfToday)) {
+          final hasDate = schedules.any((s) => s.date.isAtSameMomentAs(tempDate));
+          if (!hasDate) {
+            toInsert.add(ScheduleModel(
+              id: uuid.v4(),
+              projectId: project.id,
+              date: tempDate,
+              plannedWords: project.dailyWordTarget,
+              isRestDay: false,
+              completed: false,
+              automaticRestDay: false,
+              locked: false,
+            ));
+          }
+          tempDate = tempDate.add(const Duration(days: 1));
         }
       }
 

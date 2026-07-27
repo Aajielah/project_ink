@@ -23,6 +23,7 @@ import '../services/encouragement_service.dart';
 import '../services/backup_service.dart';
 import '../services/ongoing_sync_service.dart';
 import '../services/notification_service.dart';
+import '../services/project_lifecycle_service.dart';
 import 'date_utils.dart';
 import 'package:flutter/foundation.dart';
 
@@ -85,6 +86,13 @@ final backupServiceProvider = Provider<BackupService>((ref) {
   return BackupService(ref.watch(dbProvider));
 });
 
+final projectLifecycleServiceProvider = Provider<ProjectLifecycleService>((ref) {
+  return ProjectLifecycleService(
+    ref.watch(projectRepositoryProvider),
+    ref.watch(dailyLogRepositoryProvider),
+  );
+});
+
 // --- State Notifiers & Providers ---
 
 // Projects State Notifier
@@ -130,6 +138,10 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       // Apply pending carry forward credit for active projects (both fixed and ongoing)
       final loggingService = _ref.read(loggingServiceProvider);
       await loggingService.checkAndApplyPendingCarryForward(active);
+
+      // Check and pause inactive projects
+      final lifecycleService = _ref.read(projectLifecycleServiceProvider);
+      await lifecycleService.checkAndPauseInactiveProjects(active);
 
       final updatedList = await _projectRepo.getAllProjects();
       state = AsyncValue.data(updatedList);

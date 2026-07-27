@@ -86,16 +86,33 @@ class StatisticsRepository {
     // 7. Calculate averageWordsPerDay (Lifetime Words ÷ Total Writing Days)
     final double avgWords = writingDaysVal > 0 ? lifetimeWordsVal / writingDaysVal : 0.0;
 
-    // 8. Calculate restDaysUsed
+    // 8. Calculate restDaysUsed (Unique calendar dates where ALL active schedules on that date are rest days)
     final schedules = await _db.select(_db.schedules).get();
     int restDaysUsedVal = 0;
+    
+    final Map<String, List<Schedule>> schedulesByDateAll = {};
     for (final s in schedules) {
-      if (s.isRestDay || s.automaticRestDay) {
-        final today = getLogicalToday();
-        final cleanToday = DateTime(today.year, today.month, today.day);
-        final cleanSchedDate = DateTime(s.date.year, s.date.month, s.date.day);
-        if (cleanSchedDate.isBefore(cleanToday) || (cleanSchedDate.isAtSameMomentAs(cleanToday) && s.locked)) {
-          restDaysUsedVal++;
+      final dateKey = '${s.date.year}-${s.date.month}-${s.date.day}';
+      schedulesByDateAll.putIfAbsent(dateKey, () => []).add(s);
+    }
+    
+    final today = getLogicalToday();
+    final cleanToday = DateTime(today.year, today.month, today.day);
+    
+    for (final entry in schedulesByDateAll.entries) {
+      final dateParts = entry.key.split('-');
+      final cleanSchedDate = DateTime(int.parse(dateParts[0]), int.parse(dateParts[1]), int.parse(dateParts[2]));
+      
+      if (cleanSchedDate.isBefore(cleanToday) || cleanSchedDate.isAtSameMomentAs(cleanToday)) {
+        final daySchedules = entry.value;
+        if (daySchedules.isNotEmpty && daySchedules.every((s) => s.isRestDay || s.automaticRestDay)) {
+          if (cleanSchedDate.isAtSameMomentAs(cleanToday)) {
+            if (daySchedules.every((s) => s.locked)) {
+              restDaysUsedVal++;
+            }
+          } else {
+            restDaysUsedVal++;
+          }
         }
       }
     }
@@ -110,19 +127,11 @@ class StatisticsRepository {
       }
       
       final cleanMin = DateTime(minDate.year, minDate.month, minDate.day);
-      final today = getLogicalToday();
-      final cleanToday = DateTime(today.year, today.month, today.day);
 
       final Map<String, List<Schedule>> schedulesByDate = {};
       for (final s in schedules) {
         final dateKey = '${s.date.year}-${s.date.month}-${s.date.day}';
         schedulesByDate.putIfAbsent(dateKey, () => []).add(s);
-      }
-      
-      final Map<String, List<DailyLog>> logsByDate = {};
-      for (final l in logs) {
-        final dateKey = '${l.date.year}-${l.date.month}-${l.date.day}';
-        logsByDate.putIfAbsent(dateKey, () => []).add(l);
       }
 
       final List<String> dailyStates = [];
@@ -131,18 +140,32 @@ class StatisticsRepository {
       while (tempDate.isBefore(cleanToday) || tempDate.isAtSameMomentAs(cleanToday)) {
         final dateKey = '${tempDate.year}-${tempDate.month}-${tempDate.day}';
         final dayScheds = schedulesByDate[dateKey] ?? [];
-        final dayLogs = logsByDate[dateKey] ?? [];
         
-        if (dayScheds.isEmpty && dayLogs.isEmpty) {
+        if (dayScheds.isEmpty) {
           dailyStates.add('rest');
         } else {
-          bool hasCompleted = dayLogs.any((l) => l.completed);
-          bool hasScheduledWriting = dayScheds.any((s) => !s.isRestDay);
-          
-          if (hasCompleted) {
-            dailyStates.add('completed');
-          } else if (hasScheduledWriting) {
+          final isToday = tempDate.isAtSameMomentAs(cleanToday);
+          bool hasUncompletedWriting = false;
+          bool hasCompletedWriting = false;
+
+          for (final s in dayScheds) {
+            if (!s.isRestDay && !s.automaticRestDay) {
+              if (s.completed) {
+                hasCompletedWriting = true;
+              } else {
+                if (isToday && !s.locked) {
+                  // user still has time to complete
+                } else {
+                  hasUncompletedWriting = true;
+                }
+              }
+            }
+          }
+
+          if (hasUncompletedWriting) {
             dailyStates.add('failed');
+          } else if (hasCompletedWriting) {
+            dailyStates.add('completed');
           } else {
             dailyStates.add('rest');
           }

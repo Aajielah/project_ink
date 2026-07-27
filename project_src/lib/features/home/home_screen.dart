@@ -32,11 +32,13 @@ class TodayWritingTask {
   final ProjectModel project;
   final ScheduleModel schedule;
   final DailyLogModel? log;
+  final DateTime? lastSuccessfulLogDate;
 
   const TodayWritingTask({
     required this.project,
     required this.schedule,
     this.log,
+    this.lastSuccessfulLogDate,
   });
 }
 
@@ -87,7 +89,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       final sched = await schedRepo.getScheduleForDate(p.id, cleanToday);
       if (sched != null) {
         final log = await logRepo.getLogForDate(p.id, cleanToday);
-        tasks.add(TodayWritingTask(project: p, schedule: sched, log: log));
+        final logs = await logRepo.getLogsForProject(p.id);
+        final successfulLogs = logs.where((l) => l.actualWords > 0).toList();
+        DateTime? lastSuccessfulLogDate;
+        if (successfulLogs.isNotEmpty) {
+          lastSuccessfulLogDate = successfulLogs.reduce((a, b) => a.date.isAfter(b.date) ? a : b).date;
+        }
+
+        tasks.add(TodayWritingTask(
+          project: p,
+          schedule: sched,
+          log: log,
+          lastSuccessfulLogDate: lastSuccessfulLogDate,
+        ));
       }
     }
     return tasks;
@@ -128,14 +142,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
       case 'deadline':
         for (final p in activeProjects) {
-          final daysToDeadline = getDaysDifference(today, p.expectedFinishDate);
-          final score = (365 - daysToDeadline).clamp(0, 365).toDouble();
-          scored.add(_ProjectWithScore(
-            project: p,
-            score: score,
-            reason: 'This manuscript has the earliest expected finish date (${DateFormat('MMM d').format(p.expectedFinishDate)}). Stay on schedule!',
-            confidence: 85,
-          ));
+          if (p.projectType == ProjectType.ongoing) {
+            scored.add(_ProjectWithScore(
+              project: p,
+              score: 0.0,
+              reason: 'Ongoing project "${p.name}" has no fixed deadline.',
+              confidence: 50,
+            ));
+          } else {
+            final daysToDeadline = getDaysDifference(today, p.expectedFinishDate);
+            final score = (365 - daysToDeadline).clamp(0, 365).toDouble();
+            scored.add(_ProjectWithScore(
+              project: p,
+              score: score,
+              reason: 'This manuscript has the earliest expected finish date (${DateFormat('MMM d').format(p.expectedFinishDate)}). Stay on schedule!',
+              confidence: 85,
+            ));
+          }
         }
         break;
 
@@ -152,10 +175,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
       case 'rotate':
         for (final p in activeProjects) {
-          final daysSinceUpdate = getDaysDifference(p.updatedAt, today);
+          final task = todayTasks.firstWhere((t) => t.project.id == p.id, orElse: () => TodayWritingTask(
+            project: p,
+            schedule: ScheduleModel(
+              id: '', projectId: p.id, date: today, plannedWords: 0,
+              isRestDay: true, completed: false, automaticRestDay: false, locked: false,
+            ),
+          ));
+          final lastWorked = task.lastSuccessfulLogDate ?? p.startDate;
+          final daysSinceLastWorked = getDaysDifference(lastWorked, today);
           scored.add(_ProjectWithScore(
             project: p,
-            score: daysSinceUpdate.toDouble(),
+            score: daysSinceLastWorked.toDouble(),
             reason: 'You haven\'t logged words here recently. Rotate back to keep the narrative draft fresh!',
             confidence: 75,
           ));
@@ -178,18 +209,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
           }
 
           final double score1 = rem > 0 ? (10000 - rem).clamp(0, 10000) / 10000.0 : 0.0;
-
-          final daysToDeadline = getDaysDifference(today, p.expectedFinishDate);
-          final double score2 = (365 - daysToDeadline).clamp(0, 365) / 365.0;
-
           final double score3 = p.backlogWords.clamp(0, 10000) / 10000.0;
 
-          final daysSinceUpdate = getDaysDifference(p.updatedAt, today);
-          final double score4 = daysSinceUpdate.clamp(0, 30) / 30.0;
+          final lastWorked = task.lastSuccessfulLogDate ?? p.startDate;
+          final daysSinceLastWorked = getDaysDifference(lastWorked, today);
+          final double score4 = daysSinceLastWorked.clamp(0, 30) / 30.0;
 
           final double score5 = p.dailyWordTarget.clamp(0, 5000) / 5000.0;
 
-          double totalScore = (score1 * 100.0) + (score2 * 80.0) + (score3 * 60.0) + (score4 * 40.0) + (score5 * 20.0);
+          double totalScore;
+          if (p.projectType == ProjectType.ongoing) {
+            // Urgency weight redistribution for ongoing projects
+            totalScore = (score1 * 120.0) + (score3 * 100.0) + (score4 * 60.0) + (score5 * 20.0);
+          } else {
+            final daysToDeadline = getDaysDifference(today, p.expectedFinishDate);
+            final double score2 = (365 - daysToDeadline).clamp(0, 365) / 365.0;
+            totalScore = (score1 * 100.0) + (score2 * 80.0) + (score3 * 60.0) + (score4 * 40.0) + (score5 * 20.0);
+          }
+
           if (rem > 0) {
             totalScore += 1000.0; // Incomplete daily target boost
           }
@@ -203,10 +240,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
           } else if (p.backlogWords > 0) {
             reason = 'Urgent backlog: "${p.name}" has ${p.backlogWords} words of backlog to catch up.';
             confidence = 90;
-          } else if (daysToDeadline < 7) {
+          } else if (p.projectType != ProjectType.ongoing && getDaysDifference(today, p.expectedFinishDate) < 7) {
             reason = 'Approaching deadline: "${p.name}" is due on ${DateFormat('MMM d').format(p.expectedFinishDate)}.';
             confidence = 85;
-          } else if (daysSinceUpdate >= 3) {
+          } else if (daysSinceLastWorked >= 3) {
             reason = 'Keep it fresh: rotate back to "${p.name}" as you haven\'t logged words here recently.';
             confidence = 75;
           } else {
@@ -1103,88 +1140,119 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         onRefresh: () async {
           _refreshAll();
         },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Greeting & Streak row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+        child: projectsAsync.when(
+          data: (projects) {
+            final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
+            if (activeProjects.isEmpty) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 60.0),
+                    child: _NoActiveProjectsCard(),
+                  ),
+                ),
+              );
+            }
+
+            return FutureBuilder<List<TodayWritingTask>>(
+              future: _fetchTodayTasks(activeProjects),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final todayTasks = snapshot.data!;
+                final rec = _computeRecommendation(activeProjects, todayTasks);
+                final ProjectModel? recProject = rec['project'];
+
+                final completedTasks = todayTasks.where((t) => t.schedule.completed).toList();
+                final uncompletedTasks = todayTasks.where((t) => !t.schedule.completed).toList();
+
+                int totalPlannedToday = 0;
+                int totalLoggedToday = 0;
+                for (final t in todayTasks) {
+                  if (!t.schedule.isRestDay) {
+                    totalPlannedToday += t.schedule.plannedWords;
+                    totalLoggedToday += t.log?.actualWords ?? 0;
+                  }
+                }
+
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _getGreeting(),
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        formattedDate,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  statsAsync.when(
-                    data: (stats) => Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.colorScheme.primary.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          )
-                        ]
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.local_fire_department, color: Colors.white, size: 20),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${stats.currentGlobalStreak} DAYS',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.8,
+                      // Grace period countdown card
+                      _GracePeriodCountdownCard(todayTasks: todayTasks),
+
+                      // Greeting & Streak row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _getGreeting(),
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                formattedDate,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          statsAsync.when(
+                            data: (stats) => Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  )
+                                ]
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.local_fire_department, color: Colors.white, size: 20),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${stats.currentGlobalStreak} DAYS',
+                                      style: theme.textTheme.labelMedium?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ],
-                        ),
+                            loading: () => const SizedBox(),
+                            error: (_, __) => const SizedBox(),
+                          ),
+                        ],
                       ),
-                    ),
-                    loading: () => const SizedBox(),
-                    error: (_, __) => const SizedBox(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Writing Advisor Section (First thing the user sees below greeting)
-              projectsAsync.when(
-                data: (projects) {
-                  final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
-                  if (activeProjects.isEmpty) return const SizedBox();
+                      const SizedBox(height: 16),
 
-                  return FutureBuilder<List<TodayWritingTask>>(
-                    future: _fetchTodayTasks(activeProjects),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox();
-                      final rec = _computeRecommendation(activeProjects, snapshot.data!);
-                      final ProjectModel? recProject = rec['project'];
-
-                      return Card(
+                      // Writing Advisor Section
+                      Card(
                         color: theme.colorScheme.tertiaryContainer.withOpacity(0.25),
                         shape: RoundedRectangleBorder(
                           side: BorderSide(color: theme.colorScheme.tertiary.withOpacity(0.3)),
@@ -1322,41 +1390,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                             ],
                           ),
                         ),
-                      );
-                    },
-                  );
-                },
-                loading: () => const SizedBox(),
-                error: (_, __) => const SizedBox(),
-              ),
-              const SizedBox(height: 16),
+                      ),
+                      const SizedBox(height: 16),
 
-              // Motivational Quote Card
-              quoteAsync.when(
-                data: (quote) => quote != null ? _QuoteCard(quote: quote) : const SizedBox(),
-                loading: () => const Card(child: SizedBox(height: 80, child: Center(child: CircularProgressIndicator()))),
-                error: (_, __) => const SizedBox(),
-              ),
-              const SizedBox(height: 24),
+                      // Motivational Quote Card
+                      quoteAsync.when(
+                        data: (quote) => quote != null ? _QuoteCard(quote: quote) : const SizedBox(),
+                        loading: () => const Card(child: SizedBox(height: 80, child: Center(child: CircularProgressIndicator()))),
+                        error: (_, __) => const SizedBox(),
+                      ),
+                      const SizedBox(height: 24),
 
-              // Today's Missions List
-              projectsAsync.when(
-                data: (projects) {
-                  final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
-                  if (activeProjects.isEmpty) {
-                    return _NoActiveProjectsCard();
-                  }
+                      // Today's Missions List Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'TODAY\'S MISSIONS',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              letterSpacing: 1.0,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          if (totalPlannedToday > 0 && uncompletedTasks.isNotEmpty)
+                            FilledButton.icon(
+                              onPressed: () => _triggerQuickLog(todayTasks),
+                              icon: const Icon(Icons.bolt, size: 16),
+                              label: const Text('Quick Log'),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
 
-                  return FutureBuilder<List<TodayWritingTask>>(
-                    future: _fetchTodayTasks(activeProjects),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      final todayTasks = snapshot.data!;
-                      if (todayTasks.isEmpty) {
-                        return const Card(
+                      if (todayTasks.isEmpty)
+                        const Card(
                           child: Padding(
                             padding: EdgeInsets.all(24.0),
                             child: Text(
@@ -1364,269 +1432,246 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                               textAlign: TextAlign.center,
                             ),
                           ),
-                        );
-                      }
-
-                      int totalPlannedToday = 0;
-                      int totalLoggedToday = 0;
-                      for (final t in todayTasks) {
-                        if (!t.schedule.isRestDay) {
-                          totalPlannedToday += t.schedule.plannedWords;
-                          totalLoggedToday += t.log?.actualWords ?? 0;
-                        }
-                      }
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'TODAY\'S MISSIONS',
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  letterSpacing: 1.0,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              if (totalPlannedToday > 0)
-                                FilledButton.icon(
-                                  onPressed: () => _triggerQuickLog(todayTasks),
-                                  icon: const Icon(Icons.bolt, size: 16),
-                                  label: const Text('Quick Log'),
-                                ),
-                            ],
+                        )
+                      else if (uncompletedTasks.isEmpty)
+                        Card(
+                          color: theme.colorScheme.primaryContainer.withOpacity(0.2),
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.3)),
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          const SizedBox(height: 12),
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: todayTasks.length,
-                            separatorBuilder: (c, i) => const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final task = todayTasks[index];
-                              final isRest = task.schedule.isRestDay;
-                              final logged = task.log?.actualWords ?? 0;
-                              final target = task.schedule.plannedWords;
-                              final progress = target > 0 ? min(1.0, logged / target) : 0.0;
-
-                              final isCompletedToday = task.schedule.completed;
-                              return GestureDetector(
-                                onLongPress: () {
-                                  if (isCompletedToday) {
-                                    _showEditTodayLogDialog(task);
-                                  }
-                                },
-                                child: Card(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: Row(
-                                      children: [
-                                        BookCoverWidget(
-                                          title: task.project.name,
-                                          coverImagePath: task.project.coverImagePath,
-                                          coverType: task.project.coverType,
-                                          width: 60,
-                                          height: 80,
-                                          borderRadius: 6.0,
-                                          showTitle: false,
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                task.project.name,
-                                                style: theme.textTheme.titleMedium?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              if (isRest)
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: theme.colorScheme.secondaryContainer,
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: Text(
-                                                    task.schedule.automaticRestDay
-                                                        ? '🏝 REST DAY\n(Adaptive)'
-                                                        : '🏝 REST DAY\n(Manual)',
-                                                    textAlign: TextAlign.center,
-                                                    style: theme.textTheme.labelSmall?.copyWith(
-                                                      color: theme.colorScheme.onSecondaryContainer,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                )
-                                              else ...[
-                                                Text(
-                                                  task.project.projectType == ProjectType.ongoing
-                                                      ? "Today's Habit"
-                                                      : "Today's Goal",
-                                                  style: theme.textTheme.labelSmall?.copyWith(
-                                                    color: theme.colorScheme.primary,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  '$logged / $target words',
-                                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                if (task.project.projectType != ProjectType.ongoing) ...[
-                                                  const SizedBox(height: 6),
-                                                  LinearProgressIndicator(
-                                                    value: progress,
-                                                    minHeight: 6,
-                                                    borderRadius: BorderRadius.circular(3),
-                                                  ),
-                                                ],
-                                              ]
-                                            ],
-                                          ),
-                                        ),
-                                        if (!isRest) ...[
-                                          const SizedBox(width: 8),
-                                          if (isCompletedToday)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                              decoration: BoxDecoration(
-                                                color: Colors.green.withOpacity(0.12),
-                                                borderRadius: BorderRadius.circular(20),
-                                                border: Border.all(color: Colors.green.withOpacity(0.4), width: 1),
-                                              ),
-                                              child: const Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(Icons.check_circle_outline, color: Colors.green, size: 14),
-                                                  SizedBox(width: 4),
-                                                  Text(
-                                                    'Completed Today',
-                                                    style: TextStyle(
-                                                      color: Colors.green,
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            )
-                                          else
-                                            IconButton.filledTonal(
-                                              onPressed: () => _showSingleLogDialog(task),
-                                              icon: const Icon(Icons.add),
-                                              tooltip: 'Log words',
-                                            ),
-                                        ]
-                                      ],
-                                    ),
+                          child: const Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: Column(
+                              children: [
+                                Text(
+                                  '🎉',
+                                  style: TextStyle(fontSize: 32),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Everything for today is complete.',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else ...[
+                        if (completedTasks.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle_outline, color: theme.colorScheme.primary, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  completedTasks.length == 1
+                                      ? '✓ 1 Project Completed Today'
+                                      : '✓ ${completedTasks.length} Projects Completed Today',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.primary,
                                   ),
                                 ),
-                              );
-                            },
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 20),
-                          
-                          if (totalPlannedToday > 0)
-                            Card(
-                              color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: uncompletedTasks.length,
+                          separatorBuilder: (c, i) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final task = uncompletedTasks[index];
+                            final isRest = task.schedule.isRestDay;
+                            final logged = task.log?.actualWords ?? 0;
+                            final target = task.schedule.plannedWords;
+                            final progress = target > 0 ? min(1.0, logged / target) : 0.0;
+
+                            return Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  children: [
+                                    BookCoverWidget(
+                                      title: task.project.name,
+                                      coverImagePath: task.project.coverImagePath,
+                                      coverType: task.project.coverType,
+                                      width: 60,
+                                      height: 80,
+                                      borderRadius: 6.0,
+                                      showTitle: false,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            task.project.name,
+                                            style: theme.textTheme.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          if (isRest)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.secondaryContainer,
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                task.schedule.automaticRestDay
+                                                    ? '🏝 REST DAY\n(Adaptive)'
+                                                    : '🏝 REST DAY\n(Manual)',
+                                                textAlign: TextAlign.center,
+                                                style: theme.textTheme.labelSmall?.copyWith(
+                                                  color: theme.colorScheme.onSecondaryContainer,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            )
+                                          else ...[
+                                            Text(
+                                              task.project.projectType == ProjectType.ongoing
+                                                  ? "Today's Habit"
+                                                  : "Today's Goal",
+                                              style: theme.textTheme.labelSmall?.copyWith(
+                                                color: theme.colorScheme.primary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '$logged / $target words',
+                                              style: theme.textTheme.bodyMedium?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            if (task.project.projectType != ProjectType.ongoing) ...[
+                                              const SizedBox(height: 6),
+                                              LinearProgressIndicator(
+                                                value: progress,
+                                                minHeight: 6,
+                                                borderRadius: BorderRadius.circular(3),
+                                              ),
+                                            ],
+                                          ]
+                                        ],
+                                      ),
+                                    ),
+                                    if (!isRest) ...[
+                                      const SizedBox(width: 8),
+                                      IconButton.filledTonal(
+                                        onPressed: () => _showSingleLogDialog(task),
+                                        icon: const Icon(Icons.add),
+                                        tooltip: 'Log words',
+                                      ),
+                                    ]
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+
+                      if (totalPlannedToday > 0 && uncompletedTasks.isNotEmpty)
+                        Card(
+                          color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(color: theme.colorScheme.outlineVariant),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Today\'s Combined Total:',
+                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  '$totalLoggedToday / $totalPlannedToday words',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 24),
+
+                      Text(
+                        'Personal Insights & Progress',
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      encouragementAsync.when(
+                        data: (messages) => ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: messages.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            return Card(
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 side: BorderSide(color: theme.colorScheme.outlineVariant),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                                padding: const EdgeInsets.all(12.0),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Today\'s Combined Total:',
-                                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                    Icon(
+                                      messages[index].startsWith('🔥')
+                                          ? Icons.local_fire_department
+                                          : messages[index].startsWith('🏁')
+                                              ? Icons.flag
+                                              : messages[index].startsWith('🌓')
+                                                  ? Icons.star_half
+                                                  : messages[index].startsWith('💾')
+                                                      ? Icons.save
+                                                      : Icons.info_outline,
+                                      color: theme.colorScheme.secondary,
+                                      size: 20,
                                     ),
-                                    Text(
-                                      '$totalLoggedToday / $totalPlannedToday words',
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.colorScheme.primary,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        messages[index],
+                                        style: theme.textTheme.bodyMedium,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                        ],
-                      );
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Text('Error: $err'),
-              ),
-              const SizedBox(height: 24),
-
-              Text(
-                'Personal Insights & Progress',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              encouragementAsync.when(
-                data: (messages) => ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: messages.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    return Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: theme.colorScheme.outlineVariant),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              messages[index].startsWith('🔥')
-                                  ? Icons.local_fire_department
-                                  : messages[index].startsWith('🏁')
-                                      ? Icons.flag
-                                      : messages[index].startsWith('🌓')
-                                          ? Icons.star_half
-                                          : messages[index].startsWith('💾')
-                                              ? Icons.save
-                                              : Icons.info_outline,
-                              color: theme.colorScheme.secondary,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                messages[index],
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (_, __) => const SizedBox(),
                       ),
-                    );
-                  },
-                ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) => const SizedBox(),
-              ),
-            ],
-          ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('Error: $err')),
         ),
       ),
     );
@@ -1711,6 +1756,128 @@ class _NoActiveProjectsCard extends StatelessWidget {
               onPressed: () => context.go('/projects/create'),
               icon: const Icon(Icons.add),
               label: const Text('Create Project'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GracePeriodCountdownCard extends StatefulWidget {
+  final List<TodayWritingTask> todayTasks;
+
+  const _GracePeriodCountdownCard({required this.todayTasks});
+
+  @override
+  State<_GracePeriodCountdownCard> createState() => _GracePeriodCountdownCardState();
+}
+
+class _GracePeriodCountdownCardState extends State<_GracePeriodCountdownCard> {
+  Timer? _timer;
+  late Duration _timeRemaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateTimeRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _calculateTimeRemaining();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _calculateTimeRemaining() {
+    final now = DateTime.now();
+    final expiration = DateTime(now.year, now.month, now.day, 5, 0, 0);
+    _timeRemaining = expiration.difference(now);
+    if (_timeRemaining.isNegative) {
+      _timeRemaining = Duration.zero;
+    }
+  }
+
+  String _formatDuration(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(d.inHours);
+    final minutes = twoDigits(d.inMinutes.remainder(60));
+    final seconds = twoDigits(d.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    // Grace period is active between 12:00 AM and 5:00 AM (hour < 5)
+    final isGraceActive = now.hour < 5;
+    if (!isGraceActive) return const SizedBox();
+
+    // Check if any writing task is scheduled today and not completed
+    final hasUnfinished = widget.todayTasks.any((t) => !t.schedule.isRestDay && !t.schedule.completed);
+    if (!hasUnfinished) return const SizedBox();
+
+    final theme = Theme.of(context);
+    return Card(
+      color: Colors.amber.withOpacity(0.12),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: Colors.amber.withOpacity(0.4), width: 1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      margin: const EdgeInsets.only(bottom: 16.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Yesterday's writing has not been finalized.",
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange[900],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Please enter your writing log.",
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.orange[800],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        "Time Remaining: ",
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[800],
+                        ),
+                      ),
+                      Text(
+                        _formatDuration(_timeRemaining),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[900],
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
