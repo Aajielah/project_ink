@@ -140,7 +140,7 @@ class _HelpBottomSheetContent extends StatelessWidget {
                 context,
                 icon: Icons.edit_calendar,
                 title: 'Flexible Rest Days',
-                description: 'Best for writers who want full manual control. Whenever you decide to take a break, long-press today\'s writing mission to convert it to a Rest Day. Each action consumes one available Rest Day from your overall project budget. Once exhausted, skipped days create backlog.',
+                description: 'Best for writers who want full manual control. Whenever you decide to take a break, long-press today\'s writing mission to convert it to a Rest Day. Each action consumes one available Rest Day from your overall project budget. Once exhausted, skipped days create backlog.\n\nFlexible Rest Days are earned gradually each week.\n\nExample:\nIf your project allows 8 rest days over 4 weeks, you may receive 2 days each week.\n\nUnused rest days carry over into the following weeks, allowing you to save them for later.',
               ),
               const SizedBox(height: 24.0),
 
@@ -149,52 +149,7 @@ class _HelpBottomSheetContent extends StatelessWidget {
                 context,
                 icon: Icons.auto_mode,
                 title: 'Adaptive Rest Days',
-                description: 'Best for dynamic schedules. If you miss logging words before the grace period ends, Project Ink will automatically apply an available Adaptive Rest Day for you. Backlog is only created once your entire project rest budget is fully exhausted.',
-              ),
-              const SizedBox(height: 20.0),
-
-              // Example Card for Adaptive Rest Days
-              Card(
-                color: theme.colorScheme.secondaryContainer.withOpacity(0.4),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  side: BorderSide(color: theme.colorScheme.secondary.withOpacity(0.15)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.lightbulb, color: theme.colorScheme.secondary, size: 20.0),
-                          const SizedBox(width: 8.0),
-                          Text(
-                            'Adaptive Rollover Example',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.onSecondaryContainer,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8.0),
-                      Text(
-                        '14-Day Project • 2 Adaptive Rest Days Budget\n\n'
-                        'Day 5: No writing logged\n'
-                        '↓\n'
-                        'Adaptive Rest Day used automatically\n'
-                        'Remaining: 1 Adaptive Rest Day',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontFamily: 'monospace',
-                          fontSize: 13.0,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                description: 'Best for dynamic schedules. If you miss logging words before the grace period ends, Project Ink will automatically apply an available Adaptive Rest Day for you. Backlog is only created once your entire project rest budget is fully exhausted.\n\nAdaptive Rest Days are also earned gradually.\n\nHowever, they expire at the end of the week.\n\nIf you don\'t use them, they are lost and cannot be carried forward.\n\nThis encourages consistent writing while still allowing occasional recovery.',
               ),
             ],
           ),
