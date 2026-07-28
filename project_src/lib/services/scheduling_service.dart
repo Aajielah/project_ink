@@ -261,4 +261,21 @@ class SchedulingService {
 
     return updatedSchedules;
   }
+
+  /// Checks if a rest day is allowed on a given date (respects the 2-day cooldown rule).
+  bool isRestDayAllowed({
+    required List<ScheduleModel> schedules,
+    required DateTime targetDate,
+  }) {
+    final cleanTarget = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final d1 = cleanTarget.subtract(const Duration(days: 1));
+    final d2 = cleanTarget.subtract(const Duration(days: 2));
+
+    final hasRestInWindow = schedules.any((s) => s.isRestDay && (
+      (s.date.year == d1.year && s.date.month == d1.month && s.date.day == d1.day) ||
+      (s.date.year == d2.year && s.date.month == d2.month && s.date.day == d2.day)
+    ));
+
+    return !hasRestInWindow;
+  }
 }

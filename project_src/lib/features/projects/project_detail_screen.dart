@@ -837,11 +837,18 @@ class _OverviewTab extends ConsumerWidget {
     final isOngoing = project.projectType == ProjectType.ongoing;
     final progress = project.targetWords > 0 ? project.writtenWords / project.targetWords : 0.0;
     final logRepo = ref.watch(dailyLogRepositoryProvider);
+    final schedRepo = ref.watch(scheduleRepositoryProvider);
 
-    return FutureBuilder<List<DailyLogModel>>(
-      future: logRepo.getLogsForProject(project.id),
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        logRepo.getLogsForProject(project.id),
+        schedRepo.getSchedulesForProject(project.id),
+      ]),
       builder: (context, snapshot) {
-        final logs = snapshot.data ?? [];
+        final data = snapshot.data ?? [[], []];
+        final logs = data[0] as List<DailyLogModel>;
+        final schedules = data[1] as List<ScheduleModel>;
+        
         final totalWritingDays = logs.where((l) => l.actualWords > 0).length;
         final avgWords = totalWritingDays > 0 ? project.writtenWords ~/ totalWritingDays : 0;
 
@@ -919,67 +926,83 @@ class _OverviewTab extends ConsumerWidget {
                       ),
                       if (!isOngoing && (project.restMode == RestMode.flexible || project.restMode == RestMode.adaptive)) ...[
                         const Divider(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _StatColumn(
-                              label: project.restMode == RestMode.flexible
-                                  ? 'Flexible Rest Days Used'
-                                  : 'Adaptive Rest Days Used',
-                              value: '${project.allowedRestDays - project.remainingRestDays} days',
-                              icon: Icons.check_circle_outline,
-                              color: theme.colorScheme.primary,
-                            ),
-                            _StatColumn(
-                              label: project.restMode == RestMode.flexible
-                                  ? 'Remaining Flexible Rest Days'
-                                  : 'Remaining Adaptive Rest Days',
-                              value: '${project.remainingRestDays} days',
-                              icon: Icons.hourglass_full,
-                              color: theme.colorScheme.secondary,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                project.restMode == RestMode.flexible ? 'Rest Days Remaining' : 'Adaptive Rest Budget',
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(project.allowedRestDays, (i) {
-                                  final isRemaining = i < project.remainingRestDays;
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                                    child: Text(
-                                      isRemaining ? '■' : '□',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: isRemaining ? theme.colorScheme.primary : theme.colorScheme.outline,
-                                      ),
+                        Builder(
+                          builder: (context) {
+                            final overallUsed = schedules.where((s) => s.isRestDay || s.automaticRestDay).length;
+                            final weeklyRemaining = ref.read(schedulingServiceProvider).getAvailableRestDays(
+                              project: project,
+                              schedules: schedules,
+                              logicalToday: getLogicalToday(),
+                            );
+                            
+                            return Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _StatColumn(
+                                      label: project.restMode == RestMode.flexible
+                                          ? 'Flexible Rest Days Used'
+                                          : 'Adaptive Rest Days Used',
+                                      value: '$overallUsed days',
+                                      icon: Icons.check_circle_outline,
+                                      color: theme.colorScheme.primary,
                                     ),
-                                  );
-                                }),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${project.remainingRestDays} of ${project.allowedRestDays} remaining',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
+                                    _StatColumn(
+                                      label: project.restMode == RestMode.flexible
+                                          ? 'Remaining Flexible Days for the Week'
+                                          : 'Remaining Adaptive Days for the Week',
+                                      value: '$weeklyRemaining days',
+                                      icon: Icons.hourglass_full,
+                                      color: theme.colorScheme.secondary,
+                                      subtitle: project.restMode == RestMode.adaptive ? 'Expires Sunday' : null,
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
+                                const SizedBox(height: 16),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        project.restMode == RestMode.flexible ? 'Rest Days Used' : 'Adaptive Rest Budget',
+                                        style: theme.textTheme.labelMedium?.copyWith(
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: List.generate(project.allowedRestDays, (i) {
+                                          final isUsed = i < overallUsed;
+                                          return Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                            child: Text(
+                                              isUsed ? '■' : '□',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                                color: isUsed ? theme.colorScheme.primary : theme.colorScheme.outline,
+                                              ),
+                                            ),
+                                          );
+                                        }),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '$overallUsed of ${project.allowedRestDays} used',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
                         ),
                       ],
                       if (isOngoing) ...[
@@ -1064,12 +1087,14 @@ class _StatColumn extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final String? subtitle;
 
   const _StatColumn({
     required this.label,
     required this.value,
     required this.icon,
     required this.color,
+    this.subtitle,
   });
 
   @override
@@ -1083,6 +1108,16 @@ class _StatColumn extends StatelessWidget {
           value,
           style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
         const SizedBox(height: 4),
         Text(
           label,
@@ -1285,6 +1320,23 @@ class _ThisWeekTab extends ConsumerWidget {
                   return GestureDetector(
                     onLongPress: () {
                       if ((isFlex || isOngoing) && isToday && !s.isRestDay) {
+                        if (!isOngoing && !ref.read(schedulingServiceProvider).isRestDayAllowed(schedules: allSchedules, targetDate: s.date)) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text("Cooldown Active"),
+                              content: const Text("To maintain writing momentum, rest days must be separated by at least 2 writing days. You recently took a rest day, so you cannot schedule another one today."),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text("Got it"),
+                                ),
+                              ],
+                            ),
+                          );
+                          return;
+                        }
+
                         if (isOngoing) {
                           showDialog(
                             context: context,
@@ -1297,9 +1349,14 @@ class _ThisWeekTab extends ConsumerWidget {
                                   child: const Text("Cancel"),
                                 ),
                                 TextButton(
-                                  onPressed: () {
+                                  onPressed: () async {
                                     Navigator.pop(context);
-                                    ref.read(projectsProvider.notifier).convertDayToRestDay(project, s);
+                                    final err = await ref.read(projectsProvider.notifier).convertDayToRestDay(project, s);
+                                    if (err != null && context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(err)),
+                                      );
+                                    }
                                   },
                                   child: const Text("Confirm"),
                                 ),
@@ -1334,9 +1391,14 @@ class _ThisWeekTab extends ConsumerWidget {
                                     child: const Text("Cancel"),
                                   ),
                                   TextButton(
-                                    onPressed: () {
+                                    onPressed: () async {
                                       Navigator.pop(context);
-                                      ref.read(projectsProvider.notifier).convertDayToRestDay(project, s);
+                                      final err = await ref.read(projectsProvider.notifier).convertDayToRestDay(project, s);
+                                      if (err != null && context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text(err)),
+                                        );
+                                      }
                                     },
                                     child: const Text("Confirm"),
                                   ),

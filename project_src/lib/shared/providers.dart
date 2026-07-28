@@ -456,7 +456,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     } catch (_) {}
   }
 
-  Future<void> convertDayToRestDay(ProjectModel project, ScheduleModel todaySchedule) async {
+  Future<String?> convertDayToRestDay(ProjectModel project, ScheduleModel todaySchedule) async {
     try {
       final today = getLogicalToday();
       
@@ -477,12 +477,17 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         await _statsRepo.recalculateStatistics();
         _invalidateAllDependentProviders();
         await loadProjects(silent: true);
-        return;
+        return null;
       }
 
       // 1. Get all schedules for the project
       final schedules = await _scheduleRepo.getSchedulesForProject(project.id);
       
+      // Check rest day cooldown rule: rest days must be separated by at least 2 writing days
+      if (!_schedulingService.isRestDayAllowed(schedules: schedules, targetDate: todaySchedule.date)) {
+        return 'Rest days must be separated by at least 2 writing days to maintain momentum.';
+      }
+
       // 2. Filter future schedules starting from today (unlocked)
       final cleanToday = DateTime(today.year, today.month, today.day);
       final futureSchedules = schedules
@@ -538,8 +543,10 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       await _statsRepo.recalculateStatistics();
       _invalidateAllDependentProviders();
       await loadProjects(silent: true);
+      return null;
     } catch (e, st) {
       debugPrint('Error converting day to rest day: $e\n$st');
+      return 'Error occurred: $e';
     }
   }
 }

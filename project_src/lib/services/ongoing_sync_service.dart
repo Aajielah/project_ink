@@ -224,7 +224,11 @@ class OngoingSyncService {
           if (actual == 0) {
             bool hasRest = false;
             if (!s.locked && project.restMode == RestMode.adaptive) {
-              hasRest = currentRemainingRestDays > 0;
+              final isAllowed = schedService.isRestDayAllowed(
+                schedules: currentSchedules,
+                targetDate: s.date,
+              );
+              hasRest = currentRemainingRestDays > 0 && isAllowed;
             }
 
             if (hasRest) {
