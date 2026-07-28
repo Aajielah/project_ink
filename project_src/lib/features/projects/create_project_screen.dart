@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:image_picker/image_picker.dart';
 import '../../shared/cover_matching_helper.dart';
+import '../../shared/help_bottom_sheet.dart';
 
 import '../../shared/providers.dart';
 import '../../shared/date_utils.dart';
@@ -331,9 +332,21 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Project Type',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Project Type',
+                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.info_outline, size: 20),
+                            color: theme.colorScheme.secondary,
+                            onPressed: () => showHelpBottomSheet(context, 'project_type'),
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       SegmentedButton<ProjectType>(
@@ -551,9 +564,21 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Rest Day Mode',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Rest Day Mode',
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.info_outline, size: 20),
+                              color: theme.colorScheme.secondary,
+                              onPressed: () => showHelpBottomSheet(context, 'rest_mode'),
+                              constraints: const BoxConstraints(),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         Text(

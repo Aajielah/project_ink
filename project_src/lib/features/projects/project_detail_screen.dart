@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../shared/providers.dart';
+import '../../shared/help_bottom_sheet.dart';
 import '../../models/project.dart';
 import '../../models/schedule.dart';
 import '../../models/daily_log.dart';
@@ -399,21 +400,33 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                     ),
                     if (!isOngoing) ...[
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<RestMode>(
-                        value: editRestMode,
-                        decoration: const InputDecoration(labelText: 'Rest Mode', border: OutlineInputBorder()),
-                        items: const [
-                          DropdownMenuItem(value: RestMode.fixed, child: Text('Fixed Rest Days')),
-                          DropdownMenuItem(value: RestMode.flexible, child: Text('Flexible Rest Days')),
-                          DropdownMenuItem(value: RestMode.adaptive, child: Text('Adaptive Rest Days')),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<RestMode>(
+                              value: editRestMode,
+                              decoration: const InputDecoration(labelText: 'Rest Mode', border: OutlineInputBorder()),
+                              items: const [
+                                DropdownMenuItem(value: RestMode.fixed, child: Text('Fixed Rest Days')),
+                                DropdownMenuItem(value: RestMode.flexible, child: Text('Flexible Rest Days')),
+                                DropdownMenuItem(value: RestMode.adaptive, child: Text('Adaptive Rest Days')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setDialogState(() {
+                                    editRestMode = val;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.info_outline, size: 20),
+                            color: Theme.of(context).colorScheme.secondary,
+                            onPressed: () => showHelpBottomSheet(context, 'rest_mode'),
+                          ),
                         ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() {
-                              editRestMode = val;
-                            });
-                          }
-                        },
                       ),
                       const SizedBox(height: 12),
                       if (editRestMode == RestMode.fixed) ...[
