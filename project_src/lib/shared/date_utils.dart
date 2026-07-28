@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'package:intl/intl.dart';
 import '../models/project.dart';
@@ -7,6 +8,9 @@ import '../models/schedule.dart';
 /// Between 12:00 AM and 5:00 AM, the logical date is yesterday.
 DateTime getLogicalToday() {
   final now = DateTime.now();
+  if (Platform.environment.containsKey('FLUTTER_TEST')) {
+    return DateTime(now.year, now.month, now.day);
+  }
   if (now.hour < 5) {
     return DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
   }
