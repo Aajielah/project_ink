@@ -1561,6 +1561,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
     if (project == null) {
       return const Center(child: CircularProgressIndicator());
     }
+    final activeProject = project;
 
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
@@ -1580,7 +1581,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
             DateTime(l.date.year, l.date.month, l.date.day): l
         };
 
-        final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
+        final logicalToday = getLogicalTodayForProject(project: activeProject, schedules: schedules);
         final pastSchedules = schedules
             .where((s) => s.date.isBefore(logicalToday))
             .toList();
@@ -1921,6 +1922,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
       }
     }
     if (project == null) return;
+    final activeProject = project;
 
     final controller = TextEditingController(text: log.actualWords.toString());
     showDialog(
@@ -1982,7 +1984,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                 if (confirmed == true) {
                   try {
                     final schedules = await ref.read(scheduleRepositoryProvider).getSchedulesForProject(log.projectId);
-                    final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
+                    final logicalToday = getLogicalTodayForProject(project: activeProject, schedules: schedules);
 
                     await ref.read(loggingServiceProvider).logWords(
                       projectId: log.projectId,
