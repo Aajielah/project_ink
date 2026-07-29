@@ -1546,6 +1546,11 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
     final logRepo = ref.watch(dailyLogRepositoryProvider);
     final schedRepo = ref.watch(scheduleRepositoryProvider);
     final theme = Theme.of(context);
+    final project = ref.watch(projectsProvider).value?.firstWhere((p) => p.id == widget.projectId, orElse: () => null);
+
+    if (project == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
@@ -1565,7 +1570,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
             DateTime(l.date.year, l.date.month, l.date.day): l
         };
 
-        final logicalToday = getLogicalTodayForProject(project: widget.project, schedules: schedules);
+        final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
         final pastSchedules = schedules
             .where((s) => s.date.isBefore(logicalToday))
             .toList();
@@ -1598,10 +1603,10 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
             date: s.date,
             plannedWords: s.plannedWords,
             actualWords: 0,
+            carryForwardWords: 0,
             backlogCreated: s.isRestDay || s.automaticRestDay ? 0 : s.plannedWords,
             completed: false,
-            createdAt: s.date,
-            updatedAt: s.date,
+            loggedAt: s.date,
           );
 
           final isRest = s.isRestDay || s.automaticRestDay;
@@ -1955,7 +1960,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                 if (confirmed == true) {
                   try {
                     final schedules = await ref.read(scheduleRepositoryProvider).getSchedulesForProject(log.projectId);
-                    final logicalToday = getLogicalTodayForProject(project: widget.project, schedules: schedules);
+                    final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
 
                     await ref.read(loggingServiceProvider).logWords(
                       projectId: log.projectId,
