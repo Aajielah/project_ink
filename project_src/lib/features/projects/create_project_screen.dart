@@ -586,33 +586,57 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<RestMode>(
-                          value: _restMode,
-                          decoration: const InputDecoration(
-                            labelText: 'Select Rest Mode',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: RestMode.fixed,
-                              child: Text('Fixed Rest Days'),
-                            ),
-                            DropdownMenuItem(
-                              value: RestMode.flexible,
-                              child: Text('Flexible Rest Days'),
-                            ),
-                            DropdownMenuItem(
-                              value: RestMode.adaptive,
-                              child: Text('Adaptive Rest Days'),
-                            ),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _restMode = val;
+                        Builder(
+                          builder: (context) {
+                            final totalDays = _calculateTotalDays();
+                            final showSprint = totalDays <= 10;
+                            
+                            // If Sprint Mode was selected but duration is now > 10, auto-switch to Flexible
+                            if (!showSprint && _restMode == RestMode.sprint) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                setState(() {
+                                  _restMode = RestMode.flexible;
+                                });
                               });
                             }
-                          },
+
+                            return DropdownButtonFormField<RestMode>(
+                              value: _restMode == RestMode.sprint && !showSprint ? null : _restMode,
+                              decoration: const InputDecoration(
+                                labelText: 'Select Rest Mode',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: [
+                                const DropdownMenuItem(
+                                  value: RestMode.fixed,
+                                  child: Text('Fixed Rest Days'),
+                                ),
+                                const DropdownMenuItem(
+                                  value: RestMode.flexible,
+                                  child: Text('Flexible Rest Days'),
+                                ),
+                                const DropdownMenuItem(
+                                  value: RestMode.adaptive,
+                                  child: Text('Adaptive Rest Days'),
+                                ),
+                                if (showSprint)
+                                  const DropdownMenuItem(
+                                    value: RestMode.sprint,
+                                    child: Text('Sprint Mode'),
+                                  ),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    _restMode = val;
+                                    if (val == RestMode.sprint) {
+                                      _allowedRestDays = 0;
+                                    }
+                                  });
+                                }
+                              },
+                            );
+                          }
                         ),
                         const SizedBox(height: 16),
                         if (_restMode == RestMode.fixed) ...[
@@ -633,8 +657,9 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                               _RestDayChip(label: 'Sun', dayValue: 7, selectedList: _fixedRestDays, onChanged: (v) => setState(() {})),
                             ],
                           ),
-                        ] else ...[
+                        ] else if (_restMode == RestMode.flexible || _restMode == RestMode.adaptive) ...[
                           TextFormField(
+                            key: ValueKey('rest_days_${_restMode.name}'),
                             initialValue: _allowedRestDays.toString(),
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
@@ -646,12 +671,15 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                               if (value == null || value.isEmpty) return 'Required.';
                               final val = int.tryParse(value);
                               if (val == null || val < 0) return 'Must be 0 or greater.';
+                              if (val == 0) {
+                                return '${_restMode == RestMode.flexible ? 'Flexible' : 'Adaptive'} Rest Days must be at least 1.';
+                              }
                               return null;
                             },
-                            onChanged: (val) {
-                              final parsed = int.tryParse(val);
-                              if (parsed != null && parsed >= 0) {
-                                _allowedRestDays = parsed;
+                            onChanged: (value) {
+                              final val = int.tryParse(value);
+                              if (val != null && val >= 0) {
+                                _allowedRestDays = val;
                               }
                             },
                           ),

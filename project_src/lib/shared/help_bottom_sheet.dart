@@ -151,6 +151,15 @@ class _HelpBottomSheetContent extends StatelessWidget {
                 title: 'Adaptive Rest Days',
                 description: 'Best for dynamic schedules. If you miss logging words before the grace period ends, Project Ink will automatically apply an available Adaptive Rest Day for you. Backlog is only created once your entire project rest budget is fully exhausted.\n\nAdaptive Rest Days are also earned gradually.\n\nHowever, they expire at the end of the week.\n\nIf you don\'t use them, they are lost and cannot be carried forward.\n\nThis encourages consistent writing while still allowing occasional recovery.',
               ),
+              const SizedBox(height: 24.0),
+
+              // Sprint Mode
+              _buildRestModeDetail(
+                context,
+                icon: Icons.bolt,
+                title: 'Sprint Mode',
+                description: 'Sprint Mode is intended for short writing challenges.\n\n• Available only for projects lasting 10 days or fewer.\n• No rest days are allowed.\n• Every scheduled writing day is mandatory.\n• Any missed day immediately becomes backlog.\n\nChoose this mode only when you\'re committed to maintaining a continuous writing streak until the project is finished.',
+              ),
             ],
           ),
         ),

@@ -16,9 +16,15 @@ class SchedulingService {
     List<int>? fixedRestWeekdays,
     required int allowedRestDays,
   }) {
-    if (targetWords <= 0) return 'Target words must be greater than zero.';
-    if (dailyWordTarget <= 0) return 'Daily word target must be greater than zero.';
-    if (durationDays <= 0) return 'Duration must be at least 1 day.';
+    if (targetWords <= 0) {
+      return 'Target words must be greater than zero.';
+    }
+    if (dailyWordTarget <= 0) {
+      return 'Daily target words must be greater than zero.';
+    }
+    if (durationDays <= 0) {
+      return 'Project duration must be at least 1 day.';
+    }
 
     int restDaysEstimate = 0;
 
@@ -38,11 +44,22 @@ class SchedulingService {
       if (allowedRestDays < 0) {
         return 'Rest Days cannot be negative.';
       }
+      if (allowedRestDays == 0) {
+        return '${restMode == RestMode.flexible ? "Flexible" : "Adaptive"} Rest Days must be at least 1.';
+      }
       final writingDays = durationDays - allowedRestDays;
       if (writingDays <= 0 || writingDays * dailyWordTarget < targetWords) {
         return 'This configuration cannot complete your project. Reduce your total rest days, increase your daily target, or extend the project duration.';
       }
       restDaysEstimate = allowedRestDays;
+    } else if (restMode == RestMode.sprint) {
+      if (allowedRestDays != 0) {
+        return 'Sprint Mode does not allow rest days.';
+      }
+      if (durationDays > 10) {
+        return 'Sprint Mode is only available for projects lasting 10 days or fewer.';
+      }
+      restDaysEstimate = 0;
     }
 
     final writingDays = durationDays - restDaysEstimate;

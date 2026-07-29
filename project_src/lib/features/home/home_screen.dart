@@ -82,14 +82,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   Future<List<TodayWritingTask>> _fetchTodayTasks(List<ProjectModel> activeProjects) async {
     final schedRepo = ref.read(scheduleRepositoryProvider);
     final logRepo = ref.read(dailyLogRepositoryProvider);
-    final today = getLogicalToday();
-    final cleanToday = DateTime(today.year, today.month, today.day);
 
     final List<TodayWritingTask> tasks = [];
     for (final p in activeProjects) {
-      final sched = await schedRepo.getScheduleForDate(p.id, cleanToday);
+      final schedules = await schedRepo.getSchedulesForProject(p.id);
+      final projectToday = getLogicalTodayForProject(project: p, schedules: schedules);
+      final cleanProjectToday = DateTime(projectToday.year, projectToday.month, projectToday.day);
+
+      final sched = await schedRepo.getScheduleForDate(p.id, cleanProjectToday);
       if (sched != null) {
-        final log = await logRepo.getLogForDate(p.id, cleanToday);
+        final log = await logRepo.getLogForDate(p.id, cleanProjectToday);
         final logs = await logRepo.getLogsForProject(p.id);
         final successfulLogs = logs.where((l) => l.actualWords > 0).toList();
         DateTime? lastSuccessfulLogDate;
@@ -764,10 +766,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   Future<void> _submitLog(String projectId, int words, {bool isAdditive = true}) async {
     try {
       final project = ref.read(projectsProvider).value?.firstWhere((p) => p.id == projectId);
+      if (project == null) return;
+
+      final schedules = await ref.read(scheduleRepositoryProvider).getSchedulesForProject(projectId);
+      final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
       
       final wasCompleted = await ref.read(loggingServiceProvider).logWords(
             projectId: projectId,
-            date: DateTime.now(),
+            date: logicalToday,
             actualWords: words,
             isAdditive: isAdditive,
           );
@@ -1164,7 +1170,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final todayTasks = snapshot.data!;
+                final allTodayTasks = snapshot.data!;
+                final isSprintActive = activeProjects.any((p) => p.restMode == RestMode.sprint);
+                final todayTasks = isSprintActive
+                    ? allTodayTasks.where((t) => !t.schedule.isRestDay).toList()
+                    : allTodayTasks;
+
                 final rec = _computeRecommendation(activeProjects, todayTasks);
                 final ProjectModel? recProject = rec['project'];
 
@@ -1424,12 +1435,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       ),
                       const SizedBox(height: 12),
 
-                      if (todayTasks.isEmpty)
-                        const Card(
+                       if (todayTasks.isEmpty)
+                        Card(
                           child: Padding(
-                            padding: EdgeInsets.all(24.0),
+                            padding: const EdgeInsets.all(24.0),
                             child: Text(
-                              'No projects scheduled for today! Take a well-deserved break.',
+                              isSprintActive
+                                  ? 'Sprint Mode active! Keep writing and crush your targets.'
+                                  : 'No projects scheduled for today! Take a well-deserved break.',
                               textAlign: TextAlign.center,
                             ),
                           ),

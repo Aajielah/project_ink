@@ -252,5 +252,156 @@ void main() {
       final errorResult = await notifier.convertDayToRestDay(project, s2);
       expect(errorResult, equals('Rest days must be separated by at least 2 writing days to maintain momentum.'));
     });
+
+    test('Sprint Mode validation rules in SchedulingService', () {
+      final service = container.read(schedulingServiceProvider);
+      
+      // Sprint mode with duration <= 10 days should succeed
+      final errOk = service.validateInputs(
+        targetWords: 5000,
+        dailyWordTarget: 500,
+        durationDays: 10,
+        restMode: RestMode.sprint,
+        allowedRestDays: 0,
+      );
+      expect(errOk, isNull);
+
+      // Sprint mode with duration > 10 days should fail
+      final errDuration = service.validateInputs(
+        targetWords: 10000,
+        dailyWordTarget: 500,
+        durationDays: 11,
+        restMode: RestMode.sprint,
+        allowedRestDays: 0,
+      );
+      expect(errDuration, equals('Sprint Mode is only available for projects lasting 10 days or fewer.'));
+
+      // Sprint mode with allowedRestDays > 0 should fail
+      final errRestDays = service.validateInputs(
+        targetWords: 5000,
+        dailyWordTarget: 500,
+        durationDays: 10,
+        restMode: RestMode.sprint,
+        allowedRestDays: 1,
+      );
+      expect(errRestDays, equals('Sprint Mode does not allow rest days.'));
+    });
+
+    test('Flexible and Adaptive Mode cannot have 0 rest days', () {
+      final service = container.read(schedulingServiceProvider);
+      
+      final errFlex = service.validateInputs(
+        targetWords: 5000,
+        dailyWordTarget: 500,
+        durationDays: 15,
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+      );
+      expect(errFlex, equals('Flexible Rest Days must be at least 1.'));
+
+      final errAdapt = service.validateInputs(
+        targetWords: 5000,
+        dailyWordTarget: 500,
+        durationDays: 15,
+        restMode: RestMode.adaptive,
+        allowedRestDays: 0,
+      );
+      expect(errAdapt, equals('Adaptive Rest Days must be at least 1.'));
+    });
+
+    test('Sprint Mode active project generates Sprint encouragement message', () async {
+      final project = ProjectModel(
+        id: 'p_sprint_active',
+        name: 'Sprint Challenge',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 2000,
+        writtenWords: 0,
+        remainingWords: 2000,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: cleanToday,
+        expectedFinishDate: cleanToday.add(const Duration(days: 4)),
+        restMode: RestMode.sprint,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await projectRepo.insertProject(project);
+
+      final encouragementService = container.read(encouragementServiceProvider);
+      final messages = await encouragementService.getContextualEncouragement(null);
+      
+      final sprintEncouragements = [
+        '🔥 Go on, champ. Fire on!',
+        '⚡ Sprint mode activated. Keep pushing.',
+        '🚀 No breaks. Finish strong.',
+        '💪 One more session. You\'ve got this.',
+        '✍️ Stay locked in. The finish line is close.',
+      ];
+
+      final hasSprintMessage = messages.any((msg) => sprintEncouragements.contains(msg));
+      expect(hasSprintMessage, isTrue);
+    });
+
+    test('getLogicalTodayForProject resolves date correctly depending on completion', () {
+      final project = ProjectModel(
+        id: 'p_logical_check',
+        name: 'Logical Check',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 10000,
+        writtenWords: 0,
+        remainingWords: 10000,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: cleanToday.subtract(const Duration(days: 2)),
+        expectedFinishDate: cleanToday.add(const Duration(days: 5)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 5,
+        remainingRestDays: 5,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      final yesterday = cleanToday.subtract(const Duration(days: 1));
+      
+      // Case 1: Yesterday schedule was completed -> should return calendarToday
+      final sCompleted = ScheduleModel(
+        id: 's_comp',
+        projectId: project.id,
+        date: yesterday,
+        plannedWords: 500,
+        isRestDay: false,
+        completed: true,
+        automaticRestDay: false,
+        locked: false,
+      );
+
+      final resultCompleted = getLogicalTodayForProject(project: project, schedules: [sCompleted]);
+      expect(resultCompleted, equals(cleanToday));
+
+      // Case 2: Yesterday schedule was a rest day -> should return calendarToday
+      final sRest = ScheduleModel(
+        id: 's_rest',
+        projectId: project.id,
+        date: yesterday,
+        plannedWords: 0,
+        isRestDay: true,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+
+      final resultRest = getLogicalTodayForProject(project: project, schedules: [sRest]);
+      expect(resultRest, equals(cleanToday));
+    });
   });
 }

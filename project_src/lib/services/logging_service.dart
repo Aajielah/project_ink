@@ -41,11 +41,6 @@ class LoggingService {
     }
 
     final cleanDate = DateTime(date.year, date.month, date.day);
-    final now = getLogicalToday();
-    final today = DateTime(now.year, now.month, now.day);
-    if (cleanDate != today) {
-      throw StateError('Words can only be logged for today.');
-    }
     
     // 1. Fetch the project
     final project = await _projectRepo.getProjectById(projectId);
@@ -56,6 +51,13 @@ class LoggingService {
       throw StateError('Cannot log words on a completed project.');
     }
 
+    // Calculate logical today on a per-project basis
+    final schedules = await _scheduleRepo.getSchedulesForProject(projectId);
+    final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
+    if (cleanDate != logicalToday) {
+      throw StateError('Words can only be logged for today.');
+    }
+    
     // 2. Fetch today's schedule row
     ScheduleModel? schedule = await _scheduleRepo.getScheduleForDate(projectId, cleanDate);
     final uuid = const Uuid();

@@ -153,11 +153,17 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
 
     if (confirmed != true) return;
 
+    final project = ref.read(projectsProvider).value?.firstWhere((p) => p.id == widget.projectId);
+    if (project == null) return;
+    
+    final schedules = await ref.read(scheduleRepositoryProvider).getSchedulesForProject(widget.projectId);
+    final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
+
     final loggingService = ref.read(loggingServiceProvider);
     try {
       final wasCompleted = await loggingService.logWords(
         projectId: widget.projectId,
-        date: DateTime.now(),
+        date: logicalToday,
         actualWords: actual,
       );
       
@@ -403,21 +409,41 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                       Row(
                         children: [
                           Expanded(
-                            child: DropdownButtonFormField<RestMode>(
-                              value: editRestMode,
-                              decoration: const InputDecoration(labelText: 'Rest Mode', border: OutlineInputBorder()),
-                              items: const [
-                                DropdownMenuItem(value: RestMode.fixed, child: Text('Fixed Rest Days')),
-                                DropdownMenuItem(value: RestMode.flexible, child: Text('Flexible Rest Days')),
-                                DropdownMenuItem(value: RestMode.adaptive, child: Text('Adaptive Rest Days')),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setDialogState(() {
-                                    editRestMode = val;
+                            child: Builder(
+                              builder: (context) {
+                                final calcDays = getCalculatedDays();
+                                final showSprint = calcDays <= 10;
+                                
+                                if (!showSprint && editRestMode == RestMode.sprint) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    setDialogState(() {
+                                      editRestMode = RestMode.flexible;
+                                    });
                                   });
                                 }
-                              },
+
+                                return DropdownButtonFormField<RestMode>(
+                                  value: editRestMode == RestMode.sprint && !showSprint ? null : editRestMode,
+                                  decoration: const InputDecoration(labelText: 'Rest Mode', border: OutlineInputBorder()),
+                                  items: [
+                                    const DropdownMenuItem(value: RestMode.fixed, child: Text('Fixed Rest Days')),
+                                    const DropdownMenuItem(value: RestMode.flexible, child: Text('Flexible Rest Days')),
+                                    const DropdownMenuItem(value: RestMode.adaptive, child: Text('Adaptive Rest Days')),
+                                    if (showSprint)
+                                      const DropdownMenuItem(value: RestMode.sprint, child: Text('Sprint Mode')),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setDialogState(() {
+                                        editRestMode = val;
+                                        if (val == RestMode.sprint) {
+                                          editAllowedRestDays = 0;
+                                        }
+                                      });
+                                    }
+                                  },
+                                );
+                              }
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -472,8 +498,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                             ),
                           ],
                         ),
-                      ] else ...[
+                      ] else if (editRestMode == RestMode.flexible || editRestMode == RestMode.adaptive) ...[
                         TextFormField(
+                          key: ValueKey('edit_rest_days_${editRestMode.name}'),
                           initialValue: editAllowedRestDays.toString(),
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
@@ -517,7 +544,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                     if (!isOngoing) {
                       final targetWords = int.tryParse(targetWordsController.text) ?? project.targetWords;
                       final calcDays = getCalculatedDays();
+                      
                       if (editRestMode == RestMode.flexible || editRestMode == RestMode.adaptive) {
+                        if (editAllowedRestDays == 0) {
+                          _showValidationErrorDialog(
+                            context,
+                            title: 'Invalid Rest Days',
+                            message: '${editRestMode == RestMode.flexible ? 'Flexible' : 'Adaptive'} Rest Days must be at least 1.',
+                          );
+                          return;
+                        }
                         final writingDays = calcDays - editAllowedRestDays;
                         if (writingDays <= 0 || writingDays * dailyTarget < targetWords) {
                           _showValidationErrorDialog(
@@ -527,6 +563,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                           );
                           return;
                         }
+                      } else if (editRestMode == RestMode.sprint) {
+                        if (calcDays > 10) {
+                          _showValidationErrorDialog(
+                            context,
+                            title: 'Sprint Mode Not Available',
+                            message: 'Sprint Mode is only available for projects lasting 10 days or fewer.',
+                          );
+                          return;
+                        }
+                        editAllowedRestDays = 0;
                       }
                     }
 
@@ -888,19 +934,23 @@ class _OverviewTab extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _StatColumn(
-                            label: 'Project Streak',
-                            value: '${project.projectStreak} days',
-                            icon: Icons.local_fire_department,
-                            color: theme.colorScheme.primary,
+                          Expanded(
+                            child: _StatColumn(
+                              label: 'Project Streak',
+                              value: '${project.projectStreak} days',
+                              icon: Icons.local_fire_department,
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
-                          _StatColumn(
-                            label: isOngoing ? 'Longest Streak' : 'Remaining',
-                            value: isOngoing
-                                ? '${project.longestProjectStreak} days'
-                                : '${project.remainingWords} words',
-                            icon: isOngoing ? Icons.workspace_premium : Icons.hourglass_empty,
-                            color: theme.colorScheme.secondary,
+                          Expanded(
+                            child: _StatColumn(
+                              label: isOngoing ? 'Longest Streak' : 'Remaining',
+                              value: isOngoing
+                                  ? '${project.longestProjectStreak} days'
+                                  : '${project.remainingWords} words',
+                              icon: isOngoing ? Icons.workspace_premium : Icons.hourglass_empty,
+                              color: theme.colorScheme.secondary,
+                            ),
                           ),
                         ],
                       ),
@@ -908,19 +958,23 @@ class _OverviewTab extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _StatColumn(
-                            label: isOngoing ? 'Lifetime Words' : 'Target Goal',
-                            value: '${project.writtenWords} words',
-                            icon: isOngoing ? Icons.book : Icons.outlined_flag,
-                            color: theme.colorScheme.primary,
+                          Expanded(
+                            child: _StatColumn(
+                              label: isOngoing ? 'Lifetime Words' : 'Target Goal',
+                              value: '${project.writtenWords} words',
+                              icon: isOngoing ? Icons.book : Icons.outlined_flag,
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
-                          _StatColumn(
-                            label: isOngoing ? 'Daily Target' : 'Estimated Finish',
-                            value: isOngoing
-                                ? '${project.dailyWordTarget} words'
-                                : DateFormat('MMM d, yyyy').format(project.expectedFinishDate),
-                            icon: isOngoing ? Icons.mode_edit : Icons.calendar_today,
-                            color: theme.colorScheme.secondary,
+                          Expanded(
+                            child: _StatColumn(
+                              label: isOngoing ? 'Daily Target' : 'Estimated Finish',
+                              value: isOngoing
+                                  ? '${project.dailyWordTarget} words'
+                                  : DateFormat('MMM d, yyyy').format(project.expectedFinishDate),
+                              icon: isOngoing ? Icons.mode_edit : Icons.calendar_today,
+                              color: theme.colorScheme.secondary,
+                            ),
                           ),
                         ],
                       ),
@@ -929,10 +983,11 @@ class _OverviewTab extends ConsumerWidget {
                         Builder(
                           builder: (context) {
                             final overallUsed = schedules.where((s) => s.isRestDay || s.automaticRestDay).length;
+                            final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
                             final weeklyRemaining = ref.read(schedulingServiceProvider).getAvailableRestDays(
                               project: project,
                               schedules: schedules,
-                              logicalToday: getLogicalToday(),
+                              logicalToday: logicalToday,
                             );
                             
                             return Column(
@@ -940,22 +995,26 @@ class _OverviewTab extends ConsumerWidget {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                                   children: [
-                                    _StatColumn(
-                                      label: project.restMode == RestMode.flexible
-                                          ? 'Flexible Rest Days Used'
-                                          : 'Adaptive Rest Days Used',
-                                      value: '$overallUsed days',
-                                      icon: Icons.check_circle_outline,
-                                      color: theme.colorScheme.primary,
+                                    Expanded(
+                                      child: _StatColumn(
+                                        label: project.restMode == RestMode.flexible
+                                            ? 'Flexible Rest Days Used'
+                                            : 'Adaptive Rest Days Used',
+                                        value: '$overallUsed days',
+                                        icon: Icons.check_circle_outline,
+                                        color: theme.colorScheme.primary,
+                                      ),
                                     ),
-                                    _StatColumn(
-                                      label: project.restMode == RestMode.flexible
-                                          ? 'Remaining Flexible Days for the Week'
-                                          : 'Remaining Adaptive Days for the Week',
-                                      value: '$weeklyRemaining days',
-                                      icon: Icons.hourglass_full,
-                                      color: theme.colorScheme.secondary,
-                                      subtitle: project.restMode == RestMode.adaptive ? 'Expires Sunday' : null,
+                                    Expanded(
+                                      child: _StatColumn(
+                                        label: project.restMode == RestMode.flexible
+                                            ? 'Remaining Flexible Days for the Week'
+                                            : 'Remaining Adaptive Days for the Week',
+                                        value: '$weeklyRemaining days',
+                                        icon: Icons.hourglass_full,
+                                        color: theme.colorScheme.secondary,
+                                        subtitle: project.restMode == RestMode.adaptive ? 'Expires Sunday' : null,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -1010,17 +1069,21 @@ class _OverviewTab extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _StatColumn(
-                              label: 'Total Writing Days',
-                              value: '$totalWritingDays days',
-                              icon: Icons.calendar_month,
-                              color: theme.colorScheme.primary,
+                            Expanded(
+                              child: _StatColumn(
+                                label: 'Total Writing Days',
+                                value: '$totalWritingDays days',
+                                icon: Icons.calendar_month,
+                                color: theme.colorScheme.primary,
+                              ),
                             ),
-                            _StatColumn(
-                              label: 'Average Words/Day',
-                              value: '$avgWords words',
-                              icon: Icons.analytics,
-                              color: theme.colorScheme.secondary,
+                            Expanded(
+                              child: _StatColumn(
+                                label: 'Average Words/Day',
+                                value: '$avgWords words',
+                                icon: Icons.analytics,
+                                color: theme.colorScheme.secondary,
+                              ),
                             ),
                           ],
                         ),
@@ -1107,6 +1170,7 @@ class _StatColumn extends StatelessWidget {
         Text(
           value,
           style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 2),
@@ -1116,12 +1180,14 @@ class _StatColumn extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
               fontStyle: FontStyle.italic,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
         const SizedBox(height: 4),
         Text(
           label,
           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -1142,14 +1208,6 @@ class _ThisWeekTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final today = getLogicalToday();
-    final cleanToday = DateTime(today.year, today.month, today.day);
-
-    // Calculate current week date bounds
-    final weekdayOffset = today.weekday - 1; // days since Monday
-    final monday = cleanToday.subtract(Duration(days: weekdayOffset));
-    final sunday = monday.add(const Duration(days: 6));
-
     final schedRepo = ref.watch(scheduleRepositoryProvider);
     final logRepo = ref.watch(dailyLogRepositoryProvider);
 
@@ -1165,6 +1223,14 @@ class _ThisWeekTab extends ConsumerWidget {
 
         final allSchedules = snapshot.data![0] as List<ScheduleModel>;
         final allLogs = snapshot.data![1] as List<DailyLogModel>;
+
+        final today = getLogicalTodayForProject(project: project, schedules: allSchedules);
+        final cleanToday = DateTime(today.year, today.month, today.day);
+
+        // Calculate current week date bounds
+        final weekdayOffset = today.weekday - 1; // days since Monday
+        final monday = cleanToday.subtract(Duration(days: weekdayOffset));
+        final sunday = monday.add(const Duration(days: 6));
 
         final weekSchedules = allSchedules.where((s) =>
           (s.date.isAtSameMomentAs(monday) || s.date.isAfter(monday)) &&
@@ -1494,12 +1560,20 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
         final logs = (snapshot.data![0] as List<DailyLogModel>).reversed.toList();
         final schedules = snapshot.data![1] as List<ScheduleModel>;
 
-        final scheduleMap = {
-          for (final s in schedules)
-            DateTime(s.date.year, s.date.month, s.date.day): s
+        final logMap = {
+          for (final l in logs)
+            DateTime(l.date.year, l.date.month, l.date.day): l
         };
 
-        if (logs.isEmpty) {
+        final logicalToday = getLogicalTodayForProject(project: widget.project, schedules: schedules);
+        final pastSchedules = schedules
+            .where((s) => s.date.isBefore(logicalToday))
+            .toList();
+
+        // Sort descending (most recent past day first)
+        pastSchedules.sort((a, b) => b.date.compareTo(a.date));
+
+        if (pastSchedules.isEmpty) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -1515,14 +1589,27 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
           );
         }
 
-        final filteredLogs = logs.where((l) {
-          final s = scheduleMap[DateTime(l.date.year, l.date.month, l.date.day)];
-          final isRest = s?.isRestDay ?? (l.plannedWords == 0);
-          if (isRest) {
-            return _showRestDays;
+        final List<MapEntry<ScheduleModel, DailyLogModel>> timelineItems = [];
+        for (final s in pastSchedules) {
+          final cleanDate = DateTime(s.date.year, s.date.month, s.date.day);
+          final l = logMap[cleanDate] ?? DailyLogModel(
+            id: '',
+            projectId: widget.projectId,
+            date: s.date,
+            plannedWords: s.plannedWords,
+            actualWords: 0,
+            backlogCreated: s.isRestDay || s.automaticRestDay ? 0 : s.plannedWords,
+            completed: false,
+            createdAt: s.date,
+            updatedAt: s.date,
+          );
+
+          final isRest = s.isRestDay || s.automaticRestDay;
+          if (isRest && !_showRestDays) {
+            continue;
           }
-          return true;
-        }).toList();
+          timelineItems.add(MapEntry(s, l));
+        }
 
         return Column(
           children: [
@@ -1563,7 +1650,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
             ),
             const Divider(height: 1),
             Expanded(
-              child: filteredLogs.isEmpty
+              child: timelineItems.isEmpty
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(24.0),
@@ -1579,12 +1666,12 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16.0),
-                      itemCount: filteredLogs.length,
+                      itemCount: timelineItems.length,
                       itemBuilder: (context, index) {
-                        final l = filteredLogs[index];
-                        final s = scheduleMap[DateTime(l.date.year, l.date.month, l.date.day)];
-                        final isRest = s?.isRestDay ?? (l.plannedWords == 0);
-                        final logicalToday = getLogicalToday();
+                        final item = timelineItems[index];
+                        final s = item.key;
+                        final l = item.value;
+                        final isRest = s.isRestDay || s.automaticRestDay;
 
                         Widget leadingIcon;
                         Color accentColor;
@@ -1867,9 +1954,12 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
 
                 if (confirmed == true) {
                   try {
+                    final schedules = await ref.read(scheduleRepositoryProvider).getSchedulesForProject(log.projectId);
+                    final logicalToday = getLogicalTodayForProject(project: widget.project, schedules: schedules);
+
                     await ref.read(loggingServiceProvider).logWords(
                       projectId: log.projectId,
-                      date: DateTime.now(),
+                      date: logicalToday,
                       actualWords: words,
                       isAdditive: false,
                     );

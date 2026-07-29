@@ -1,6 +1,6 @@
 enum ProjectStatus { upcoming, active, paused, frozen, completed }
 
-enum RestMode { fixed, flexible, adaptive }
+enum RestMode { fixed, flexible, adaptive, sprint }
 
 /// Parses the RestMode string in a backward-compatible manner.
 RestMode parseRestMode(String value) {

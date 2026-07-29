@@ -63,6 +63,10 @@ class EncouragementService {
   Future<List<String>> getContextualEncouragement(String? activeProjectId) async {
     final List<String> messages = [];
     final stats = await _statsRepo.getStatistics();
+    
+    final projects = await _projectRepo.getAllProjects();
+    final sprintProjects = projects.where((p) => p.status == ProjectStatus.active && p.restMode == RestMode.sprint).toList();
+    final isSprintActive = sprintProjects.isNotEmpty;
 
     // 1. Global streak check
     if (stats.currentGlobalStreak >= 3) {
@@ -97,9 +101,21 @@ class EncouragementService {
       messages.add('💾 Don\'t forget to export a backup in Settings to keep your writing logs safe!');
     }
 
-    // If no context-specific messages, provide a general welcoming one
-    if (messages.isEmpty) {
-      messages.add('Welcome back! Every word you write today is progress. Let\'s get to writing!');
+    if (isSprintActive) {
+      final sprintEncouragements = [
+        '🔥 Go on, champ. Fire on!',
+        '⚡ Sprint mode activated. Keep pushing.',
+        '🚀 No breaks. Finish strong.',
+        '💪 One more session. You\'ve got this.',
+        '✍️ Stay locked in. The finish line is close.',
+      ];
+      final randomSprintMsg = sprintEncouragements[Random().nextInt(sprintEncouragements.length)];
+      messages.add(randomSprintMsg);
+    } else {
+      // If no context-specific messages, provide a general welcoming one
+      if (messages.isEmpty) {
+        messages.add('Welcome back! Every word you write today is progress. Let\'s get to writing!');
+      }
     }
 
     return messages;
