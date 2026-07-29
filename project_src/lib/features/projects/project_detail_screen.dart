@@ -1546,7 +1546,17 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
     final logRepo = ref.watch(dailyLogRepositoryProvider);
     final schedRepo = ref.watch(scheduleRepositoryProvider);
     final theme = Theme.of(context);
-    final project = ref.watch(projectsProvider).value?.firstWhere((p) => p.id == widget.projectId, orElse: () => null);
+    
+    ProjectModel? project;
+    final projects = ref.watch(projectsProvider).value;
+    if (projects != null) {
+      for (final p in projects) {
+        if (p.id == widget.projectId) {
+          project = p;
+          break;
+        }
+      }
+    }
 
     if (project == null) {
       return const Center(child: CircularProgressIndicator());
@@ -1900,6 +1910,18 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
   }
 
   void _showEditLogDialog(BuildContext context, WidgetRef ref, DailyLogModel log) {
+    ProjectModel? project;
+    final projects = ref.read(projectsProvider).value;
+    if (projects != null) {
+      for (final p in projects) {
+        if (p.id == widget.projectId) {
+          project = p;
+          break;
+        }
+      }
+    }
+    if (project == null) return;
+
     final controller = TextEditingController(text: log.actualWords.toString());
     showDialog(
       context: context,
