@@ -40,6 +40,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   RestMode _restMode = RestMode.flexible;
   int _allowedRestDays = 1; // rest days per week
   final List<int> _fixedRestDays = []; // 1 = Mon, 7 = Sun
+  String _ongoingStyle = 'daily';
 
   // Book Cover State
   String? _coverType;
@@ -240,6 +241,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
         allowedRestDays: 0,
         coverImagePath: _coverImagePath,
         coverType: _coverType,
+        ongoingStyle: _ongoingStyle,
       );
     }
 
@@ -555,6 +557,69 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Writing Schedule (Ongoing style selection) Card
+              if (_projectType == ProjectType.ongoing) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Writing Schedule',
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.info_outline, size: 20),
+                              color: theme.colorScheme.secondary,
+                              onPressed: () => showHelpBottomSheet(context, 'ongoing_style'),
+                              constraints: const BoxConstraints(),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Select how often you want to write for this ongoing habit.',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 16),
+                        RadioListTile<String>(
+                          title: const Text('Daily'),
+                          subtitle: const Text('Write every day. Great for building a consistent daily habit.'),
+                          value: 'daily',
+                          groupValue: _ongoingStyle,
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _ongoingStyle = val;
+                              });
+                            }
+                          },
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('Rhythm Mode'),
+                          subtitle: const Text('Write every other day. Recovery days alternate automatically with writing days.'),
+                          value: 'rhythm',
+                          groupValue: _ongoingStyle,
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _ongoingStyle = val;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // Rest Day Configuration Card
               if (_projectType == ProjectType.fixed) ...[

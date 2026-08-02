@@ -33,6 +33,7 @@ class ProjectRepository {
       coverImagePath: data.coverImagePath,
       coverType: data.coverType,
       pendingCarryForward: data.pendingCarryForward,
+      ongoingStyle: data.ongoingStyle ?? 'daily',
     );
   }
 
@@ -62,6 +63,7 @@ class ProjectRepository {
       coverImagePath: Value(model.coverImagePath),
       coverType: Value(model.coverType),
       pendingCarryForward: Value(model.pendingCarryForward),
+      ongoingStyle: Value(model.ongoingStyle),
     );
   }
 

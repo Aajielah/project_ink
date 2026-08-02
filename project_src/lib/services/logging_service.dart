@@ -5,7 +5,6 @@ import '../models/project.dart';
 import '../shared/date_utils.dart';
 import '../models/daily_log.dart';
 import '../models/schedule.dart';
-import '../models/statistics.dart';
 import '../repositories/project_repository.dart';
 import '../repositories/schedule_repository.dart';
 import '../repositories/daily_log_repository.dart';
@@ -75,6 +74,10 @@ class LoggingService {
         locked: false,
       );
       await _scheduleRepo.insertSchedules([schedule]);
+    }
+
+    if (schedule.isRecoveryDay) {
+      throw StateError('Today is a scheduled Recovery Day.');
     }
 
     // 3. Create/Update Daily Log row

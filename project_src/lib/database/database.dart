@@ -39,6 +39,7 @@ class Projects extends Table {
   TextColumn get coverType => text().nullable()();
   TextColumn get projectType => text().withDefault(const Constant('fixed'))();
   IntColumn get pendingCarryForward => integer().withDefault(const Constant(0))();
+  TextColumn get ongoingStyle => text().nullable().withDefault(const Constant('daily'))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -54,6 +55,7 @@ class Schedules extends Table {
   BoolColumn get completed => boolean().withDefault(const Constant(false))();
   BoolColumn get automaticRestDay => boolean().withDefault(const Constant(false))();
   BoolColumn get locked => boolean().withDefault(const Constant(false))();
+  BoolColumn get isRecoveryDay => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -143,7 +145,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -161,6 +163,10 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 4) {
           await m.addColumn(projects, projects.pendingCarryForward);
+        }
+        if (from < 5) {
+          await m.addColumn(projects, projects.ongoingStyle);
+          await m.addColumn(schedules, schedules.isRecoveryDay);
         }
       },
       beforeOpen: (details) async {

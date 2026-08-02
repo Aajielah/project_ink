@@ -7,6 +7,7 @@ class ScheduleModel {
   final bool completed;
   final bool automaticRestDay;
   final bool locked;
+  final bool isRecoveryDay;
 
   const ScheduleModel({
     required this.id,
@@ -17,6 +18,7 @@ class ScheduleModel {
     required this.completed,
     required this.automaticRestDay,
     required this.locked,
+    this.isRecoveryDay = false,
   });
 
   ScheduleModel copyWith({
@@ -28,6 +30,7 @@ class ScheduleModel {
     bool? completed,
     bool? automaticRestDay,
     bool? locked,
+    bool? isRecoveryDay,
   }) {
     return ScheduleModel(
       id: id ?? this.id,
@@ -38,6 +41,7 @@ class ScheduleModel {
       completed: completed ?? this.completed,
       automaticRestDay: automaticRestDay ?? this.automaticRestDay,
       locked: locked ?? this.locked,
+      isRecoveryDay: isRecoveryDay ?? this.isRecoveryDay,
     );
   }
 
@@ -51,6 +55,7 @@ class ScheduleModel {
       'completed': completed,
       'automaticRestDay': automaticRestDay,
       'locked': locked,
+      'isRecoveryDay': isRecoveryDay,
     };
   }
 
@@ -64,6 +69,7 @@ class ScheduleModel {
       completed: json['completed'] as bool,
       automaticRestDay: json['automaticRestDay'] as bool,
       locked: json['locked'] as bool,
+      isRecoveryDay: json['isRecoveryDay'] as bool? ?? false,
     );
   }
 }

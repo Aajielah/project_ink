@@ -39,29 +39,63 @@ class OngoingSyncService {
           final List<ScheduleModel> initialTasks = [];
           var tempDate = cleanStart;
           while (tempDate.isBefore(cleanToday)) {
-            initialTasks.add(ScheduleModel(
-              id: uuid.v4(),
-              projectId: project.id,
-              date: tempDate,
-              plannedWords: 0,
-              isRestDay: true,
-              automaticRestDay: true,
-              completed: false,
-              locked: true,
-            ));
+            final diff = getDaysDifference(project.startDate, tempDate);
+            final isRhythmRecovery = project.ongoingStyle == 'rhythm' && diff % 2 != 0;
+
+            if (isRhythmRecovery) {
+              initialTasks.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: 0,
+                isRestDay: false,
+                isRecoveryDay: true,
+                completed: true,
+                automaticRestDay: false,
+                locked: false,
+              ));
+            } else {
+              initialTasks.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: 0,
+                isRestDay: true,
+                automaticRestDay: true,
+                completed: false,
+                locked: true,
+              ));
+            }
             tempDate = tempDate.add(const Duration(days: 1));
           }
           while (tempDate.isBefore(sundayOfToday) || tempDate.isAtSameMomentAs(sundayOfToday)) {
-            initialTasks.add(ScheduleModel(
-              id: uuid.v4(),
-              projectId: project.id,
-              date: tempDate,
-              plannedWords: project.dailyWordTarget,
-              isRestDay: false,
-              completed: false,
-              automaticRestDay: false,
-              locked: false,
-            ));
+            final diff = getDaysDifference(project.startDate, tempDate);
+            final isRhythmRecovery = project.ongoingStyle == 'rhythm' && diff % 2 != 0;
+
+            if (isRhythmRecovery) {
+              initialTasks.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: 0,
+                isRestDay: false,
+                isRecoveryDay: true,
+                completed: true,
+                automaticRestDay: false,
+                locked: false,
+              ));
+            } else {
+              initialTasks.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: project.dailyWordTarget,
+                isRestDay: false,
+                completed: false,
+                automaticRestDay: false,
+                locked: false,
+              ));
+            }
             tempDate = tempDate.add(const Duration(days: 1));
           }
           await schedRepo.insertSchedules(initialTasks);
@@ -106,28 +140,59 @@ class OngoingSyncService {
       if (latestDate.isBefore(sundayOfToday)) {
         var tempDate = latestDate.add(const Duration(days: 1));
         while (tempDate.isBefore(sundayOfToday) || tempDate.isAtSameMomentAs(sundayOfToday)) {
+          final diff = getDaysDifference(project.startDate, tempDate);
+          final isRhythmRecovery = project.ongoingStyle == 'rhythm' && diff % 2 != 0;
+
           if (tempDate.isBefore(cleanToday)) {
-            toInsert.add(ScheduleModel(
-              id: uuid.v4(),
-              projectId: project.id,
-              date: tempDate,
-              plannedWords: 0,
-              isRestDay: true,
-              automaticRestDay: true,
-              completed: false,
-              locked: true,
-            ));
+            if (isRhythmRecovery) {
+              toInsert.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: 0,
+                isRestDay: false,
+                isRecoveryDay: true,
+                completed: true,
+                automaticRestDay: false,
+                locked: false,
+              ));
+            } else {
+              toInsert.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: 0,
+                isRestDay: true,
+                automaticRestDay: true,
+                completed: false,
+                locked: true,
+              ));
+            }
           } else {
-            toInsert.add(ScheduleModel(
-              id: uuid.v4(),
-              projectId: project.id,
-              date: tempDate,
-              plannedWords: project.dailyWordTarget,
-              isRestDay: false,
-              completed: false,
-              automaticRestDay: false,
-              locked: false,
-            ));
+            if (isRhythmRecovery) {
+              toInsert.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: 0,
+                isRestDay: false,
+                isRecoveryDay: true,
+                completed: true,
+                automaticRestDay: false,
+                locked: false,
+              ));
+            } else {
+              toInsert.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: project.dailyWordTarget,
+                isRestDay: false,
+                completed: false,
+                automaticRestDay: false,
+                locked: false,
+              ));
+            }
           }
           tempDate = tempDate.add(const Duration(days: 1));
         }
@@ -137,16 +202,33 @@ class OngoingSyncService {
         while (tempDate.isBefore(sundayOfToday) || tempDate.isAtSameMomentAs(sundayOfToday)) {
           final hasDate = schedules.any((s) => s.date.isAtSameMomentAs(tempDate));
           if (!hasDate) {
-            toInsert.add(ScheduleModel(
-              id: uuid.v4(),
-              projectId: project.id,
-              date: tempDate,
-              plannedWords: project.dailyWordTarget,
-              isRestDay: false,
-              completed: false,
-              automaticRestDay: false,
-              locked: false,
-            ));
+            final diff = getDaysDifference(project.startDate, tempDate);
+            final isRhythmRecovery = project.ongoingStyle == 'rhythm' && diff % 2 != 0;
+
+            if (isRhythmRecovery) {
+              toInsert.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: 0,
+                isRestDay: false,
+                isRecoveryDay: true,
+                completed: true,
+                automaticRestDay: false,
+                locked: false,
+              ));
+            } else {
+              toInsert.add(ScheduleModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                date: tempDate,
+                plannedWords: project.dailyWordTarget,
+                isRestDay: false,
+                completed: false,
+                automaticRestDay: false,
+                locked: false,
+              ));
+            }
           }
           tempDate = tempDate.add(const Duration(days: 1));
         }

@@ -211,8 +211,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
     RestMode editRestMode = project.restMode;
     int editAllowedRestDays = project.allowedRestDays;
     DateTime editStartDate = project.startDate;
-    DateTime editExpectedFinishDate = project.expectedFinishDate;
-    
+
     // Calculate initial duration days
     final int initialDurationDays = getDaysDifference(project.startDate, project.expectedFinishDate) + 1;
     final qtyController = TextEditingController(text: initialDurationDays.toString());
@@ -960,7 +959,7 @@ class _OverviewTab extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: _StatColumn(
-                              label: isOngoing ? 'Lifetime Words' : 'Target Goal',
+                              label: isOngoing ? 'Lifetime Words' : 'Words Written',
                               value: '${project.writtenWords} words',
                               icon: isOngoing ? Icons.book : Icons.outlined_flag,
                               color: theme.colorScheme.primary,
@@ -978,7 +977,73 @@ class _OverviewTab extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      if (!isOngoing && (project.restMode == RestMode.flexible || project.restMode == RestMode.adaptive)) ...[
+                      if (isOngoing && project.ongoingStyle == 'rhythm') ...[
+                        const Divider(height: 32),
+                        Builder(
+                          builder: (context) {
+                            final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
+                            final todaySchedule = schedules.firstWhere(
+                              (s) => s.date.year == logicalToday.year &&
+                                     s.date.month == logicalToday.month &&
+                                     s.date.day == logicalToday.day,
+                              orElse: () => ScheduleModel(
+                                id: '', projectId: project.id, date: logicalToday, plannedWords: 0,
+                                isRestDay: false, isRecoveryDay: true, completed: true, automaticRestDay: false, locked: false,
+                              ),
+                            );
+                            final isRecovery = todaySchedule.isRecoveryDay;
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                              decoration: BoxDecoration(
+                                color: isRecovery
+                                    ? theme.colorScheme.secondaryContainer.withOpacity(0.15)
+                                    : theme.colorScheme.primaryContainer.withOpacity(0.15),
+                                border: Border.all(
+                                  color: isRecovery
+                                      ? theme.colorScheme.secondary.withOpacity(0.2)
+                                      : theme.colorScheme.primary.withOpacity(0.2),
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isRecovery ? Icons.coffee : Icons.mode_edit,
+                                    color: isRecovery ? theme.colorScheme.secondary : theme.colorScheme.primary,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          isRecovery ? '☕ Recovery Day' : '🟢 Writing Day',
+                                          style: theme.textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: isRecovery ? theme.colorScheme.secondary : theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          isRecovery
+                                              ? 'Today is a scheduled recovery day. No writing is required!'
+                                              : 'Today is a scheduled writing day. Target: ${project.dailyWordTarget} words.',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                      if (!isOngoing && project.status == ProjectStatus.active && (project.restMode == RestMode.flexible || project.restMode == RestMode.adaptive)) ...[
                         const Divider(height: 32),
                         Builder(
                           builder: (context) {

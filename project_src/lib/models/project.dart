@@ -38,6 +38,7 @@ class ProjectModel {
   final String? coverImagePath;
   final String? coverType;
   final int pendingCarryForward;
+  final String ongoingStyle; // 'daily' or 'rhythm'
 
   const ProjectModel({
     required this.id,
@@ -64,6 +65,7 @@ class ProjectModel {
     this.coverImagePath,
     this.coverType,
     this.pendingCarryForward = 0,
+    this.ongoingStyle = 'daily',
   });
 
 
@@ -93,6 +95,7 @@ class ProjectModel {
     String? coverImagePath,
     String? coverType,
     int? pendingCarryForward,
+    String? ongoingStyle,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -119,6 +122,7 @@ class ProjectModel {
       coverImagePath: coverImagePath ?? this.coverImagePath,
       coverType: coverType ?? this.coverType,
       pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
+      ongoingStyle: ongoingStyle ?? this.ongoingStyle,
     );
   }
 
@@ -148,6 +152,7 @@ class ProjectModel {
       'coverImagePath': coverImagePath,
       'coverType': coverType,
       'pendingCarryForward': pendingCarryForward,
+      'ongoingStyle': ongoingStyle,
     };
   }
 
@@ -179,6 +184,7 @@ class ProjectModel {
       coverImagePath: json['coverImagePath'] as String?,
       coverType: json['coverType'] as String?,
       pendingCarryForward: json['pendingCarryForward'] as int? ?? 0,
+      ongoingStyle: json['ongoingStyle'] as String? ?? 'daily',
     );
   }
 }

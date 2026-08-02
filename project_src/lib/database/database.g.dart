@@ -531,6 +531,14 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(0));
+  static const VerificationMeta _ongoingStyleMeta =
+      const VerificationMeta('ongoingStyle');
+  @override
+  late final GeneratedColumn<String> ongoingStyle = GeneratedColumn<String>(
+      'ongoing_style', aliasedName, true,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('daily'));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -556,7 +564,8 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         coverImagePath,
         coverType,
         projectType,
-        pendingCarryForward
+        pendingCarryForward,
+        ongoingStyle
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -717,6 +726,12 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           pendingCarryForward.isAcceptableOrUnknown(
               data['pending_carry_forward']!, _pendingCarryForwardMeta));
     }
+    if (data.containsKey('ongoing_style')) {
+      context.handle(
+          _ongoingStyleMeta,
+          ongoingStyle.isAcceptableOrUnknown(
+              data['ongoing_style']!, _ongoingStyleMeta));
+    }
     return context;
   }
 
@@ -775,6 +790,8 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           .read(DriftSqlType.string, data['${effectivePrefix}project_type'])!,
       pendingCarryForward: attachedDatabase.typeMapping.read(
           DriftSqlType.int, data['${effectivePrefix}pending_carry_forward'])!,
+      ongoingStyle: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ongoing_style']),
     );
   }
 
@@ -809,6 +826,7 @@ class Project extends DataClass implements Insertable<Project> {
   final String? coverType;
   final String projectType;
   final int pendingCarryForward;
+  final String? ongoingStyle;
   const Project(
       {required this.id,
       required this.name,
@@ -833,7 +851,8 @@ class Project extends DataClass implements Insertable<Project> {
       this.coverImagePath,
       this.coverType,
       required this.projectType,
-      required this.pendingCarryForward});
+      required this.pendingCarryForward,
+      this.ongoingStyle});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -869,6 +888,9 @@ class Project extends DataClass implements Insertable<Project> {
     }
     map['project_type'] = Variable<String>(projectType);
     map['pending_carry_forward'] = Variable<int>(pendingCarryForward);
+    if (!nullToAbsent || ongoingStyle != null) {
+      map['ongoing_style'] = Variable<String>(ongoingStyle);
+    }
     return map;
   }
 
@@ -906,6 +928,9 @@ class Project extends DataClass implements Insertable<Project> {
           : Value(coverType),
       projectType: Value(projectType),
       pendingCarryForward: Value(pendingCarryForward),
+      ongoingStyle: ongoingStyle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ongoingStyle),
     );
   }
 
@@ -941,6 +966,7 @@ class Project extends DataClass implements Insertable<Project> {
       projectType: serializer.fromJson<String>(json['projectType']),
       pendingCarryForward:
           serializer.fromJson<int>(json['pendingCarryForward']),
+      ongoingStyle: serializer.fromJson<String?>(json['ongoingStyle']),
     );
   }
   @override
@@ -971,6 +997,7 @@ class Project extends DataClass implements Insertable<Project> {
       'coverType': serializer.toJson<String?>(coverType),
       'projectType': serializer.toJson<String>(projectType),
       'pendingCarryForward': serializer.toJson<int>(pendingCarryForward),
+      'ongoingStyle': serializer.toJson<String?>(ongoingStyle),
     };
   }
 
@@ -998,7 +1025,8 @@ class Project extends DataClass implements Insertable<Project> {
           Value<String?> coverImagePath = const Value.absent(),
           Value<String?> coverType = const Value.absent(),
           String? projectType,
-          int? pendingCarryForward}) =>
+          int? pendingCarryForward,
+          Value<String?> ongoingStyle = const Value.absent()}) =>
       Project(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1027,6 +1055,8 @@ class Project extends DataClass implements Insertable<Project> {
         coverType: coverType.present ? coverType.value : this.coverType,
         projectType: projectType ?? this.projectType,
         pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
+        ongoingStyle:
+            ongoingStyle.present ? ongoingStyle.value : this.ongoingStyle,
       );
   Project copyWithCompanion(ProjectsCompanion data) {
     return Project(
@@ -1082,6 +1112,9 @@ class Project extends DataClass implements Insertable<Project> {
       pendingCarryForward: data.pendingCarryForward.present
           ? data.pendingCarryForward.value
           : this.pendingCarryForward,
+      ongoingStyle: data.ongoingStyle.present
+          ? data.ongoingStyle.value
+          : this.ongoingStyle,
     );
   }
 
@@ -1111,7 +1144,8 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('coverImagePath: $coverImagePath, ')
           ..write('coverType: $coverType, ')
           ..write('projectType: $projectType, ')
-          ..write('pendingCarryForward: $pendingCarryForward')
+          ..write('pendingCarryForward: $pendingCarryForward, ')
+          ..write('ongoingStyle: $ongoingStyle')
           ..write(')'))
         .toString();
   }
@@ -1141,7 +1175,8 @@ class Project extends DataClass implements Insertable<Project> {
         coverImagePath,
         coverType,
         projectType,
-        pendingCarryForward
+        pendingCarryForward,
+        ongoingStyle
       ]);
   @override
   bool operator ==(Object other) =>
@@ -1170,7 +1205,8 @@ class Project extends DataClass implements Insertable<Project> {
           other.coverImagePath == this.coverImagePath &&
           other.coverType == this.coverType &&
           other.projectType == this.projectType &&
-          other.pendingCarryForward == this.pendingCarryForward);
+          other.pendingCarryForward == this.pendingCarryForward &&
+          other.ongoingStyle == this.ongoingStyle);
 }
 
 class ProjectsCompanion extends UpdateCompanion<Project> {
@@ -1198,6 +1234,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<String?> coverType;
   final Value<String> projectType;
   final Value<int> pendingCarryForward;
+  final Value<String?> ongoingStyle;
   final Value<int> rowid;
   const ProjectsCompanion({
     this.id = const Value.absent(),
@@ -1224,6 +1261,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.coverType = const Value.absent(),
     this.projectType = const Value.absent(),
     this.pendingCarryForward = const Value.absent(),
+    this.ongoingStyle = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectsCompanion.insert({
@@ -1251,6 +1289,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.coverType = const Value.absent(),
     this.projectType = const Value.absent(),
     this.pendingCarryForward = const Value.absent(),
+    this.ongoingStyle = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1288,6 +1327,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<String>? coverType,
     Expression<String>? projectType,
     Expression<int>? pendingCarryForward,
+    Expression<String>? ongoingStyle,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1318,6 +1358,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (projectType != null) 'project_type': projectType,
       if (pendingCarryForward != null)
         'pending_carry_forward': pendingCarryForward,
+      if (ongoingStyle != null) 'ongoing_style': ongoingStyle,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1347,6 +1388,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       Value<String?>? coverType,
       Value<String>? projectType,
       Value<int>? pendingCarryForward,
+      Value<String?>? ongoingStyle,
       Value<int>? rowid}) {
     return ProjectsCompanion(
       id: id ?? this.id,
@@ -1373,6 +1415,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       coverType: coverType ?? this.coverType,
       projectType: projectType ?? this.projectType,
       pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
+      ongoingStyle: ongoingStyle ?? this.ongoingStyle,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1453,6 +1496,9 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (pendingCarryForward.present) {
       map['pending_carry_forward'] = Variable<int>(pendingCarryForward.value);
     }
+    if (ongoingStyle.present) {
+      map['ongoing_style'] = Variable<String>(ongoingStyle.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1486,6 +1532,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('coverType: $coverType, ')
           ..write('projectType: $projectType, ')
           ..write('pendingCarryForward: $pendingCarryForward, ')
+          ..write('ongoingStyle: $ongoingStyle, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1561,6 +1608,16 @@ class $SchedulesTable extends Schedules
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("locked" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _isRecoveryDayMeta =
+      const VerificationMeta('isRecoveryDay');
+  @override
+  late final GeneratedColumn<bool> isRecoveryDay = GeneratedColumn<bool>(
+      'is_recovery_day', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_recovery_day" IN (0, 1))'),
+      defaultValue: const Constant(false));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1570,7 +1627,8 @@ class $SchedulesTable extends Schedules
         isRestDay,
         completed,
         automaticRestDay,
-        locked
+        locked,
+        isRecoveryDay
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1627,6 +1685,12 @@ class $SchedulesTable extends Schedules
       context.handle(_lockedMeta,
           locked.isAcceptableOrUnknown(data['locked']!, _lockedMeta));
     }
+    if (data.containsKey('is_recovery_day')) {
+      context.handle(
+          _isRecoveryDayMeta,
+          isRecoveryDay.isAcceptableOrUnknown(
+              data['is_recovery_day']!, _isRecoveryDayMeta));
+    }
     return context;
   }
 
@@ -1656,6 +1720,8 @@ class $SchedulesTable extends Schedules
           DriftSqlType.bool, data['${effectivePrefix}automatic_rest_day'])!,
       locked: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}locked'])!,
+      isRecoveryDay: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_recovery_day'])!,
     );
   }
 
@@ -1674,6 +1740,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
   final bool completed;
   final bool automaticRestDay;
   final bool locked;
+  final bool isRecoveryDay;
   const Schedule(
       {required this.id,
       required this.projectId,
@@ -1682,7 +1749,8 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       required this.isRestDay,
       required this.completed,
       required this.automaticRestDay,
-      required this.locked});
+      required this.locked,
+      required this.isRecoveryDay});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1694,6 +1762,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     map['completed'] = Variable<bool>(completed);
     map['automatic_rest_day'] = Variable<bool>(automaticRestDay);
     map['locked'] = Variable<bool>(locked);
+    map['is_recovery_day'] = Variable<bool>(isRecoveryDay);
     return map;
   }
 
@@ -1707,6 +1776,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       completed: Value(completed),
       automaticRestDay: Value(automaticRestDay),
       locked: Value(locked),
+      isRecoveryDay: Value(isRecoveryDay),
     );
   }
 
@@ -1722,6 +1792,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       completed: serializer.fromJson<bool>(json['completed']),
       automaticRestDay: serializer.fromJson<bool>(json['automaticRestDay']),
       locked: serializer.fromJson<bool>(json['locked']),
+      isRecoveryDay: serializer.fromJson<bool>(json['isRecoveryDay']),
     );
   }
   @override
@@ -1736,6 +1807,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       'completed': serializer.toJson<bool>(completed),
       'automaticRestDay': serializer.toJson<bool>(automaticRestDay),
       'locked': serializer.toJson<bool>(locked),
+      'isRecoveryDay': serializer.toJson<bool>(isRecoveryDay),
     };
   }
 
@@ -1747,7 +1819,8 @@ class Schedule extends DataClass implements Insertable<Schedule> {
           bool? isRestDay,
           bool? completed,
           bool? automaticRestDay,
-          bool? locked}) =>
+          bool? locked,
+          bool? isRecoveryDay}) =>
       Schedule(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
@@ -1757,6 +1830,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
         completed: completed ?? this.completed,
         automaticRestDay: automaticRestDay ?? this.automaticRestDay,
         locked: locked ?? this.locked,
+        isRecoveryDay: isRecoveryDay ?? this.isRecoveryDay,
       );
   Schedule copyWithCompanion(SchedulesCompanion data) {
     return Schedule(
@@ -1772,6 +1846,9 @@ class Schedule extends DataClass implements Insertable<Schedule> {
           ? data.automaticRestDay.value
           : this.automaticRestDay,
       locked: data.locked.present ? data.locked.value : this.locked,
+      isRecoveryDay: data.isRecoveryDay.present
+          ? data.isRecoveryDay.value
+          : this.isRecoveryDay,
     );
   }
 
@@ -1785,14 +1862,15 @@ class Schedule extends DataClass implements Insertable<Schedule> {
           ..write('isRestDay: $isRestDay, ')
           ..write('completed: $completed, ')
           ..write('automaticRestDay: $automaticRestDay, ')
-          ..write('locked: $locked')
+          ..write('locked: $locked, ')
+          ..write('isRecoveryDay: $isRecoveryDay')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(id, projectId, date, plannedWords, isRestDay,
-      completed, automaticRestDay, locked);
+      completed, automaticRestDay, locked, isRecoveryDay);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1804,7 +1882,8 @@ class Schedule extends DataClass implements Insertable<Schedule> {
           other.isRestDay == this.isRestDay &&
           other.completed == this.completed &&
           other.automaticRestDay == this.automaticRestDay &&
-          other.locked == this.locked);
+          other.locked == this.locked &&
+          other.isRecoveryDay == this.isRecoveryDay);
 }
 
 class SchedulesCompanion extends UpdateCompanion<Schedule> {
@@ -1816,6 +1895,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
   final Value<bool> completed;
   final Value<bool> automaticRestDay;
   final Value<bool> locked;
+  final Value<bool> isRecoveryDay;
   final Value<int> rowid;
   const SchedulesCompanion({
     this.id = const Value.absent(),
@@ -1826,6 +1906,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     this.completed = const Value.absent(),
     this.automaticRestDay = const Value.absent(),
     this.locked = const Value.absent(),
+    this.isRecoveryDay = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SchedulesCompanion.insert({
@@ -1837,6 +1918,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     this.completed = const Value.absent(),
     this.automaticRestDay = const Value.absent(),
     this.locked = const Value.absent(),
+    this.isRecoveryDay = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         projectId = Value(projectId),
@@ -1851,6 +1933,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     Expression<bool>? completed,
     Expression<bool>? automaticRestDay,
     Expression<bool>? locked,
+    Expression<bool>? isRecoveryDay,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1862,6 +1945,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
       if (completed != null) 'completed': completed,
       if (automaticRestDay != null) 'automatic_rest_day': automaticRestDay,
       if (locked != null) 'locked': locked,
+      if (isRecoveryDay != null) 'is_recovery_day': isRecoveryDay,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1875,6 +1959,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
       Value<bool>? completed,
       Value<bool>? automaticRestDay,
       Value<bool>? locked,
+      Value<bool>? isRecoveryDay,
       Value<int>? rowid}) {
     return SchedulesCompanion(
       id: id ?? this.id,
@@ -1885,6 +1970,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
       completed: completed ?? this.completed,
       automaticRestDay: automaticRestDay ?? this.automaticRestDay,
       locked: locked ?? this.locked,
+      isRecoveryDay: isRecoveryDay ?? this.isRecoveryDay,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1916,6 +2002,9 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     if (locked.present) {
       map['locked'] = Variable<bool>(locked.value);
     }
+    if (isRecoveryDay.present) {
+      map['is_recovery_day'] = Variable<bool>(isRecoveryDay.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1933,6 +2022,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
           ..write('completed: $completed, ')
           ..write('automaticRestDay: $automaticRestDay, ')
           ..write('locked: $locked, ')
+          ..write('isRecoveryDay: $isRecoveryDay, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4179,6 +4269,7 @@ typedef $$ProjectsTableCreateCompanionBuilder = ProjectsCompanion Function({
   Value<String?> coverType,
   Value<String> projectType,
   Value<int> pendingCarryForward,
+  Value<String?> ongoingStyle,
   Value<int> rowid,
 });
 typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
@@ -4206,6 +4297,7 @@ typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
   Value<String?> coverType,
   Value<String> projectType,
   Value<int> pendingCarryForward,
+  Value<String?> ongoingStyle,
   Value<int> rowid,
 });
 
@@ -4333,6 +4425,9 @@ class $$ProjectsTableFilterComposer
   ColumnFilters<int> get pendingCarryForward => $composableBuilder(
       column: $table.pendingCarryForward,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get ongoingStyle => $composableBuilder(
+      column: $table.ongoingStyle, builder: (column) => ColumnFilters(column));
 
   Expression<bool> schedulesRefs(
       Expression<bool> Function($$SchedulesTableFilterComposer f) f) {
@@ -4469,6 +4564,10 @@ class $$ProjectsTableOrderingComposer
   ColumnOrderings<int> get pendingCarryForward => $composableBuilder(
       column: $table.pendingCarryForward,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get ongoingStyle => $composableBuilder(
+      column: $table.ongoingStyle,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$ProjectsTableAnnotationComposer
@@ -4551,6 +4650,9 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<int> get pendingCarryForward => $composableBuilder(
       column: $table.pendingCarryForward, builder: (column) => column);
+
+  GeneratedColumn<String> get ongoingStyle => $composableBuilder(
+      column: $table.ongoingStyle, builder: (column) => column);
 
   Expression<T> schedulesRefs<T extends Object>(
       Expression<T> Function($$SchedulesTableAnnotationComposer a) f) {
@@ -4642,6 +4744,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<String?> coverType = const Value.absent(),
             Value<String> projectType = const Value.absent(),
             Value<int> pendingCarryForward = const Value.absent(),
+            Value<String?> ongoingStyle = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion(
@@ -4669,6 +4772,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             coverType: coverType,
             projectType: projectType,
             pendingCarryForward: pendingCarryForward,
+            ongoingStyle: ongoingStyle,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -4696,6 +4800,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<String?> coverType = const Value.absent(),
             Value<String> projectType = const Value.absent(),
             Value<int> pendingCarryForward = const Value.absent(),
+            Value<String?> ongoingStyle = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion.insert(
@@ -4723,6 +4828,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             coverType: coverType,
             projectType: projectType,
             pendingCarryForward: pendingCarryForward,
+            ongoingStyle: ongoingStyle,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -4794,6 +4900,7 @@ typedef $$SchedulesTableCreateCompanionBuilder = SchedulesCompanion Function({
   Value<bool> completed,
   Value<bool> automaticRestDay,
   Value<bool> locked,
+  Value<bool> isRecoveryDay,
   Value<int> rowid,
 });
 typedef $$SchedulesTableUpdateCompanionBuilder = SchedulesCompanion Function({
@@ -4805,6 +4912,7 @@ typedef $$SchedulesTableUpdateCompanionBuilder = SchedulesCompanion Function({
   Value<bool> completed,
   Value<bool> automaticRestDay,
   Value<bool> locked,
+  Value<bool> isRecoveryDay,
   Value<int> rowid,
 });
 
@@ -4873,6 +4981,9 @@ class $$SchedulesTableFilterComposer
 
   ColumnFilters<bool> get locked => $composableBuilder(
       column: $table.locked, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isRecoveryDay => $composableBuilder(
+      column: $table.isRecoveryDay, builder: (column) => ColumnFilters(column));
 
   $$ProjectsTableFilterComposer get projectId {
     final $$ProjectsTableFilterComposer composer = $composerBuilder(
@@ -4948,6 +5059,10 @@ class $$SchedulesTableOrderingComposer
   ColumnOrderings<bool> get locked => $composableBuilder(
       column: $table.locked, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isRecoveryDay => $composableBuilder(
+      column: $table.isRecoveryDay,
+      builder: (column) => ColumnOrderings(column));
+
   $$ProjectsTableOrderingComposer get projectId {
     final $$ProjectsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -4998,6 +5113,9 @@ class $$SchedulesTableAnnotationComposer
 
   GeneratedColumn<bool> get locked =>
       $composableBuilder(column: $table.locked, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRecoveryDay => $composableBuilder(
+      column: $table.isRecoveryDay, builder: (column) => column);
 
   $$ProjectsTableAnnotationComposer get projectId {
     final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
@@ -5072,6 +5190,7 @@ class $$SchedulesTableTableManager extends RootTableManager<
             Value<bool> completed = const Value.absent(),
             Value<bool> automaticRestDay = const Value.absent(),
             Value<bool> locked = const Value.absent(),
+            Value<bool> isRecoveryDay = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SchedulesCompanion(
@@ -5083,6 +5202,7 @@ class $$SchedulesTableTableManager extends RootTableManager<
             completed: completed,
             automaticRestDay: automaticRestDay,
             locked: locked,
+            isRecoveryDay: isRecoveryDay,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -5094,6 +5214,7 @@ class $$SchedulesTableTableManager extends RootTableManager<
             Value<bool> completed = const Value.absent(),
             Value<bool> automaticRestDay = const Value.absent(),
             Value<bool> locked = const Value.absent(),
+            Value<bool> isRecoveryDay = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SchedulesCompanion.insert(
@@ -5105,6 +5226,7 @@ class $$SchedulesTableTableManager extends RootTableManager<
             completed: completed,
             automaticRestDay: automaticRestDay,
             locked: locked,
+            isRecoveryDay: isRecoveryDay,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

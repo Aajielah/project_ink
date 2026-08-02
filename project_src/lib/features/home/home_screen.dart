@@ -68,7 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      ref.read(projectsProvider.notifier).loadProjects(silent: true);
+      _refreshAll();
     }
   }
 
@@ -262,6 +262,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
           ));
         }
         break;
+    }
+
+    for (int i = 0; i < scored.length; i++) {
+      final p = scored[i].project;
+      final task = todayTasks.firstWhere(
+        (t) => t.project.id == p.id,
+        orElse: () => TodayWritingTask(
+          project: p,
+          schedule: ScheduleModel(
+            id: '', projectId: p.id, date: today, plannedWords: 0,
+            isRestDay: true, completed: false, automaticRestDay: false, locked: false,
+          ),
+        ),
+      );
+      if (task.schedule.isRecoveryDay) {
+        scored[i] = _ProjectWithScore(
+          project: p,
+          score: scored[i].score - 100000.0,
+          reason: 'Today is a scheduled Recovery Day. Enjoy your rest!',
+          confidence: 99,
+        );
+      }
     }
 
     if (scored.isEmpty) {
@@ -1179,13 +1201,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                 final rec = _computeRecommendation(activeProjects, todayTasks);
                 final ProjectModel? recProject = rec['project'];
 
-                final completedTasks = todayTasks.where((t) => t.schedule.completed).toList();
-                final uncompletedTasks = todayTasks.where((t) => !t.schedule.completed).toList();
+                final completedTasks = todayTasks.where((t) => t.schedule.completed && !t.schedule.isRecoveryDay).toList();
+                final uncompletedTasks = todayTasks.where((t) => !t.schedule.completed && !t.schedule.isRecoveryDay).toList();
+                final recoveryTasks = todayTasks.where((t) => t.schedule.isRecoveryDay).toList();
+                final visibleTasks = [...uncompletedTasks, ...recoveryTasks];
 
                 int totalPlannedToday = 0;
                 int totalLoggedToday = 0;
                 for (final t in todayTasks) {
-                  if (!t.schedule.isRestDay) {
+                  if (!t.schedule.isRestDay && !t.schedule.isRecoveryDay) {
                     totalPlannedToday += t.schedule.plannedWords;
                     totalLoggedToday += t.log?.actualWords ?? 0;
                   }
@@ -1495,10 +1519,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                         ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: uncompletedTasks.length,
+                          itemCount: visibleTasks.length,
                           separatorBuilder: (c, i) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            final task = uncompletedTasks[index];
+                            final task = visibleTasks[index];
+                            if (task.schedule.isRecoveryDay) {
+                              return Card(
+                                color: theme.colorScheme.secondaryContainer.withOpacity(0.15),
+                                shape: RoundedRectangleBorder(
+                                  side: BorderSide(color: theme.colorScheme.secondary.withOpacity(0.2)),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Row(
+                                    children: [
+                                      BookCoverWidget(
+                                        title: task.project.name,
+                                        coverImagePath: task.project.coverImagePath,
+                                        coverType: task.project.coverType,
+                                        width: 60,
+                                        height: 80,
+                                        borderRadius: 6.0,
+                                        showTitle: false,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              task.project.name,
+                                              style: theme.textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.coffee, size: 16, color: theme.colorScheme.secondary),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'Recovery Day',
+                                                  style: theme.textTheme.labelMedium?.copyWith(
+                                                    color: theme.colorScheme.secondary,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Recharge and prepare for your next writing session!',
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                color: theme.colorScheme.onSurfaceVariant,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
                             final isRest = task.schedule.isRestDay;
                             final logged = task.log?.actualWords ?? 0;
                             final target = task.schedule.plannedWords;

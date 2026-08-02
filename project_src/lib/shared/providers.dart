@@ -123,7 +123,28 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     }
     try {
       final list = await _projectRepo.getAllProjects();
-      final active = list.where((p) => p.status == ProjectStatus.active).toList();
+      
+      // Auto-activation sweep: Check if any upcoming project start date is reached/passed
+      final today = getLogicalToday();
+      final cleanToday = DateTime(today.year, today.month, today.day);
+      bool listChanged = false;
+      
+      for (final p in list) {
+        if (p.status == ProjectStatus.upcoming) {
+          final cleanStartDate = DateTime(p.startDate.year, p.startDate.month, p.startDate.day);
+          if (!cleanStartDate.isAfter(cleanToday)) {
+            final updatedProject = p.copyWith(
+              status: ProjectStatus.active,
+              updatedAt: DateTime.now(),
+            );
+            await _projectRepo.updateProject(updatedProject);
+            listChanged = true;
+          }
+        }
+      }
+      
+      final finalList = listChanged ? await _projectRepo.getAllProjects() : list;
+      final active = finalList.where((p) => p.status == ProjectStatus.active).toList();
       final activeOngoing = active.where((p) => p.projectType == ProjectType.ongoing).toList();
       
       if (activeOngoing.isNotEmpty) {
@@ -203,6 +224,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     required int allowedRestDays,
     String? coverImagePath,
     String? coverType,
+    String ongoingStyle = 'daily',
   }) async {
     if (projectType == ProjectType.fixed) {
       final err = _schedulingService.validateInputs(
@@ -270,6 +292,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           updatedAt: DateTime.now(),
           coverImagePath: coverImagePath,
           coverType: coverType,
+          ongoingStyle: 'daily',
         );
 
         await _projectRepo.insertProject(project);
@@ -300,6 +323,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           updatedAt: DateTime.now(),
           coverImagePath: coverImagePath,
           coverType: coverType,
+          ongoingStyle: ongoingStyle,
         );
 
         await _projectRepo.insertProject(project);

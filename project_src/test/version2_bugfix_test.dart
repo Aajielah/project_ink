@@ -5,7 +5,6 @@ import '../lib/database/database.dart';
 import '../lib/models/project.dart';
 import '../lib/models/schedule.dart';
 import '../lib/models/daily_log.dart';
-import '../lib/models/statistics.dart';
 import '../lib/repositories/project_repository.dart';
 import '../lib/repositories/schedule_repository.dart';
 import '../lib/repositories/daily_log_repository.dart';
@@ -402,6 +401,144 @@ void main() {
 
       final resultRest = getLogicalTodayForProject(project: project, schedules: [sRest]);
       expect(resultRest, equals(cleanToday));
+    });
+
+    test('Upcoming project is automatically activated on loadProjects if start date is reached or passed', () async {
+      final projectRepo = container.read(projectRepositoryProvider);
+      final projectsNotifier = container.read(projectsProvider.notifier);
+
+      final upcomingProject = ProjectModel(
+        id: 'p_upcoming_activation_test',
+        name: 'Upcoming Activation Test',
+        status: ProjectStatus.upcoming,
+        projectType: ProjectType.fixed,
+        targetWords: 10000,
+        writtenWords: 0,
+        remainingWords: 10000,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: cleanToday.subtract(const Duration(days: 1)), // Start date was yesterday
+        expectedFinishDate: cleanToday.add(const Duration(days: 5)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 5,
+        remainingRestDays: 5,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await projectRepo.insertProject(upcomingProject);
+
+      // Verify it is currently upcoming in the DB
+      final initialDbProject = await projectRepo.getProjectById(upcomingProject.id);
+      expect(initialDbProject?.status, equals(ProjectStatus.upcoming));
+
+      // Trigger loadProjects, which runs the auto-activation sweep
+      await projectsNotifier.loadProjects();
+
+      // Verify it is now active in the DB
+      final activatedDbProject = await projectRepo.getProjectById(upcomingProject.id);
+      expect(activatedDbProject?.status, equals(ProjectStatus.active));
+    });
+
+    test('Ongoing project in Rhythm Mode generates alternating schedule starting from start date', () async {
+      final projectId = 'p_rhythm_sync';
+      final monday = cleanToday.subtract(Duration(days: cleanToday.weekday - 1));
+      final project = ProjectModel(
+        id: projectId,
+        name: 'Rhythm Habit Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.ongoing,
+        ongoingStyle: 'rhythm',
+        targetWords: 0,
+        writtenWords: 0,
+        remainingWords: 0,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: monday,
+        expectedFinishDate: cleanToday.add(const Duration(days: 30)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await projectRepo.insertProject(project);
+
+      await syncService.syncOngoingSchedules([project]);
+
+      final schedules = await scheduleRepo.getSchedulesForProject(projectId);
+      expect(schedules.isNotEmpty, isTrue);
+
+      // Verify alternating sequence
+      for (final s in schedules) {
+        final diff = getDaysDifference(project.startDate, s.date);
+        final isRecovery = diff % 2 != 0;
+
+        expect(s.isRecoveryDay, equals(isRecovery));
+
+        if (isRecovery) {
+          expect(s.plannedWords, equals(0));
+          expect(s.completed, isTrue);
+        } else {
+          // If it is today or in the future, it should be a Writing Day
+          if (s.date.isAfter(cleanToday) || s.date.isAtSameMomentAs(cleanToday)) {
+            expect(s.plannedWords, equals(500));
+            expect(s.isRestDay, isFalse);
+          }
+        }
+      }
+    });
+
+    test('Logging words on a scheduled Recovery Day is blocked', () async {
+      final loggingService = container.read(loggingServiceProvider);
+
+      final projectId = 'p_rhythm_log_test';
+      final project = ProjectModel(
+        id: projectId,
+        name: 'Rhythm Logging Block Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.ongoing,
+        ongoingStyle: 'rhythm',
+        targetWords: 0,
+        writtenWords: 0,
+        remainingWords: 0,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: cleanToday.subtract(const Duration(days: 1)), // Day 0 = yesterday, Day 1 = cleanToday (Recovery)
+        expectedFinishDate: cleanToday.add(const Duration(days: 30)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await projectRepo.insertProject(project);
+
+      await syncService.syncOngoingSchedules([project]);
+
+      // Verify that today (Day 1) is a Recovery Day
+      final todaySched = await scheduleRepo.getScheduleForDate(projectId, cleanToday);
+      expect(todaySched, isNotNull);
+      expect(todaySched!.isRecoveryDay, isTrue);
+
+      // Attempting to log words on today (Recovery Day) should fail
+      expect(
+        () => loggingService.logWords(
+          projectId: projectId,
+          date: cleanToday,
+          actualWords: 200,
+        ),
+        throwsA(isA<StateError>()),
+      );
     });
   });
 }
