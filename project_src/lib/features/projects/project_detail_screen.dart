@@ -977,7 +977,7 @@ class _OverviewTab extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      if (isOngoing && project.ongoingStyle == 'rhythm') ...[
+                      if (isOngoing && project.ongoingStyle == 'rhythm' && project.status == ProjectStatus.active) ...[
                         const Divider(height: 32),
                         Builder(
                           builder: (context) {
