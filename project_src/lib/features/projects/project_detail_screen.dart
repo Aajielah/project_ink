@@ -650,7 +650,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                       }
 
                       final futureWritingDays = futureDates.length - futureRestDaysCount;
-                      final remainingWordsToPlan = max(0, targetWords - project.writtenWords);
+                      final pastPlannedWords = recalculated.fold<int>(0, (sum, s) => sum + s.plannedWords);
+                      final remainingWordsToPlan = max(0, targetWords - pastPlannedWords);
                       final maxPossibleFutureWords = futureWritingDays * dailyTarget;
 
                       // 4. Validate that the schedule is possible
@@ -1054,6 +1055,10 @@ class _OverviewTab extends ConsumerWidget {
                               schedules: schedules,
                               logicalToday: logicalToday,
                             );
+
+                            final currentWeek = (getDaysDifference(project.startDate, logicalToday) ~/ 7) + 1;
+                            final expirationDate = project.startDate.add(Duration(days: currentWeek * 7 - 1));
+                            final expirationDayName = DateFormat('EEEE').format(expirationDate);
                             
                             return Column(
                               children: [
@@ -1078,7 +1083,7 @@ class _OverviewTab extends ConsumerWidget {
                                         value: '$weeklyRemaining days',
                                         icon: Icons.hourglass_full,
                                         color: theme.colorScheme.secondary,
-                                        subtitle: project.restMode == RestMode.adaptive ? 'Expires Sunday' : null,
+                                        subtitle: project.restMode == RestMode.adaptive ? 'Expires $expirationDayName' : null,
                                       ),
                                     ),
                                   ],

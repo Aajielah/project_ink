@@ -52,11 +52,13 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   String _selectedStrategy = 'smart';
+  DateTime? _lastRefreshedDate;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _lastRefreshedDate = getLogicalToday();
   }
 
   @override
@@ -1139,6 +1141,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   }
 
   void _refreshAll() {
+    _lastRefreshedDate = getLogicalToday();
     ref.invalidate(projectsProvider);
     ref.invalidate(statisticsProvider);
     ref.invalidate(homeQuoteProvider(null));
@@ -1147,6 +1150,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
+    final today = getLogicalToday();
+    if (_lastRefreshedDate != null && today.isAfter(_lastRefreshedDate!)) {
+      _lastRefreshedDate = today;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _refreshAll();
+      });
+    }
+
     final theme = Theme.of(context);
     final projectsAsync = ref.watch(projectsProvider);
     final statsAsync = ref.watch(statisticsProvider);
