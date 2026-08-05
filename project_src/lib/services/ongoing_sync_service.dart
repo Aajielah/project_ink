@@ -400,6 +400,9 @@ class OngoingSyncService {
                   ));
                 }
               }
+              final updatedS = s.copyWith(locked: true);
+              currentSchedules = currentSchedules.map((x) => x.id == s.id ? updatedS : x).toList();
+              schedulesToUpdateInDb.add(updatedS);
             }
           } else if (actual < s.plannedWords) {
             // Backlog remaining
@@ -422,6 +425,9 @@ class OngoingSyncService {
                 loggedAt: s.date,
               ));
             }
+            final updatedS = s.copyWith(locked: true);
+            currentSchedules = currentSchedules.map((x) => x.id == s.id ? updatedS : x).toList();
+            schedulesToUpdateInDb.add(updatedS);
           }
         }
 

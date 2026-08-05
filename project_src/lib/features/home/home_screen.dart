@@ -1140,9 +1140,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     );
   }
 
-  void _refreshAll() {
+  Future<void> _refreshAll({bool silent = true}) async {
     _lastRefreshedDate = getLogicalToday();
-    ref.invalidate(projectsProvider);
+    await ref.read(projectsProvider.notifier).loadProjects(silent: silent);
     ref.invalidate(statisticsProvider);
     ref.invalidate(homeQuoteProvider(null));
     ref.invalidate(homeEncouragementProvider(null));
@@ -1154,7 +1154,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     if (_lastRefreshedDate != null && today.isAfter(_lastRefreshedDate!)) {
       _lastRefreshedDate = today;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _refreshAll();
+        _refreshAll(silent: true);
       });
     }
 
@@ -1178,7 +1178,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          _refreshAll();
+          await _refreshAll(silent: true);
         },
         child: projectsAsync.when(
           data: (projects) {

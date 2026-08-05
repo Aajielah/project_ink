@@ -540,5 +540,193 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+
+    test('Past missed days are locked during backlog sync to prevent retroactive changes', () async {
+      final cleanToday = DateTime(2026, 8, 5);
+      final yesterday = cleanToday.subtract(const Duration(days: 1));
+      final tomorrow = cleanToday.add(const Duration(days: 1));
+
+      final project = ProjectModel(
+        id: 'p_lock_test',
+        name: 'Lock Test',
+        projectType: ProjectType.fixed,
+        targetWords: 3000,
+        writtenWords: 0,
+        remainingWords: 3000,
+        dailyWordTarget: 1000,
+        backlogWords: 0,
+        startDate: yesterday,
+        expectedFinishDate: tomorrow,
+        status: ProjectStatus.active,
+        restMode: RestMode.flexible,
+        allowedRestDays: 5,
+        remainingRestDays: 5,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await projectRepo.insertProject(project);
+
+      // Create initial schedules
+      final s1 = ScheduleModel(
+        id: 's_yes',
+        projectId: 'p_lock_test',
+        date: yesterday,
+        plannedWords: 1000,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      final s2 = ScheduleModel(
+        id: 's_tod',
+        projectId: 'p_lock_test',
+        date: cleanToday,
+        plannedWords: 1000,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      final s3 = ScheduleModel(
+        id: 's_tom',
+        projectId: 'p_lock_test',
+        date: tomorrow,
+        plannedWords: 1000,
+        isRestDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      await scheduleRepo.insertSchedules([s1, s2, s3]);
+
+      // Run sync under Flexible mode
+      await syncService.syncFixedGoalBacklogs([project]);
+
+      // Verify that yesterday's schedule is now locked
+      final s1Updated = await scheduleRepo.getScheduleForDate('p_lock_test', yesterday);
+      expect(s1Updated, isNotNull);
+      expect(s1Updated!.locked, isTrue);
+      expect(s1Updated.isRestDay, isFalse);
+
+      // Change project to Adaptive mode with budget
+      final updatedProject = project.copyWith(
+        restMode: RestMode.adaptive,
+        remainingRestDays: 5,
+        updatedAt: DateTime.now(),
+      );
+      await projectRepo.updateProject(updatedProject);
+
+      // Run sync again under Adaptive mode
+      await syncService.syncFixedGoalBacklogs([updatedProject]);
+
+      // Verify that yesterday's schedule remained locked as a writing day and was NOT retroactively converted
+      final s1Final = await scheduleRepo.getScheduleForDate('p_lock_test', yesterday);
+      expect(s1Final, isNotNull);
+      expect(s1Final!.locked, isTrue);
+      expect(s1Final.isRestDay, isFalse);
+      expect(s1Final.plannedWords, equals(1000));
+    });
+
+    test('Global streak ignores recovery days and requires all writing tasks today to be completed', () async {
+      final p1 = 'p_streak_test_1';
+      final p2 = 'p_streak_test_2';
+      
+      final project1 = ProjectModel(
+        id: p1,
+        name: 'Project 1',
+        status: ProjectStatus.active,
+        targetWords: 10000,
+        writtenWords: 0,
+        remainingWords: 10000,
+        dailyWordTarget: 2000,
+        backlogWords: 0,
+        startDate: DateTime.now().subtract(const Duration(days: 1)),
+        expectedFinishDate: DateTime.now().add(const Duration(days: 5)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 5,
+        remainingRestDays: 5,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        projectType: ProjectType.fixed,
+      );
+      
+      final project2 = ProjectModel(
+        id: p2,
+        name: 'Project 2 (Rhythm)',
+        status: ProjectStatus.active,
+        targetWords: 0,
+        writtenWords: 0,
+        remainingWords: 0,
+        dailyWordTarget: 2000,
+        backlogWords: 0,
+        startDate: DateTime.now().subtract(const Duration(days: 1)),
+        expectedFinishDate: DateTime.now().add(const Duration(days: 5)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        projectType: ProjectType.ongoing,
+      );
+      
+      await projectRepo.insertProject(project1);
+      await projectRepo.insertProject(project2);
+      
+      final today = getLogicalToday();
+      final yesterday = today.subtract(const Duration(days: 1));
+      
+      final s1_y = ScheduleModel(
+        id: 's1_y',
+        projectId: p1,
+        date: yesterday,
+        plannedWords: 2000,
+        isRestDay: false,
+        automaticRestDay: false,
+        isRecoveryDay: false,
+        completed: false,
+        locked: true,
+      );
+      
+      final s1_t = ScheduleModel(
+        id: 's1_t',
+        projectId: p1,
+        date: today,
+        plannedWords: 2000,
+        isRestDay: false,
+        automaticRestDay: false,
+        isRecoveryDay: false,
+        completed: false,
+        locked: false,
+      );
+      
+      final s2_t = ScheduleModel(
+        id: 's2_t',
+        projectId: p2,
+        date: today,
+        plannedWords: 0,
+        isRestDay: false,
+        automaticRestDay: false,
+        isRecoveryDay: true,
+        completed: true,
+        locked: false,
+      );
+      
+      await scheduleRepo.insertSchedules([s1_y, s1_t, s2_t]);
+      
+      await statsRepo.recalculateStatistics();
+      final stats = await statsRepo.getStatistics();
+      
+      expect(stats.currentGlobalStreak, equals(0));
+      expect(stats.longestGlobalStreak, equals(0));
+    });
   });
 }

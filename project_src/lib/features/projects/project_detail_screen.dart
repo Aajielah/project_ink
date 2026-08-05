@@ -15,6 +15,7 @@ import '../../services/ongoing_sync_service.dart';
 import 'project_duration_type.dart';
 import '../../shared/completion_messages.dart';
 import '../../shared/date_utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProjectDetailScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -1344,8 +1345,10 @@ class _ThisWeekTab extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          todaySchedule.isRestDay
-                              ? 'Today is scheduled as a REST DAY. Writing is optional!'
+                          (todaySchedule.isRestDay || todaySchedule.isRecoveryDay)
+                              ? (todaySchedule.isRecoveryDay
+                                  ? 'Today is a scheduled Recovery Day. Enjoy your rest!'
+                                  : 'Today is scheduled as a REST DAY. Writing is optional!')
                               : (() {
                                   final sched = todaySchedule!;
                                   final remaining = sched.plannedWords - loggedToday;
@@ -1455,7 +1458,25 @@ class _ThisWeekTab extends ConsumerWidget {
 
                   return GestureDetector(
                     onLongPress: () {
-                      if ((isFlex || isOngoing) && isToday && !s.isRestDay) {
+                      final isRhythm = project.projectType == ProjectType.ongoing && project.ongoingStyle == 'rhythm';
+                      if (isRhythm && isToday && !s.isRestDay && !s.isRecoveryDay) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Writing Day Active"),
+                            content: const Text("Rhythm Mode schedules are fixed and alternate between writing and recovery days. You must log your target words today, otherwise they will become a backlog tomorrow!"),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text("Got it"),
+                              ),
+                            ],
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (!isRhythm && (isFlex || isOngoing) && isToday && !s.isRestDay && !s.isRecoveryDay) {
                         if (!isOngoing && !ref.read(schedulingServiceProvider).isRestDayAllowed(schedules: allSchedules, targetDate: s.date)) {
                           showDialog(
                             context: context,
@@ -1555,14 +1576,14 @@ class _ThisWeekTab extends ConsumerWidget {
                           : null,
                       child: ListTile(
                         leading: Icon(
-                          s.isRestDay
+                          (s.isRestDay || s.isRecoveryDay)
                               ? Icons.coffee
                               : s.completed
                                   ? Icons.check_circle
                                   : Icons.radio_button_unchecked,
                           color: s.completed
                               ? theme.colorScheme.primary
-                              : s.isRestDay
+                              : (s.isRestDay || s.isRecoveryDay)
                                   ? theme.colorScheme.outline
                                   : null,
                         ),
@@ -1571,7 +1592,9 @@ class _ThisWeekTab extends ConsumerWidget {
                           style: isToday ? const TextStyle(fontWeight: FontWeight.bold) : null,
                         ),
                         subtitle: Text(
-                          s.isRestDay ? 'Rest Day' : '$logged / ${s.plannedWords} words',
+                          (s.isRestDay || s.isRecoveryDay)
+                              ? (s.isRecoveryDay ? 'Recovery Day' : 'Rest Day')
+                              : '$logged / ${s.plannedWords} words',
                         ),
                         trailing: isToday
                             ? Card(
@@ -1610,6 +1633,29 @@ class _HistoryTab extends ConsumerStatefulWidget {
 
 class _HistoryTabState extends ConsumerState<_HistoryTab> {
   bool _showRestDays = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _showRestDays = prefs.getBool('show_rest_days_${widget.projectId}') ?? false;
+      });
+    }
+  }
+
+  Future<void> _toggleRestDays(bool value) async {
+    setState(() {
+      _showRestDays = value;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_rest_days_${widget.projectId}', value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1723,11 +1769,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                       Switch.adaptive(
                         value: _showRestDays,
                         activeColor: theme.colorScheme.primary,
-                        onChanged: (val) {
-                          setState(() {
-                            _showRestDays = val;
-                          });
-                        },
+                        onChanged: _toggleRestDays,
                       ),
                     ],
                   ),

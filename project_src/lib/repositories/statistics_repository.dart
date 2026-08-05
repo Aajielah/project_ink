@@ -146,12 +146,15 @@ class StatisticsRepository {
         } else {
           final isToday = tempDate.isAtSameMomentAs(cleanToday);
           bool hasUncompletedWriting = false;
-          bool hasCompletedWriting = false;
+          int totalWritingSchedules = 0;
+          int completedWritingSchedules = 0;
 
           for (final s in dayScheds) {
-            if (!s.isRestDay && !s.automaticRestDay) {
+            final isRestOrRecovery = s.isRestDay || s.automaticRestDay || s.isRecoveryDay;
+            if (!isRestOrRecovery) {
+              totalWritingSchedules++;
               if (s.completed) {
-                hasCompletedWriting = true;
+                completedWritingSchedules++;
               } else {
                 if (isToday && !s.locked) {
                   // user still has time to complete
@@ -164,7 +167,7 @@ class StatisticsRepository {
 
           if (hasUncompletedWriting) {
             dailyStates.add('failed');
-          } else if (hasCompletedWriting) {
+          } else if (totalWritingSchedules > 0 && completedWritingSchedules == totalWritingSchedules) {
             dailyStates.add('completed');
           } else {
             dailyStates.add('rest');
