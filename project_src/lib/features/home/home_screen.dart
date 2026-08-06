@@ -11,6 +11,7 @@ import '../../models/project.dart';
 import '../../models/schedule.dart';
 import '../../models/daily_log.dart';
 import '../../models/quote.dart';
+import '../../models/today_writing_task.dart';
 import '../projects/widgets/book_cover_widget.dart';
 import '../../shared/completion_messages.dart';
 import '../../shared/date_utils.dart';
@@ -26,20 +27,6 @@ class _ProjectWithScore {
     required this.score,
     required this.reason,
     required this.confidence,
-  });
-}
-
-class TodayWritingTask {
-  final ProjectModel project;
-  final ScheduleModel schedule;
-  final DailyLogModel? log;
-  final DateTime? lastSuccessfulLogDate;
-
-  const TodayWritingTask({
-    required this.project,
-    required this.schedule,
-    this.log,
-    this.lastSuccessfulLogDate,
   });
 }
 
@@ -1163,6 +1150,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     final statsAsync = ref.watch(statisticsProvider);
     final quoteAsync = ref.watch(homeQuoteProvider(null));
     final encouragementAsync = ref.watch(homeEncouragementProvider(null));
+    final todayTasksAsync = ref.watch(todayTasksProvider);
 
     final String formattedDate = DateFormat('EEEE, MMMM d').format(DateTime.now());
 
@@ -1196,15 +1184,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
               );
             }
 
-            return FutureBuilder<List<TodayWritingTask>>(
-              future: _fetchTodayTasks(activeProjects),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+            final allTodayTasks = todayTasksAsync.value;
+            if (allTodayTasks == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-                final allTodayTasks = snapshot.data!;
-                final isSprintActive = activeProjects.any((p) => p.restMode == RestMode.sprint);
+            final isSprintActive = activeProjects.any((p) => p.restMode == RestMode.sprint);
                 final todayTasks = isSprintActive
                     ? allTodayTasks.where((t) => !t.schedule.isRestDay).toList()
                     : allTodayTasks;
@@ -1214,8 +1199,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
                 final completedTasks = todayTasks.where((t) => t.schedule.completed && !t.schedule.isRecoveryDay).toList();
                 final uncompletedTasks = todayTasks.where((t) => !t.schedule.completed && !t.schedule.isRecoveryDay).toList();
-                final recoveryTasks = todayTasks.where((t) => t.schedule.isRecoveryDay).toList();
-                final visibleTasks = [...uncompletedTasks, ...recoveryTasks];
+                final visibleTasks = todayTasks.where((t) =>
+                  !t.schedule.completed &&
+                  !t.schedule.isRestDay &&
+                  !t.schedule.automaticRestDay &&
+                  !t.schedule.isRecoveryDay
+                ).toList();
 
                 int totalPlannedToday = 0;
                 int totalLoggedToday = 0;
@@ -1779,8 +1768,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                     ],
                   ),
                 );
-              },
-            );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('Error: $err')),

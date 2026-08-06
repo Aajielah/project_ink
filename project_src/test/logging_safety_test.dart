@@ -238,12 +238,15 @@ void main() {
       final updatedProject = projectRepo.db[project.id]!;
       // Credit should be cleared
       expect(updatedProject.pendingCarryForward, 0);
-      // Today's schedule should be marked completed
+      // Today's schedule should be marked completed and target reduced to 0
       final sched = await scheduleRepo.getScheduleForDate(project.id, cleanToday);
       expect(sched!.completed, isTrue);
-      // Daily log should be recorded with the 3000 words
+      expect(sched.plannedWords, 0);
+      // Daily log should be recorded with completed: true and 0 actual words
       final log = await logRepo.getLogForDate(project.id, cleanToday);
-      expect(log!.actualWords, 3000);
+      expect(log!.completed, isTrue);
+      expect(log.actualWords, 0);
+      expect(log.plannedWords, 0);
     });
 
     test('Editing today\'s log correctly recalculates progress and pending credit', () async {

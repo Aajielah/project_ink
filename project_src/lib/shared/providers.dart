@@ -7,6 +7,7 @@ import '../database/connection/native.dart'
     if (dart.library.html) '../database/connection/web.dart' as native;
 import '../models/project.dart';
 import '../models/schedule.dart';
+import '../models/today_writing_task.dart';
 
 import '../models/settings.dart';
 import '../models/statistics.dart';
@@ -664,4 +665,40 @@ final homeEncouragementProvider =
 final homeQuoteProvider =
     FutureProvider.family<QuoteModel?, String?>((ref, projectId) async {
   return ref.watch(encouragementServiceProvider).getQuoteForUser(projectId);
+});
+
+// Today Tasks Provider (Cached and auto-updating)
+final todayTasksProvider = FutureProvider<List<TodayWritingTask>>((ref) async {
+  final projectsAsync = ref.watch(projectsProvider);
+  final projects = projectsAsync.value ?? [];
+  final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
+
+  final schedRepo = ref.watch(scheduleRepositoryProvider);
+  final logRepo = ref.watch(dailyLogRepositoryProvider);
+
+  final List<TodayWritingTask> tasks = [];
+  for (final p in activeProjects) {
+    final schedules = await schedRepo.getSchedulesForProject(p.id);
+    final projectToday = getLogicalTodayForProject(project: p, schedules: schedules);
+    final cleanProjectToday = DateTime(projectToday.year, projectToday.month, projectToday.day);
+
+    final sched = await schedRepo.getScheduleForDate(p.id, cleanProjectToday);
+    if (sched != null) {
+      final log = await logRepo.getLogForDate(p.id, cleanProjectToday);
+      final logs = await logRepo.getLogsForProject(p.id);
+      final successfulLogs = logs.where((l) => l.actualWords > 0).toList();
+      DateTime? lastSuccessfulLogDate;
+      if (successfulLogs.isNotEmpty) {
+        lastSuccessfulLogDate = successfulLogs.reduce((a, b) => a.date.isAfter(b.date) ? a : b).date;
+      }
+
+      tasks.add(TodayWritingTask(
+        project: p,
+        schedule: sched,
+        log: log,
+        lastSuccessfulLogDate: lastSuccessfulLogDate,
+      ));
+    }
+  }
+  return tasks;
 });

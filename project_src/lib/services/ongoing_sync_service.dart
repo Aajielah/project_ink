@@ -109,12 +109,14 @@ class OngoingSyncService {
       for (final s in schedules) {
         if (s.date.isBefore(cleanToday) && !s.completed && (!s.isRestDay || s.plannedWords > 0)) {
           if (project.ongoingStyle == 'rhythm') {
-            final backlogCreated = s.plannedWords;
+            final existingLog = await logRepo.getLogForDate(project.id, s.date);
+            final actual = existingLog?.actualWords ?? 0;
+            final backlogCreated = s.plannedWords - actual;
+
             toUpdate.add(s.copyWith(
               locked: true,
             ));
             
-            final existingLog = await logRepo.getLogForDate(project.id, s.date);
             if (existingLog != null) {
               await logRepo.insertLog(existingLog.copyWith(
                 backlogCreated: backlogCreated,
@@ -126,7 +128,7 @@ class OngoingSyncService {
                 scheduleId: s.id,
                 date: s.date,
                 plannedWords: s.plannedWords,
-                actualWords: 0,
+                actualWords: actual,
                 carryForwardWords: 0,
                 backlogCreated: backlogCreated,
                 completed: false,

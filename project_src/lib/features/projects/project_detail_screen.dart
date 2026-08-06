@@ -218,6 +218,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
     final qtyController = TextEditingController(text: initialDurationDays.toString());
     DurationType editDurationType = DurationType.days;
     DateTime? editEndDate = project.expectedFinishDate;
+    String editOngoingStyle = project.ongoingStyle;
     
     final schedRepo = ref.read(scheduleRepositoryProvider);
     final existingScheds = await schedRepo.getSchedulesForProject(project.id);
@@ -404,6 +405,27 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: 'Daily Word Target', border: OutlineInputBorder()),
                     ),
+                    if (isOngoing) ...[
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: editOngoingStyle,
+                        decoration: const InputDecoration(
+                          labelText: 'Writing Schedule Style',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'daily', child: Text('Daily Mode (Write every day)')),
+                          DropdownMenuItem(value: 'rhythm', child: Text('Rhythm Mode (Alternate write/recovery)')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() {
+                              editOngoingStyle = val;
+                            });
+                          }
+                        },
+                      ),
+                    ],
                     if (!isOngoing) ...[
                       const SizedBox(height: 16),
                       Row(
@@ -589,6 +611,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                         dailyWordTarget: dailyTarget,
                         startDate: startDate,
                         expectedFinishDate: startDate,
+                        ongoingStyle: editOngoingStyle,
                         updatedAt: DateTime.now(),
                       );
                       await ref.read(projectsProvider.notifier).updateProject(updated);

@@ -801,5 +801,88 @@ void main() {
       expect(logMon.actualWords, equals(0));
       expect(logMon.plannedWords, equals(2000));
     });
+
+    test('Ongoing Rhythm Mode project missed writing days with partial progress generate partial backlog correctly', () async {
+      final pId = 'rhythm_partial_backlog_test';
+      final project = ProjectModel(
+        id: pId,
+        name: 'Royal Harem System',
+        status: ProjectStatus.active,
+        targetWords: 0,
+        writtenWords: 500,
+        remainingWords: 0,
+        dailyWordTarget: 2000,
+        backlogWords: 0,
+        startDate: DateTime.now().subtract(const Duration(days: 2)),
+        expectedFinishDate: DateTime.now().add(const Duration(days: 5)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        projectType: ProjectType.ongoing,
+        ongoingStyle: 'rhythm',
+      );
+      await projectRepo.insertProject(project);
+
+      final rawToday = getLogicalToday();
+      final today = DateTime(rawToday.year, rawToday.month, rawToday.day);
+      final yesterday = today.subtract(const Duration(days: 1));
+      final twoDaysAgo = today.subtract(const Duration(days: 2));
+
+      final s_mon = ScheduleModel(
+        id: 's_mon_partial',
+        projectId: pId,
+        date: twoDaysAgo,
+        plannedWords: 2000,
+        isRestDay: false,
+        automaticRestDay: false,
+        isRecoveryDay: false,
+        completed: false,
+        locked: false,
+      );
+
+      final s_tue = ScheduleModel(
+        id: 's_tue_partial',
+        projectId: pId,
+        date: yesterday,
+        plannedWords: 0,
+        isRestDay: false,
+        automaticRestDay: false,
+        isRecoveryDay: true,
+        completed: true,
+        locked: false,
+      );
+
+      await scheduleRepo.insertSchedules([s_mon, s_tue]);
+
+      await dailyLogRepo.insertLog(DailyLogModel(
+        id: 'log_mon_partial',
+        projectId: pId,
+        scheduleId: 's_mon_partial',
+        date: twoDaysAgo,
+        plannedWords: 2000,
+        actualWords: 500,
+        carryForwardWords: 0,
+        backlogCreated: 0,
+        completed: false,
+        loggedAt: twoDaysAgo,
+      ));
+
+      await syncService.syncOngoingSchedules([project]);
+
+      final sMonUpdated = await scheduleRepo.getScheduleForDate(pId, twoDaysAgo);
+      expect(sMonUpdated, isNotNull);
+      expect(sMonUpdated!.locked, isTrue);
+
+      final logMon = await dailyLogRepo.getLogForDate(pId, twoDaysAgo);
+      expect(logMon, isNotNull);
+      expect(logMon!.backlogCreated, equals(1500));
+      expect(logMon.actualWords, equals(500));
+      expect(logMon.plannedWords, equals(2000));
+    });
   });
 }

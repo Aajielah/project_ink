@@ -183,25 +183,53 @@ class LoggingService {
   Future<void> checkAndApplyPendingCarryForward(List<ProjectModel> activeProjects) async {
     final now = getLogicalToday();
     final today = DateTime(now.year, now.month, now.day);
+    final uuid = const Uuid();
     for (final project in activeProjects) {
       if (project.pendingCarryForward > 0) {
         final schedule = await _scheduleRepo.getScheduleForDate(project.id, today);
         if (schedule != null && !schedule.isRestDay && !schedule.completed) {
           final credit = project.pendingCarryForward;
+          final target = schedule.plannedWords;
+          final newPlanned = target - credit < 0 ? 0 : target - credit;
+          final remainingCredit = credit - target < 0 ? 0 : credit - target;
+          final isCompleted = newPlanned == 0;
           
-          // Reset the credit on the project first to prevent double application
+          // Reset or reduce the credit on the project
           final updatedProj = project.copyWith(
-            pendingCarryForward: 0,
+            pendingCarryForward: remainingCredit,
             updatedAt: DateTime.now(),
           );
           await _projectRepo.updateProject(updatedProj);
           
-          // Log the credit for today
-          await logWords(
-            projectId: project.id,
-            date: today,
-            actualWords: credit,
-          );
+          // Update today's schedule planned words
+          await _scheduleRepo.updateSchedule(schedule.copyWith(
+            plannedWords: newPlanned,
+            completed: isCompleted,
+            locked: isCompleted ? true : schedule.locked,
+          ));
+
+          if (isCompleted) {
+            final existingLog = await _logRepo.getLogForDate(project.id, today);
+            if (existingLog != null) {
+              await _logRepo.insertLog(existingLog.copyWith(
+                plannedWords: 0,
+                completed: true,
+              ));
+            } else {
+              await _logRepo.insertLog(DailyLogModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                scheduleId: schedule.id,
+                date: today,
+                plannedWords: 0,
+                actualWords: 0,
+                carryForwardWords: 0,
+                backlogCreated: 0,
+                completed: true,
+                loggedAt: DateTime.now(),
+              ));
+            }
+          }
         }
       }
     }
