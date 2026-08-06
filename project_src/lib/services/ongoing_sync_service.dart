@@ -108,21 +108,48 @@ class OngoingSyncService {
       final List<ScheduleModel> toUpdate = [];
       for (final s in schedules) {
         if (s.date.isBefore(cleanToday) && !s.completed && (!s.isRestDay || s.plannedWords > 0)) {
-          toUpdate.add(s.copyWith(
-            plannedWords: 0,
-            isRestDay: true,
-            automaticRestDay: true,
-            completed: false,
-            locked: true,
-          ));
-          
-          final existingLog = await logRepo.getLogForDate(project.id, s.date);
-          if (existingLog != null) {
-            await logRepo.insertLog(existingLog.copyWith(
-              plannedWords: 0,
-              backlogCreated: 0,
-              completed: false,
+          if (project.ongoingStyle == 'rhythm') {
+            final backlogCreated = s.plannedWords;
+            toUpdate.add(s.copyWith(
+              locked: true,
             ));
+            
+            final existingLog = await logRepo.getLogForDate(project.id, s.date);
+            if (existingLog != null) {
+              await logRepo.insertLog(existingLog.copyWith(
+                backlogCreated: backlogCreated,
+              ));
+            } else {
+              await logRepo.insertLog(DailyLogModel(
+                id: uuid.v4(),
+                projectId: project.id,
+                scheduleId: s.id,
+                date: s.date,
+                plannedWords: s.plannedWords,
+                actualWords: 0,
+                carryForwardWords: 0,
+                backlogCreated: backlogCreated,
+                completed: false,
+                loggedAt: s.date,
+              ));
+            }
+          } else {
+            toUpdate.add(s.copyWith(
+              plannedWords: 0,
+              isRestDay: true,
+              automaticRestDay: true,
+              completed: false,
+              locked: true,
+            ));
+            
+            final existingLog = await logRepo.getLogForDate(project.id, s.date);
+            if (existingLog != null) {
+              await logRepo.insertLog(existingLog.copyWith(
+                plannedWords: 0,
+                backlogCreated: 0,
+                completed: false,
+              ));
+            }
           }
         }
       }
@@ -235,7 +262,9 @@ class OngoingSyncService {
       }
 
       if (toUpdate.isNotEmpty) {
-        await schedRepo.insertSchedules(toUpdate);
+        for (final s in toUpdate) {
+          await schedRepo.updateSchedule(s);
+        }
       }
       if (toInsert.isNotEmpty) {
         await schedRepo.insertSchedules(toInsert);

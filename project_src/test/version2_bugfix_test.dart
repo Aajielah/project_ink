@@ -728,5 +728,78 @@ void main() {
       expect(stats.currentGlobalStreak, equals(0));
       expect(stats.longestGlobalStreak, equals(0));
     });
+
+    test('Ongoing Rhythm Mode project missed writing days are locked and generate backlog instead of turning into rest days', () async {
+      final pId = 'rhythm_backlog_test';
+      final project = ProjectModel(
+        id: pId,
+        name: 'Royal Harem System',
+        status: ProjectStatus.active,
+        targetWords: 0,
+        writtenWords: 0,
+        remainingWords: 0,
+        dailyWordTarget: 2000,
+        backlogWords: 0,
+        startDate: DateTime.now().subtract(const Duration(days: 2)),
+        expectedFinishDate: DateTime.now().add(const Duration(days: 5)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        projectType: ProjectType.ongoing,
+        ongoingStyle: 'rhythm',
+      );
+      await projectRepo.insertProject(project);
+
+      final rawToday = getLogicalToday();
+      final today = DateTime(rawToday.year, rawToday.month, rawToday.day);
+      final yesterday = today.subtract(const Duration(days: 1));
+      final twoDaysAgo = today.subtract(const Duration(days: 2));
+
+      final s_mon = ScheduleModel(
+        id: 's_mon',
+        projectId: pId,
+        date: twoDaysAgo,
+        plannedWords: 2000,
+        isRestDay: false,
+        automaticRestDay: false,
+        isRecoveryDay: false,
+        completed: false,
+        locked: false,
+      );
+
+      final s_tue = ScheduleModel(
+        id: 's_tue',
+        projectId: pId,
+        date: yesterday,
+        plannedWords: 0,
+        isRestDay: false,
+        automaticRestDay: false,
+        isRecoveryDay: true,
+        completed: true,
+        locked: false,
+      );
+
+      await scheduleRepo.insertSchedules([s_mon, s_tue]);
+
+      await syncService.syncOngoingSchedules([project]);
+
+      final sMonUpdated = await scheduleRepo.getScheduleForDate(pId, twoDaysAgo);
+      expect(sMonUpdated, isNotNull);
+      expect(sMonUpdated!.locked, isTrue);
+      expect(sMonUpdated.isRestDay, isFalse);
+      expect(sMonUpdated.isRecoveryDay, isFalse);
+      expect(sMonUpdated.plannedWords, equals(2000));
+
+      final logMon = await dailyLogRepo.getLogForDate(pId, twoDaysAgo);
+      expect(logMon, isNotNull);
+      expect(logMon!.backlogCreated, equals(2000));
+      expect(logMon.actualWords, equals(0));
+      expect(logMon.plannedWords, equals(2000));
+    });
   });
 }
