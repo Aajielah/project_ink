@@ -41,16 +41,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   String _selectedStrategy = 'smart';
   DateTime? _lastRefreshedDate;
   bool _showAllProjects = false;
+  Timer? _sessionTransitionTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _lastRefreshedDate = getLogicalToday();
+    
+    // Check and trigger UI updates periodically to refresh morning/evening view transitions
+    _sessionTransitionTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   @override
   void dispose() {
+    _sessionTransitionTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -1303,7 +1312,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Grace period countdown card
-                  _GracePeriodCountdownCard(todayTasks: todayTasks),
+                  _GracePeriodCountdownCard(todayTasks: allTodayTasks),
 
                   // Greeting & Streak row
                   Row(
