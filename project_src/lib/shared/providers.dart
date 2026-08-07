@@ -178,34 +178,64 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       final settings = await _ref.read(settingsRepositoryProvider).getSettings();
       if (settings == null || !settings.notifications) {
         await NotificationService.instance.cancelDaily12AMNotification();
+        await NotificationService.instance.cancelDailyMorningNotification();
+        await NotificationService.instance.cancelDailyEveningNotification();
         return;
       }
 
       final active = projects.where((p) => p.status == ProjectStatus.active).toList();
       if (active.isEmpty) {
         await NotificationService.instance.cancelDaily12AMNotification();
+        await NotificationService.instance.cancelDailyMorningNotification();
+        await NotificationService.instance.cancelDailyEveningNotification();
         return;
       }
 
       final today = getLogicalToday();
-      bool allCompletedToday = true;
 
-      for (final p in active) {
-        final schedule = await _scheduleRepo.getScheduleForDate(p.id, today);
-        if (schedule != null && !schedule.isRestDay) {
-          final log = await _dailyLogRepo.getLogForDate(p.id, today);
-          final logged = log?.actualWords ?? 0;
-          if (logged < schedule.plannedWords) {
-            allCompletedToday = false;
-            break;
+      // Check if a group of projects has any incomplete writing targets today
+      Future<bool> hasIncompleteTarget(List<ProjectModel> group) async {
+        if (group.isEmpty) return false;
+        for (final p in group) {
+          final schedule = await _scheduleRepo.getScheduleForDate(p.id, today);
+          if (schedule != null && !schedule.isRestDay) {
+            final log = await _dailyLogRepo.getLogForDate(p.id, today);
+            final logged = log?.actualWords ?? 0;
+            if (logged < schedule.plannedWords) {
+              return true; // Found an incomplete target in this group
+            }
           }
         }
+        return false;
       }
 
-      if (allCompletedToday) {
-        await NotificationService.instance.cancelDaily12AMNotification();
+      final morningProjects = active.where((p) => p.writingSession == 'morning').toList();
+      final eveningProjects = active.where((p) => p.writingSession == 'evening').toList();
+      final noneProjects = active.where((p) => p.writingSession != 'morning' && p.writingSession != 'evening').toList();
+
+      final morningIncomplete = await hasIncompleteTarget(morningProjects);
+      final eveningIncomplete = await hasIncompleteTarget(eveningProjects);
+      final noneIncomplete = await hasIncompleteTarget(noneProjects);
+
+      // Morning reminders (12:00 PM)
+      if (morningIncomplete) {
+        await NotificationService.instance.scheduleDailyMorningNotification();
       } else {
+        await NotificationService.instance.cancelDailyMorningNotification();
+      }
+
+      // Evening reminders (8:00 PM)
+      if (eveningIncomplete) {
+        await NotificationService.instance.scheduleDailyEveningNotification();
+      } else {
+        await NotificationService.instance.cancelDailyEveningNotification();
+      }
+
+      // Global/No Preference reminders (12:00 AM)
+      if (noneIncomplete) {
         await NotificationService.instance.scheduleDaily12AMNotification();
+      } else {
+        await NotificationService.instance.cancelDaily12AMNotification();
       }
     } catch (e) {
       debugPrint('Error updating notification schedule: $e');
@@ -226,6 +256,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     String? coverImagePath,
     String? coverType,
     String ongoingStyle = 'daily',
+    String writingSession = 'none',
   }) async {
     if (projectType == ProjectType.fixed) {
       final err = _schedulingService.validateInputs(
@@ -294,6 +325,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           coverImagePath: coverImagePath,
           coverType: coverType,
           ongoingStyle: 'daily',
+          writingSession: writingSession,
         );
 
         await _projectRepo.insertProject(project);
@@ -325,6 +357,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           coverImagePath: coverImagePath,
           coverType: coverType,
           ongoingStyle: ongoingStyle,
+          writingSession: writingSession,
         );
 
         await _projectRepo.insertProject(project);

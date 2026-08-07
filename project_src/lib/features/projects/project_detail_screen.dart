@@ -219,6 +219,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
     DurationType editDurationType = DurationType.days;
     DateTime? editEndDate = project.expectedFinishDate;
     String editOngoingStyle = project.ongoingStyle;
+    String editWritingSession = project.writingSession;
     
     final schedRepo = ref.read(scheduleRepositoryProvider);
     final existingScheds = await schedRepo.getSchedulesForProject(project.id);
@@ -542,6 +543,27 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                         ),
                       ],
                     ],
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      value: editWritingSession,
+                      decoration: const InputDecoration(
+                        labelText: 'Writing Session (Optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'none', child: Text('No Preference', overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(value: 'morning', child: Text('Morning Session (5 AM – 5 PM)', overflow: TextOverflow.ellipsis)),
+                        DropdownMenuItem(value: 'evening', child: Text('Evening Session (5 PM – 5 AM)', overflow: TextOverflow.ellipsis)),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() {
+                            editWritingSession = val;
+                          });
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -615,6 +637,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                         startDate: startDate,
                         expectedFinishDate: startDate,
                         ongoingStyle: editOngoingStyle,
+                        writingSession: editWritingSession,
                         updatedAt: DateTime.now(),
                       );
                       await ref.read(projectsProvider.notifier).updateProject(updated);
@@ -737,6 +760,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                         startDate: startDate,
                         expectedFinishDate: recalculated.isNotEmpty ? recalculated.last.date : newEndDate,
                         remainingWords: max(0, targetWords - project.writtenWords),
+                        writingSession: editWritingSession,
                         updatedAt: DateTime.now(),
                       );
 

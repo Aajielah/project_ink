@@ -75,7 +75,8 @@ class BackupService {
             : p.coverImagePath,
         'coverType': p.coverType,
         'projectType': p.projectType, 'pendingCarryForward': p.pendingCarryForward,
-        'ongoingStyle': p.ongoingStyle
+        'ongoingStyle': p.ongoingStyle,
+        'writingSession': p.writingSession
       }).toList());
 
 
@@ -255,6 +256,7 @@ class BackupService {
               projectType: Value(p['projectType'] ?? 'fixed'),
               pendingCarryForward: Value(p['pendingCarryForward'] ?? 0),
               ongoingStyle: Value(p['ongoingStyle'] ?? 'daily'),
+              writingSession: Value(p['writingSession'] ?? 'none'),
             ));
           }
         }

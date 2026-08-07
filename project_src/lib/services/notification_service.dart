@@ -133,13 +133,109 @@ class NotificationService {
     }
   }
 
-  tz.TZDateTime _nextInstanceOf12AM() {
+  Future<void> scheduleDailyMorningNotification() async {
+    if (!_initialized) await init();
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+
+    try {
+      final scheduledDate = _nextInstanceOfTime(12, 0); // 12:00 PM
+      await _plugin.zonedSchedule(
+        1,
+        'Morning Session Reminder',
+        "Don't forget your morning writing target! Keep your momentum going.",
+        scheduledDate,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'morning_reminder_channel',
+            'Morning Reminders',
+            channelDescription: 'Reminders to write during the morning session.',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } catch (e) {
+      debugPrint('Failed to schedule morning reminder notification: $e');
+    }
+  }
+
+  Future<void> cancelDailyMorningNotification() async {
+    if (!_initialized) await init();
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+
+    try {
+      await _plugin.cancel(1);
+    } catch (e) {
+      debugPrint('Failed to cancel morning reminder notification: $e');
+    }
+  }
+
+  Future<void> scheduleDailyEveningNotification() async {
+    if (!_initialized) await init();
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+
+    try {
+      final scheduledDate = _nextInstanceOfTime(20, 0); // 8:00 PM
+      await _plugin.zonedSchedule(
+        2,
+        'Evening Session Reminder',
+        "Time for your evening writing session! Let's get some words down.",
+        scheduledDate,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'evening_reminder_channel',
+            'Evening Reminders',
+            channelDescription: 'Reminders to write during the evening session.',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } catch (e) {
+      debugPrint('Failed to schedule evening reminder notification: $e');
+    }
+  }
+
+  Future<void> cancelDailyEveningNotification() async {
+    if (!_initialized) await init();
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+
+    try {
+      await _plugin.cancel(2);
+    } catch (e) {
+      debugPrint('Failed to cancel evening reminder notification: $e');
+    }
+  }
+
+  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, 0, 0);
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
     return scheduledDate;
+  }
+
+  tz.TZDateTime _nextInstanceOf12AM() {
+    return _nextInstanceOfTime(0, 0);
   }
 }

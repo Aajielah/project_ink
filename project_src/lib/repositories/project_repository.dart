@@ -34,6 +34,7 @@ class ProjectRepository {
       coverType: data.coverType,
       pendingCarryForward: data.pendingCarryForward,
       ongoingStyle: data.ongoingStyle ?? 'daily',
+      writingSession: data.writingSession ?? 'none',
     );
   }
 
@@ -64,6 +65,7 @@ class ProjectRepository {
       coverType: Value(model.coverType),
       pendingCarryForward: Value(model.pendingCarryForward),
       ongoingStyle: Value(model.ongoingStyle),
+      writingSession: Value(model.writingSession),
     );
   }
 

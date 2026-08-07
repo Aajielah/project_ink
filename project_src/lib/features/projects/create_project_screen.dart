@@ -41,6 +41,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   int _allowedRestDays = 1; // rest days per week
   final List<int> _fixedRestDays = []; // 1 = Mon, 7 = Sun
   String _ongoingStyle = 'daily';
+  String _writingSession = 'none';
 
   // Book Cover State
   String? _coverType;
@@ -224,6 +225,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
         allowedRestDays: _allowedRestDays,
         coverImagePath: _coverImagePath,
         coverType: _coverType,
+        writingSession: _writingSession,
       );
     } else {
       final dailyTarget = int.parse(_dailyTargetController.text);
@@ -242,6 +244,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
         coverImagePath: _coverImagePath,
         coverType: _coverType,
         ongoingStyle: _ongoingStyle,
+        writingSession: _writingSession,
       );
     }
 
@@ -749,6 +752,127 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                             },
                           ),
                         ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Writing Session (Optional)',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.info_outline, size: 20),
+                              color: theme.colorScheme.secondary,
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  builder: (context) {
+                                    return SafeArea(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(24.0),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Writing Sessions',
+                                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            const Text(
+                                              'Writing Sessions help organize your daily writing routine.\n\n'
+                                              'Assign projects to either:\n'
+                                              '🌅 Morning Session\n'
+                                              'or\n'
+                                              '🌙 Evening Session\n\n'
+                                              'Projects assigned to a session appear only during that time on the Home screen.\n\n'
+                                              'Choosing No Preference makes the project appear all day.\n\n'
+                                              'Writing Sessions do NOT affect deadlines, backlog, reminders, or statistics. They are purely an organizational tool.',
+                                            ),
+                                            const SizedBox(height: 24),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: FilledButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: const Text('Got it'),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        Text(
+                          'Organize when this project appears on your Home screen.',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 16),
+                        RadioListTile<String>(
+                          title: const Text('No Preference'),
+                          subtitle: const Text('Appears on Home screen all day'),
+                          value: 'none',
+                          groupValue: _writingSession,
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _writingSession = val;
+                              });
+                            }
+                          },
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('Morning Session'),
+                          subtitle: const Text('Appears on Home screen 5:00 AM – 4:59 PM'),
+                          value: 'morning',
+                          groupValue: _writingSession,
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _writingSession = val;
+                              });
+                            }
+                          },
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('Evening Session'),
+                          subtitle: const Text('Appears on Home screen 5:00 PM – 4:59 AM'),
+                          value: 'evening',
+                          groupValue: _writingSession,
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _writingSession = val;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Writing Sessions are optional. They only control where this project appears on the Home screen. Deadlines, logging, backlog, statistics, and reminders continue working normally.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
                       ],
                     ),
                   ),

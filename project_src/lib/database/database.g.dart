@@ -539,6 +539,14 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('daily'));
+  static const VerificationMeta _writingSessionMeta =
+      const VerificationMeta('writingSession');
+  @override
+  late final GeneratedColumn<String> writingSession = GeneratedColumn<String>(
+      'writing_session', aliasedName, true,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('none'));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -565,7 +573,8 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         coverType,
         projectType,
         pendingCarryForward,
-        ongoingStyle
+        ongoingStyle,
+        writingSession
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -732,6 +741,12 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           ongoingStyle.isAcceptableOrUnknown(
               data['ongoing_style']!, _ongoingStyleMeta));
     }
+    if (data.containsKey('writing_session')) {
+      context.handle(
+          _writingSessionMeta,
+          writingSession.isAcceptableOrUnknown(
+              data['writing_session']!, _writingSessionMeta));
+    }
     return context;
   }
 
@@ -792,6 +807,8 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           DriftSqlType.int, data['${effectivePrefix}pending_carry_forward'])!,
       ongoingStyle: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}ongoing_style']),
+      writingSession: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}writing_session']),
     );
   }
 
@@ -827,6 +844,7 @@ class Project extends DataClass implements Insertable<Project> {
   final String projectType;
   final int pendingCarryForward;
   final String? ongoingStyle;
+  final String? writingSession;
   const Project(
       {required this.id,
       required this.name,
@@ -852,7 +870,8 @@ class Project extends DataClass implements Insertable<Project> {
       this.coverType,
       required this.projectType,
       required this.pendingCarryForward,
-      this.ongoingStyle});
+      this.ongoingStyle,
+      this.writingSession});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -890,6 +909,9 @@ class Project extends DataClass implements Insertable<Project> {
     map['pending_carry_forward'] = Variable<int>(pendingCarryForward);
     if (!nullToAbsent || ongoingStyle != null) {
       map['ongoing_style'] = Variable<String>(ongoingStyle);
+    }
+    if (!nullToAbsent || writingSession != null) {
+      map['writing_session'] = Variable<String>(writingSession);
     }
     return map;
   }
@@ -931,6 +953,9 @@ class Project extends DataClass implements Insertable<Project> {
       ongoingStyle: ongoingStyle == null && nullToAbsent
           ? const Value.absent()
           : Value(ongoingStyle),
+      writingSession: writingSession == null && nullToAbsent
+          ? const Value.absent()
+          : Value(writingSession),
     );
   }
 
@@ -967,6 +992,7 @@ class Project extends DataClass implements Insertable<Project> {
       pendingCarryForward:
           serializer.fromJson<int>(json['pendingCarryForward']),
       ongoingStyle: serializer.fromJson<String?>(json['ongoingStyle']),
+      writingSession: serializer.fromJson<String?>(json['writingSession']),
     );
   }
   @override
@@ -998,6 +1024,7 @@ class Project extends DataClass implements Insertable<Project> {
       'projectType': serializer.toJson<String>(projectType),
       'pendingCarryForward': serializer.toJson<int>(pendingCarryForward),
       'ongoingStyle': serializer.toJson<String?>(ongoingStyle),
+      'writingSession': serializer.toJson<String?>(writingSession),
     };
   }
 
@@ -1026,7 +1053,8 @@ class Project extends DataClass implements Insertable<Project> {
           Value<String?> coverType = const Value.absent(),
           String? projectType,
           int? pendingCarryForward,
-          Value<String?> ongoingStyle = const Value.absent()}) =>
+          Value<String?> ongoingStyle = const Value.absent(),
+          Value<String?> writingSession = const Value.absent()}) =>
       Project(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1057,6 +1085,8 @@ class Project extends DataClass implements Insertable<Project> {
         pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
         ongoingStyle:
             ongoingStyle.present ? ongoingStyle.value : this.ongoingStyle,
+        writingSession:
+            writingSession.present ? writingSession.value : this.writingSession,
       );
   Project copyWithCompanion(ProjectsCompanion data) {
     return Project(
@@ -1115,6 +1145,9 @@ class Project extends DataClass implements Insertable<Project> {
       ongoingStyle: data.ongoingStyle.present
           ? data.ongoingStyle.value
           : this.ongoingStyle,
+      writingSession: data.writingSession.present
+          ? data.writingSession.value
+          : this.writingSession,
     );
   }
 
@@ -1145,7 +1178,8 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('coverType: $coverType, ')
           ..write('projectType: $projectType, ')
           ..write('pendingCarryForward: $pendingCarryForward, ')
-          ..write('ongoingStyle: $ongoingStyle')
+          ..write('ongoingStyle: $ongoingStyle, ')
+          ..write('writingSession: $writingSession')
           ..write(')'))
         .toString();
   }
@@ -1176,7 +1210,8 @@ class Project extends DataClass implements Insertable<Project> {
         coverType,
         projectType,
         pendingCarryForward,
-        ongoingStyle
+        ongoingStyle,
+        writingSession
       ]);
   @override
   bool operator ==(Object other) =>
@@ -1206,7 +1241,8 @@ class Project extends DataClass implements Insertable<Project> {
           other.coverType == this.coverType &&
           other.projectType == this.projectType &&
           other.pendingCarryForward == this.pendingCarryForward &&
-          other.ongoingStyle == this.ongoingStyle);
+          other.ongoingStyle == this.ongoingStyle &&
+          other.writingSession == this.writingSession);
 }
 
 class ProjectsCompanion extends UpdateCompanion<Project> {
@@ -1235,6 +1271,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<String> projectType;
   final Value<int> pendingCarryForward;
   final Value<String?> ongoingStyle;
+  final Value<String?> writingSession;
   final Value<int> rowid;
   const ProjectsCompanion({
     this.id = const Value.absent(),
@@ -1262,6 +1299,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.projectType = const Value.absent(),
     this.pendingCarryForward = const Value.absent(),
     this.ongoingStyle = const Value.absent(),
+    this.writingSession = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectsCompanion.insert({
@@ -1290,6 +1328,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.projectType = const Value.absent(),
     this.pendingCarryForward = const Value.absent(),
     this.ongoingStyle = const Value.absent(),
+    this.writingSession = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1328,6 +1367,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<String>? projectType,
     Expression<int>? pendingCarryForward,
     Expression<String>? ongoingStyle,
+    Expression<String>? writingSession,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1359,6 +1399,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (pendingCarryForward != null)
         'pending_carry_forward': pendingCarryForward,
       if (ongoingStyle != null) 'ongoing_style': ongoingStyle,
+      if (writingSession != null) 'writing_session': writingSession,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1389,6 +1430,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       Value<String>? projectType,
       Value<int>? pendingCarryForward,
       Value<String?>? ongoingStyle,
+      Value<String?>? writingSession,
       Value<int>? rowid}) {
     return ProjectsCompanion(
       id: id ?? this.id,
@@ -1416,6 +1458,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       projectType: projectType ?? this.projectType,
       pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
       ongoingStyle: ongoingStyle ?? this.ongoingStyle,
+      writingSession: writingSession ?? this.writingSession,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1499,6 +1542,9 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (ongoingStyle.present) {
       map['ongoing_style'] = Variable<String>(ongoingStyle.value);
     }
+    if (writingSession.present) {
+      map['writing_session'] = Variable<String>(writingSession.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1533,6 +1579,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('projectType: $projectType, ')
           ..write('pendingCarryForward: $pendingCarryForward, ')
           ..write('ongoingStyle: $ongoingStyle, ')
+          ..write('writingSession: $writingSession, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4270,6 +4317,7 @@ typedef $$ProjectsTableCreateCompanionBuilder = ProjectsCompanion Function({
   Value<String> projectType,
   Value<int> pendingCarryForward,
   Value<String?> ongoingStyle,
+  Value<String?> writingSession,
   Value<int> rowid,
 });
 typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
@@ -4298,6 +4346,7 @@ typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
   Value<String> projectType,
   Value<int> pendingCarryForward,
   Value<String?> ongoingStyle,
+  Value<String?> writingSession,
   Value<int> rowid,
 });
 
@@ -4428,6 +4477,10 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<String> get ongoingStyle => $composableBuilder(
       column: $table.ongoingStyle, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get writingSession => $composableBuilder(
+      column: $table.writingSession,
+      builder: (column) => ColumnFilters(column));
 
   Expression<bool> schedulesRefs(
       Expression<bool> Function($$SchedulesTableFilterComposer f) f) {
@@ -4568,6 +4621,10 @@ class $$ProjectsTableOrderingComposer
   ColumnOrderings<String> get ongoingStyle => $composableBuilder(
       column: $table.ongoingStyle,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get writingSession => $composableBuilder(
+      column: $table.writingSession,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$ProjectsTableAnnotationComposer
@@ -4653,6 +4710,9 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<String> get ongoingStyle => $composableBuilder(
       column: $table.ongoingStyle, builder: (column) => column);
+
+  GeneratedColumn<String> get writingSession => $composableBuilder(
+      column: $table.writingSession, builder: (column) => column);
 
   Expression<T> schedulesRefs<T extends Object>(
       Expression<T> Function($$SchedulesTableAnnotationComposer a) f) {
@@ -4745,6 +4805,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<String> projectType = const Value.absent(),
             Value<int> pendingCarryForward = const Value.absent(),
             Value<String?> ongoingStyle = const Value.absent(),
+            Value<String?> writingSession = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion(
@@ -4773,6 +4834,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             projectType: projectType,
             pendingCarryForward: pendingCarryForward,
             ongoingStyle: ongoingStyle,
+            writingSession: writingSession,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -4801,6 +4863,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<String> projectType = const Value.absent(),
             Value<int> pendingCarryForward = const Value.absent(),
             Value<String?> ongoingStyle = const Value.absent(),
+            Value<String?> writingSession = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion.insert(
@@ -4829,6 +4892,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             projectType: projectType,
             pendingCarryForward: pendingCarryForward,
             ongoingStyle: ongoingStyle,
+            writingSession: writingSession,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

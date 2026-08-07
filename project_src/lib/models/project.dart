@@ -39,6 +39,7 @@ class ProjectModel {
   final String? coverType;
   final int pendingCarryForward;
   final String ongoingStyle; // 'daily' or 'rhythm'
+  final String writingSession; // 'none', 'morning', 'evening'
 
   const ProjectModel({
     required this.id,
@@ -66,6 +67,7 @@ class ProjectModel {
     this.coverType,
     this.pendingCarryForward = 0,
     this.ongoingStyle = 'daily',
+    this.writingSession = 'none',
   });
 
 
@@ -96,6 +98,7 @@ class ProjectModel {
     String? coverType,
     int? pendingCarryForward,
     String? ongoingStyle,
+    String? writingSession,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -123,6 +126,7 @@ class ProjectModel {
       coverType: coverType ?? this.coverType,
       pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
       ongoingStyle: ongoingStyle ?? this.ongoingStyle,
+      writingSession: writingSession ?? this.writingSession,
     );
   }
 
@@ -153,6 +157,7 @@ class ProjectModel {
       'coverType': coverType,
       'pendingCarryForward': pendingCarryForward,
       'ongoingStyle': ongoingStyle,
+      'writingSession': writingSession,
     };
   }
 
@@ -185,6 +190,7 @@ class ProjectModel {
       coverType: json['coverType'] as String?,
       pendingCarryForward: json['pendingCarryForward'] as int? ?? 0,
       ongoingStyle: json['ongoingStyle'] as String? ?? 'daily',
+      writingSession: json['writingSession'] as String? ?? 'none',
     );
   }
 }

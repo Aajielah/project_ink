@@ -40,6 +40,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   String _selectedStrategy = 'smart';
   DateTime? _lastRefreshedDate;
+  bool _showAllProjects = false;
 
   @override
   void initState() {
@@ -1196,43 +1197,116 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
               return const Center(child: CircularProgressIndicator());
             }
 
-            final isSprintActive = activeProjects.any((p) => p.restMode == RestMode.sprint);
-                final todayTasks = isSprintActive
-                    ? allTodayTasks.where((t) => !t.schedule.isRestDay).toList()
-                    : allTodayTasks;
+            final now = DateTime.now();
+            final isMorning = now.hour >= 5 && now.hour < 17;
 
-                final rec = _computeRecommendation(activeProjects, todayTasks);
-                final ProjectModel? recProject = rec['project'];
+            // Apply writing session filtering to activeProjects
+            final filteredActiveProjects = _showAllProjects
+                ? activeProjects
+                : activeProjects.where((p) {
+                    if (p.writingSession == 'morning') return isMorning;
+                    if (p.writingSession == 'evening') return !isMorning;
+                    return true;
+                  }).toList();
 
-                final completedTasks = todayTasks.where((t) => t.schedule.completed && !t.schedule.isRecoveryDay).toList();
-                final uncompletedTasks = todayTasks.where((t) => !t.schedule.completed && !t.schedule.isRecoveryDay).toList();
-                final visibleTasks = todayTasks.where((t) =>
-                  !t.schedule.completed &&
-                  !t.schedule.isRestDay &&
-                  !t.schedule.automaticRestDay &&
-                  !t.schedule.isRecoveryDay
-                ).toList();
+            // Apply writing session filtering to todayTasks
+            final filteredAllTodayTasks = _showAllProjects
+                ? allTodayTasks
+                : allTodayTasks.where((t) {
+                    final session = t.project.writingSession;
+                    if (session == 'morning') return isMorning;
+                    if (session == 'evening') return !isMorning;
+                    return true;
+                  }).toList();
 
-                int totalPlannedToday = 0;
-                int totalLoggedToday = 0;
-                for (final t in todayTasks) {
-                  if (!t.schedule.isRestDay && !t.schedule.isRecoveryDay) {
-                    totalPlannedToday += t.schedule.plannedWords;
-                    totalLoggedToday += t.log?.actualWords ?? 0;
-                  }
-                }
+            if (filteredActiveProjects.isEmpty) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 60.0),
+                    child: Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(color: theme.colorScheme.outlineVariant),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isMorning ? '🌅 Morning Session' : '🌙 Evening Session',
+                              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              isMorning
+                                  ? 'No active projects scheduled for this morning.'
+                                  : 'No active projects scheduled for this evening.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            FilledButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _showAllProjects = true;
+                                });
+                              },
+                              icon: const Icon(Icons.visibility),
+                              label: const Text('Show All Projects'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
 
-                return SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Grace period countdown card
-                      _GracePeriodCountdownCard(todayTasks: todayTasks),
+            final isSprintActive = filteredActiveProjects.any((p) => p.restMode == RestMode.sprint);
+            final todayTasks = isSprintActive
+                ? filteredAllTodayTasks.where((t) => !t.schedule.isRestDay).toList()
+                : filteredAllTodayTasks;
 
-                      // Greeting & Streak row
-                      Row(
+            final rec = _computeRecommendation(filteredActiveProjects, todayTasks);
+            final ProjectModel? recProject = rec['project'];
+
+            final completedTasks = todayTasks.where((t) => t.schedule.completed && !t.schedule.isRecoveryDay).toList();
+            final uncompletedTasks = todayTasks.where((t) => !t.schedule.completed && !t.schedule.isRecoveryDay).toList();
+            final visibleTasks = todayTasks.where((t) =>
+              !t.schedule.completed &&
+              !t.schedule.isRestDay &&
+              !t.schedule.automaticRestDay &&
+              !t.schedule.isRecoveryDay
+            ).toList();
+
+            int totalPlannedToday = 0;
+            int totalLoggedToday = 0;
+            for (final t in todayTasks) {
+              if (!t.schedule.isRestDay && !t.schedule.isRecoveryDay) {
+                totalPlannedToday += t.schedule.plannedWords;
+                totalLoggedToday += t.log?.actualWords ?? 0;
+              }
+            }
+
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Grace period countdown card
+                  _GracePeriodCountdownCard(todayTasks: todayTasks),
+
+                  // Greeting & Streak row
+                  Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Column(
@@ -1291,6 +1365,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                             error: (_, __) => const SizedBox(),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Writing Session Focus Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(12),
+                          border: BorderSide(
+                            color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isMorning ? Icons.wb_sunny : Icons.nightlight_round,
+                              size: 18,
+                              color: isMorning ? Colors.orange : Colors.purple,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _showAllProjects
+                                  ? 'All Projects Displayed'
+                                  : (isMorning ? 'Morning Session Focus' : 'Evening Session Focus'),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _showAllProjects = !_showAllProjects;
+                                });
+                              },
+                              icon: Icon(
+                                _showAllProjects ? Icons.filter_list : Icons.visibility,
+                                size: 14,
+                              ),
+                              label: Text(
+                                _showAllProjects ? 'Filter by session' : 'Show all projects',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
 

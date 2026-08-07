@@ -40,6 +40,7 @@ class Projects extends Table {
   TextColumn get projectType => text().withDefault(const Constant('fixed'))();
   IntColumn get pendingCarryForward => integer().withDefault(const Constant(0))();
   TextColumn get ongoingStyle => text().nullable().withDefault(const Constant('daily'))();
+  TextColumn get writingSession => text().nullable().withDefault(const Constant('none'))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -145,7 +146,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -167,6 +168,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 5) {
           await m.addColumn(projects, projects.ongoingStyle);
           await m.addColumn(schedules, schedules.isRecoveryDay);
+        }
+        if (from < 6) {
+          await m.addColumn(projects, projects.writingSession);
         }
       },
       beforeOpen: (details) async {
