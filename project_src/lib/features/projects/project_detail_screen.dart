@@ -321,16 +321,17 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                           Expanded(
                             flex: 3,
                             child: DropdownButtonFormField<DurationType>(
+                              isExpanded: true,
                               value: editDurationType,
                               decoration: const InputDecoration(
                                 labelText: 'Duration Unit',
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: DurationType.days, child: Text('Days')),
-                                DropdownMenuItem(value: DurationType.weeks, child: Text('Weeks')),
-                                DropdownMenuItem(value: DurationType.months, child: Text('Months')),
-                                DropdownMenuItem(value: DurationType.customRange, child: Text('Custom Range')),
+                                DropdownMenuItem(value: DurationType.days, child: Text('Days', overflow: TextOverflow.ellipsis)),
+                                DropdownMenuItem(value: DurationType.weeks, child: Text('Weeks', overflow: TextOverflow.ellipsis)),
+                                DropdownMenuItem(value: DurationType.months, child: Text('Months', overflow: TextOverflow.ellipsis)),
+                                DropdownMenuItem(value: DurationType.customRange, child: Text('Custom Range', overflow: TextOverflow.ellipsis)),
                               ],
                               onChanged: (val) {
                                 if (val != null) {
@@ -408,14 +409,15 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                     if (isOngoing) ...[
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         value: editOngoingStyle,
                         decoration: const InputDecoration(
                           labelText: 'Writing Schedule Style',
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'daily', child: Text('Daily Mode (Write every day)')),
-                          DropdownMenuItem(value: 'rhythm', child: Text('Rhythm Mode (Alternate write/recovery)')),
+                          DropdownMenuItem(value: 'daily', child: Text('Daily Mode (Write every day)', overflow: TextOverflow.ellipsis)),
+                          DropdownMenuItem(value: 'rhythm', child: Text('Rhythm Mode (Alternate write/recovery)', overflow: TextOverflow.ellipsis)),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -445,14 +447,15 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                                 }
 
                                 return DropdownButtonFormField<RestMode>(
+                                  isExpanded: true,
                                   value: editRestMode == RestMode.sprint && !showSprint ? null : editRestMode,
                                   decoration: const InputDecoration(labelText: 'Rest Mode', border: OutlineInputBorder()),
                                   items: [
-                                    const DropdownMenuItem(value: RestMode.fixed, child: Text('Fixed Rest Days')),
-                                    const DropdownMenuItem(value: RestMode.flexible, child: Text('Flexible Rest Days')),
-                                    const DropdownMenuItem(value: RestMode.adaptive, child: Text('Adaptive Rest Days')),
+                                    const DropdownMenuItem(value: RestMode.fixed, child: Text('Fixed Rest Days', overflow: TextOverflow.ellipsis)),
+                                    const DropdownMenuItem(value: RestMode.flexible, child: Text('Flexible Rest Days', overflow: TextOverflow.ellipsis)),
+                                    const DropdownMenuItem(value: RestMode.adaptive, child: Text('Adaptive Rest Days', overflow: TextOverflow.ellipsis)),
                                     if (showSprint)
-                                      const DropdownMenuItem(value: RestMode.sprint, child: Text('Sprint Mode')),
+                                      const DropdownMenuItem(value: RestMode.sprint, child: Text('Sprint Mode', overflow: TextOverflow.ellipsis)),
                                   ],
                                   onChanged: (val) {
                                     if (val != null) {
