@@ -1383,7 +1383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(12),
-                          border: BorderSide(
+                          border: Border.all(
                             color: theme.colorScheme.outlineVariant.withOpacity(0.5),
                           ),
                         ),
