@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../shared/date_utils.dart';
@@ -304,13 +305,16 @@ class OngoingSyncService {
       int currentWeekNum = 1;
       int currentRemainingRestDays = project.restMode == RestMode.fixed
           ? 0
-          : (project.currentWeek == 1
-              ? project.remainingRestDays
-              : schedService.getWeeklyAllocation(
-                  totalRestDays: project.allowedRestDays,
-                  durationDays: durationDays,
-                  week: 1,
-                ));
+          : min(
+              project.allowedRestDays,
+              (project.currentWeek == 1
+                  ? project.remainingRestDays
+                  : schedService.getWeeklyAllocation(
+                      totalRestDays: project.allowedRestDays,
+                      durationDays: durationDays,
+                      week: 1,
+                    )),
+            );
 
       var tempDate = cleanFirst;
       while (tempDate.isBefore(cleanToday)) {
@@ -320,7 +324,7 @@ class OngoingSyncService {
           while (currentWeekNum < weekOfTempDate) {
             currentWeekNum++;
             if (currentWeekNum == project.currentWeek) {
-              currentRemainingRestDays = project.remainingRestDays;
+              currentRemainingRestDays = min(project.allowedRestDays, project.remainingRestDays);
             } else {
               final weeklyAllocation = schedService.getWeeklyAllocation(
                 totalRestDays: project.allowedRestDays,
@@ -328,9 +332,9 @@ class OngoingSyncService {
                 week: currentWeekNum,
               );
               if (project.restMode == RestMode.flexible) {
-                currentRemainingRestDays += weeklyAllocation;
+                currentRemainingRestDays = min(project.allowedRestDays, currentRemainingRestDays + weeklyAllocation);
               } else if (project.restMode == RestMode.adaptive) {
-                currentRemainingRestDays = weeklyAllocation;
+                currentRemainingRestDays = min(project.allowedRestDays, weeklyAllocation);
               }
             }
           }
@@ -488,7 +492,7 @@ class OngoingSyncService {
         while (currentWeekNum < weekOfToday) {
           currentWeekNum++;
           if (currentWeekNum == project.currentWeek) {
-            currentRemainingRestDays = project.remainingRestDays;
+            currentRemainingRestDays = min(project.allowedRestDays, project.remainingRestDays);
           } else {
             final weeklyAllocation = schedService.getWeeklyAllocation(
               totalRestDays: project.allowedRestDays,
@@ -496,9 +500,9 @@ class OngoingSyncService {
               week: currentWeekNum,
             );
             if (project.restMode == RestMode.flexible) {
-              currentRemainingRestDays += weeklyAllocation;
+              currentRemainingRestDays = min(project.allowedRestDays, currentRemainingRestDays + weeklyAllocation);
             } else if (project.restMode == RestMode.adaptive) {
-              currentRemainingRestDays = weeklyAllocation;
+              currentRemainingRestDays = min(project.allowedRestDays, weeklyAllocation);
             }
           }
         }
