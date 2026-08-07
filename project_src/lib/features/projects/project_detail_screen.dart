@@ -724,7 +724,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                       await schedRepo.deleteUnlockedFutureSchedules(project.id, cleanToday);
                       await schedRepo.insertSchedules(recalculated.where((s) => !s.locked && !s.date.isBefore(cleanToday)).toList());
 
-                      final updated = project.copyWith(
+                      final tempUpdated = project.copyWith(
                         name: name,
                         description: desc.isNotEmpty ? desc : null,
                         targetWords: targetWords,
@@ -736,6 +736,20 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                         remainingWords: max(0, targetWords - project.writtenWords),
                         updatedAt: DateTime.now(),
                       );
+
+                      final logicalToday = getLogicalTodayForProject(project: tempUpdated, schedules: recalculated);
+                      final remainingRestDays = ref.read(schedulingServiceProvider).getAvailableRestDays(
+                        project: tempUpdated,
+                        schedules: recalculated,
+                        logicalToday: logicalToday,
+                      );
+                      final calculatedCurrentWeek = (getDaysDifference(startDate, logicalToday) ~/ 7) + 1;
+
+                      final updated = tempUpdated.copyWith(
+                        remainingRestDays: remainingRestDays,
+                        currentWeek: max(1, calculatedCurrentWeek),
+                      );
+
                       await ref.read(projectsProvider.notifier).updateProject(updated);
                     }
 

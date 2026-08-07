@@ -658,5 +658,102 @@ void main() {
       expect(updatedProj?.backlogWords, 500);
       expect(updatedProj?.remainingRestDays, 2); // Budget untouched!
     });
+
+    test('Changing from adaptive to flexible and vice versa recalculates remainingRestDays correctly', () {
+      final startDate = cleanToday.subtract(const Duration(days: 7)); // start of week 1 (we are in week 2 now)
+      final expectedFinish = cleanToday.add(const Duration(days: 7));
+
+      // 1. Initial Project in Adaptive mode
+      // Allowed rest days: 3 (1 per week)
+      // Schedules has 1 rest day in Week 1, and 0 in Week 2 (which is cleanToday)
+      final projectAdaptive = ProjectModel(
+        id: 'p_transition',
+        name: 'Transition Test',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 6000,
+        writtenWords: 1000,
+        remainingWords: 5000,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: startDate,
+        expectedFinishDate: expectedFinish,
+        restMode: RestMode.adaptive,
+        allowedRestDays: 3,
+        remainingRestDays: 1, // 1 remaining for Week 2 (starts with 1, used 0)
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 2,
+        createdAt: startDate,
+        updatedAt: startDate,
+      );
+
+      final schedules = [
+        ScheduleModel(
+          id: 's_w1_1',
+          projectId: 'p_transition',
+          date: startDate,
+          plannedWords: 0,
+          isRestDay: true, // Rest day used in Week 1
+          completed: false,
+          automaticRestDay: true,
+          locked: true,
+        ),
+        ScheduleModel(
+          id: 's_w2_1',
+          projectId: 'p_transition',
+          date: cleanToday,
+          plannedWords: 500,
+          isRestDay: false,
+          completed: false,
+          automaticRestDay: false,
+          locked: false,
+        ),
+      ];
+
+      // Transitioning to Flexible Mode
+      final tempFlexible = projectAdaptive.copyWith(
+        restMode: RestMode.flexible,
+      );
+
+      final remainingFlexible = container.read(schedulingServiceProvider).getAvailableRestDays(
+        project: tempFlexible,
+        schedules: schedules,
+        logicalToday: cleanToday,
+      );
+
+      // We expect:
+      // totalAllocatedUpToNow for Week 2:
+      // Week 1 allocation = 1
+      // Week 2 allocation = 1
+      // Total allocated = 2
+      // Total used overall = 1 (s_w1_1)
+      // So remaining for flexible = 2 - 1 = 1!
+      expect(remainingFlexible, 1);
+
+      // Now, let's suppose we are transitioning from a Flexible Project with overall budget 3, where we used 1 rest day.
+      // Dynamic remaining flexible is 2 (total budget 3 - used 1 = 2).
+      // We transition to Adaptive Mode:
+      final projectFlexible = projectAdaptive.copyWith(
+        restMode: RestMode.flexible,
+        remainingRestDays: 2, // 3 allowed - 1 used = 2
+      );
+
+      final tempAdaptive = projectFlexible.copyWith(
+        restMode: RestMode.adaptive,
+      );
+
+      final remainingAdaptive = container.read(schedulingServiceProvider).getAvailableRestDays(
+        project: tempAdaptive,
+        schedules: schedules,
+        logicalToday: cleanToday,
+      );
+
+      // We expect:
+      // Week 2 allocation = 1
+      // Week 2 used = 0
+      // So remaining adaptive = 1 - 0 = 1!
+      expect(remainingAdaptive, 1);
+    });
   });
 }
