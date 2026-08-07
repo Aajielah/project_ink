@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:math';
 import '../lib/database/database.dart';
 import '../lib/models/project.dart';
 import '../lib/models/schedule.dart';
@@ -11,7 +10,6 @@ import '../lib/repositories/schedule_repository.dart';
 import '../lib/repositories/daily_log_repository.dart';
 import '../lib/repositories/statistics_repository.dart';
 import '../lib/services/ongoing_sync_service.dart';
-import '../lib/services/logging_service.dart';
 import '../lib/services/scheduling_service.dart';
 import '../lib/shared/providers.dart';
 import '../lib/shared/date_utils.dart';
@@ -23,7 +21,6 @@ void main() {
   late DailyLogRepository dailyLogRepo;
   late StatisticsRepository statsRepo;
   late OngoingSyncService syncService;
-  late LoggingService loggingService;
   late SchedulingService schedulingService;
   late ProviderContainer container;
 
@@ -48,7 +45,6 @@ void main() {
     );
 
     syncService = container.read(ongoingSyncServiceProvider);
-    loggingService = container.read(loggingServiceProvider);
     schedulingService = container.read(schedulingServiceProvider);
   });
 
