@@ -74,14 +74,15 @@ class BackupService {
             ? 'covers/${p.coverImagePath!.split('/').last.split('\\').last}'
             : p.coverImagePath,
         'coverType': p.coverType,
-        'projectType': p.projectType, 'pendingCarryForward': p.pendingCarryForward
+        'projectType': p.projectType, 'pendingCarryForward': p.pendingCarryForward,
+        'ongoingStyle': p.ongoingStyle
       }).toList());
 
 
       writeJsonFile('schedule.json', schedules.map((s) => {
         'id': s.id, 'projectId': s.projectId, 'date': s.date.toIso8601String(),
         'plannedWords': s.plannedWords, 'isRestDay': s.isRestDay, 'completed': s.completed,
-        'automaticRestDay': s.automaticRestDay, 'locked': s.locked
+        'automaticRestDay': s.automaticRestDay, 'locked': s.locked, 'isRecoveryDay': s.isRecoveryDay
       }).toList());
 
       writeJsonFile('logs.json', logs.map((l) => {
@@ -253,6 +254,7 @@ class BackupService {
               coverType: Value(p['coverType']),
               projectType: Value(p['projectType'] ?? 'fixed'),
               pendingCarryForward: Value(p['pendingCarryForward'] ?? 0),
+              ongoingStyle: Value(p['ongoingStyle'] ?? 'daily'),
             ));
           }
         }
@@ -270,6 +272,7 @@ class BackupService {
               completed: Value(s['completed'] ?? false),
               automaticRestDay: Value(s['automaticRestDay'] ?? false),
               locked: Value(s['locked'] ?? false),
+              isRecoveryDay: Value(s['isRecoveryDay'] ?? false),
             ));
           }
         }

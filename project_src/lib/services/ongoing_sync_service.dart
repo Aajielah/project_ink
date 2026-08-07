@@ -296,12 +296,21 @@ class OngoingSyncService {
       final firstDate = currentSchedules.first.date;
       final cleanFirst = DateTime(firstDate.year, firstDate.month, firstDate.day);
 
-      int currentRemainingRestDays = project.remainingRestDays;
-      int currentWeekNum = project.currentWeek;
       bool projectModified = false;
       List<ScheduleModel> schedulesToUpdateInDb = [];
 
       final durationDays = getDaysDifference(project.startDate, project.expectedFinishDate) + 1;
+
+      int currentWeekNum = 1;
+      int currentRemainingRestDays = project.restMode == RestMode.fixed
+          ? 0
+          : (project.currentWeek == 1
+              ? project.remainingRestDays
+              : schedService.getWeeklyAllocation(
+                  totalRestDays: project.allowedRestDays,
+                  durationDays: durationDays,
+                  week: 1,
+                ));
 
       var tempDate = cleanFirst;
       while (tempDate.isBefore(cleanToday)) {
@@ -310,15 +319,19 @@ class OngoingSyncService {
         if (weekOfTempDate > currentWeekNum) {
           while (currentWeekNum < weekOfTempDate) {
             currentWeekNum++;
-            final weeklyAllocation = schedService.getWeeklyAllocation(
-              totalRestDays: project.allowedRestDays,
-              durationDays: durationDays,
-              week: currentWeekNum,
-            );
-            if (project.restMode == RestMode.flexible) {
-              currentRemainingRestDays += weeklyAllocation;
-            } else if (project.restMode == RestMode.adaptive) {
-              currentRemainingRestDays = weeklyAllocation;
+            if (currentWeekNum == project.currentWeek) {
+              currentRemainingRestDays = project.remainingRestDays;
+            } else {
+              final weeklyAllocation = schedService.getWeeklyAllocation(
+                totalRestDays: project.allowedRestDays,
+                durationDays: durationDays,
+                week: currentWeekNum,
+              );
+              if (project.restMode == RestMode.flexible) {
+                currentRemainingRestDays += weeklyAllocation;
+              } else if (project.restMode == RestMode.adaptive) {
+                currentRemainingRestDays = weeklyAllocation;
+              }
             }
           }
           projectModified = true;
@@ -330,9 +343,12 @@ class OngoingSyncService {
         ).toList();
         final s = matches.isNotEmpty ? matches.first : null;
 
-        if (s != null && !s.isRestDay && !s.completed) {
-          final existingLog = await logRepo.getLogForDate(project.id, s.date);
-          final actual = existingLog?.actualWords ?? 0;
+        if (s != null) {
+          if (s.isRestDay || s.automaticRestDay) {
+            currentRemainingRestDays = currentRemainingRestDays - 1 < 0 ? 0 : currentRemainingRestDays - 1;
+          } else if (!s.completed) {
+            final existingLog = await logRepo.getLogForDate(project.id, s.date);
+            final actual = existingLog?.actualWords ?? 0;
 
           if (actual == 0) {
             bool hasRest = false;
@@ -461,6 +477,7 @@ class OngoingSyncService {
             schedulesToUpdateInDb.add(updatedS);
           }
         }
+      }
 
         tempDate = tempDate.add(const Duration(days: 1));
       }
@@ -470,15 +487,19 @@ class OngoingSyncService {
       if (weekOfToday > currentWeekNum) {
         while (currentWeekNum < weekOfToday) {
           currentWeekNum++;
-          final weeklyAllocation = schedService.getWeeklyAllocation(
-            totalRestDays: project.allowedRestDays,
-            durationDays: durationDays,
-            week: currentWeekNum,
-          );
-          if (project.restMode == RestMode.flexible) {
-            currentRemainingRestDays += weeklyAllocation;
-          } else if (project.restMode == RestMode.adaptive) {
-            currentRemainingRestDays = weeklyAllocation;
+          if (currentWeekNum == project.currentWeek) {
+            currentRemainingRestDays = project.remainingRestDays;
+          } else {
+            final weeklyAllocation = schedService.getWeeklyAllocation(
+              totalRestDays: project.allowedRestDays,
+              durationDays: durationDays,
+              week: currentWeekNum,
+            );
+            if (project.restMode == RestMode.flexible) {
+              currentRemainingRestDays += weeklyAllocation;
+            } else if (project.restMode == RestMode.adaptive) {
+              currentRemainingRestDays = weeklyAllocation;
+            }
           }
         }
         projectModified = true;

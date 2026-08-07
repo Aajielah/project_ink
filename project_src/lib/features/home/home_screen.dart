@@ -1168,8 +1168,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         onRefresh: () async {
           await _refreshAll(silent: true);
         },
-        child: projectsAsync.when(
-          data: (projects) {
+        child: Builder(
+          builder: (context) {
+            final projects = projectsAsync.value;
+            if (projects == null) {
+              if (projectsAsync.hasError) {
+                return Center(child: Text('Error: ${projectsAsync.error}'));
+              }
+              return const Center(child: CircularProgressIndicator());
+            }
             final activeProjects = projects.where((p) => p.status == ProjectStatus.active).toList();
             if (activeProjects.isEmpty) {
               return SingleChildScrollView(
@@ -1769,8 +1776,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                   ),
                 );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('Error: $err')),
         ),
       ),
     );
