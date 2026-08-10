@@ -676,11 +676,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                         }
                       }
 
-                      // 2. Identify future dates
+                      // 2. Identify future dates (excluding dates already in recalculated history)
                       final List<DateTime> futureDates = [];
+                      final existingDates = recalculated.map((s) => DateTime(s.date.year, s.date.month, s.date.day)).toSet();
+                      
                       var tempDate = startDate.isAfter(cleanToday) ? startDate : cleanToday;
                       while (tempDate.isBefore(newEndDate) || tempDate.isAtSameMomentAs(newEndDate)) {
-                        futureDates.add(tempDate);
+                        final cleanTemp = DateTime(tempDate.year, tempDate.month, tempDate.day);
+                        if (!existingDates.contains(cleanTemp)) {
+                          futureDates.add(cleanTemp);
+                        }
                         tempDate = tempDate.add(const Duration(days: 1));
                       }
 
