@@ -180,7 +180,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
         },
       );
 
-      ref.invalidate(projectsProvider);
+      await ref.read(projectsProvider.notifier).loadProjects(silent: true);
       ref.invalidate(statisticsProvider);
       ref.invalidate(homeQuoteProvider(widget.projectId));
       ref.invalidate(homeEncouragementProvider(widget.projectId));
@@ -827,7 +827,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
   }
 
   void _refreshAll() {
-    ref.invalidate(projectsProvider);
+    ref.read(projectsProvider.notifier).loadProjects(silent: true);
     setState(() {});
   }
 
@@ -2093,7 +2093,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
 
                 await statsRepo.recalculateStatistics();
                 
-                ref.invalidate(projectsProvider);
+                await ref.read(projectsProvider.notifier).loadProjects(silent: true);
                 ref.invalidate(statisticsProvider);
                 
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -2191,7 +2191,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                       isAdditive: false,
                     );
                     
-                    ref.invalidate(projectsProvider);
+                    await ref.read(projectsProvider.notifier).loadProjects(silent: true);
                     ref.invalidate(statisticsProvider);
                     ref.invalidate(homeQuoteProvider(log.projectId));
                     ref.invalidate(homeEncouragementProvider(log.projectId));
