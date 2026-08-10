@@ -1527,6 +1527,23 @@ class _ThisWeekTab extends ConsumerWidget {
 
                   return GestureDetector(
                     onLongPress: () {
+                      if (isToday && logged > 0) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Words Already Logged"),
+                            content: const Text("You have already logged writing progress for today. You cannot convert today into a Rest Day after logging words."),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text("Got it"),
+                              ),
+                            ],
+                          ),
+                        );
+                        return;
+                      }
+
                       final isRhythm = project.projectType == ProjectType.ongoing && project.ongoingStyle == 'rhythm';
                       if (isRhythm && isToday && !s.isRestDay && !s.isRecoveryDay) {
                         showDialog(
