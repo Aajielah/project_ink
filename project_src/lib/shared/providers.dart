@@ -27,6 +27,7 @@ import '../services/notification_service.dart';
 import '../services/project_lifecycle_service.dart';
 import 'date_utils.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // --- Database & Connection Provider ---
 final dbProvider = Provider<AppDatabase>((ref) {
@@ -124,6 +125,22 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     }
     try {
       final list = await _projectRepo.getAllProjects();
+      
+      // Load custom order from SharedPreferences and sort the projects list accordingly
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final orderedIds = prefs.getStringList('projects_custom_order') ?? [];
+        if (orderedIds.isNotEmpty) {
+          list.sort((a, b) {
+            final indexA = orderedIds.indexOf(a.id);
+            final indexB = orderedIds.indexOf(b.id);
+            if (indexA == -1 && indexB == -1) return 0;
+            if (indexA == -1) return 1; // Unlisted projects go to the end
+            if (indexB == -1) return -1;
+            return indexA.compareTo(indexB);
+          });
+        }
+      } catch (_) {}
       
       // Auto-activation sweep: Check if any upcoming project start date is reached/passed
       final today = getLogicalToday();
@@ -448,6 +465,19 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       _invalidateAllDependentProviders();
       await loadProjects(silent: true);
       await cleanupOrphanedCovers();
+    } catch (_) {}
+  }
+
+  Future<void> reorderProjects(List<ProjectModel> reorderedList) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final orderedIds = reorderedList.map((p) => p.id).toList();
+      await prefs.setStringList('projects_custom_order', orderedIds);
+      
+      // Update memory state
+      if (state is AsyncData<List<ProjectModel>>) {
+        state = AsyncValue.data(reorderedList);
+      }
     } catch (_) {}
   }
 

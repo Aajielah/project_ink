@@ -61,14 +61,14 @@ class ProjectsScreen extends ConsumerWidget {
   }
 }
 
-class _ProjectList extends StatelessWidget {
+class _ProjectList extends ConsumerWidget {
   final List<ProjectModel> projects;
   final String emptyMessage;
 
-  const _ProjectList({required this.projects, required this.emptyMessage});
+  const _ProjectList({super.key, required this.projects, required this.emptyMessage});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     if (projects.isEmpty) {
@@ -93,21 +93,41 @@ class _ProjectList extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
+    return ReorderableListView.builder(
+      buildDefaultDragHandles: false,
       padding: const EdgeInsets.all(16.0),
       itemCount: projects.length,
       itemBuilder: (context, index) {
         final project = projects[index];
-        return _ProjectCard(project: project);
+        return _ProjectCard(
+          key: ValueKey(project.id),
+          index: index,
+          project: project,
+        );
+      },
+      onReorder: (oldIndex, newIndex) async {
+        final tabList = List<ProjectModel>.from(projects);
+        if (oldIndex < newIndex) {
+          newIndex -= 1;
+        }
+        final item = tabList.removeAt(oldIndex);
+        tabList.insert(newIndex, item);
+
+        final allProjects = ref.read(projectsProvider).value ?? [];
+        final otherProjects = allProjects.where((p) => !projects.any((tp) => tp.id == p.id)).toList();
+        final newAllProjects = [...tabList, ...otherProjects];
+
+        await ref.read(projectsProvider.notifier).reorderProjects(newAllProjects);
       },
     );
   }
 }
 
 class _ProjectCard extends ConsumerWidget {
+  final int index;
   final ProjectModel project;
 
-  const _ProjectCard({required this.project});
+  const _ProjectCard({super.key, required this.index, required this.project});
 
   Future<void> _pickCustomCover(BuildContext context, WidgetRef ref) async {
     try {
@@ -251,10 +271,8 @@ class _ProjectCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12.0),
         onTap: () => context.go('/projects/${project.id}'),
         onLongPress: () => _showCoverActionSheet(context, ref),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Visual Book Cover (3:4 ratio)
               BookCoverWidget(
@@ -330,6 +348,18 @@ class _ProjectCard extends ConsumerWidget {
                       ],
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Dedicated Drag Handle
+              ReorderableDragStartListener(
+                index: index,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
+                  ),
                 ),
               ),
             ],
