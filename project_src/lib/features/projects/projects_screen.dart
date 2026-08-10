@@ -271,6 +271,8 @@ class _ProjectCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12.0),
         onTap: () => context.go('/projects/${project.id}'),
         onLongPress: () => _showCoverActionSheet(context, ref),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
