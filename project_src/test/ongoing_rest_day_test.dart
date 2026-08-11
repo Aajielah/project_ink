@@ -217,5 +217,73 @@ void main() {
       // Available budget is 0
       expect(available, 0);
     });
+
+    test('Sliding carry-forward credit: when a writing day with a carry-forward discount is manually converted to a rest day, the discount slides to the next active writing day', () async {
+      final projectId = 'p_slide_carry_forward';
+      final project = ProjectModel(
+        id: projectId,
+        name: 'Slide Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 1000,
+        writtenWords: 201, // Today logged 201 words (1 word of excess)
+        remainingWords: 799,
+        dailyWordTarget: 200,
+        backlogWords: 0,
+        startDate: cleanToday.subtract(const Duration(days: 1)),
+        expectedFinishDate: cleanToday.add(const Duration(days: 3)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 5,
+        remainingRestDays: 5,
+        projectStreak: 1,
+        longestProjectStreak: 1,
+        currentWeek: 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await projectRepo.insertProject(project);
+
+      // May 1st (yesterday) - Completed
+      final date1 = cleanToday.subtract(const Duration(days: 1));
+      final s1 = ScheduleModel(
+        id: 's_date1', projectId: projectId, date: date1, plannedWords: 200,
+        isRestDay: false, completed: true, automaticRestDay: false, locked: true,
+      );
+
+      // May 2nd (today) - Has a carry-forward discount applied (target 199 instead of 200)
+      final sToday = ScheduleModel(
+        id: 's_today', projectId: projectId, date: cleanToday, plannedWords: 199,
+        isRestDay: false, completed: false, automaticRestDay: false, locked: false,
+      );
+
+      // May 3rd (tomorrow) - Standard target 200
+      final dateTomorrow = cleanToday.add(const Duration(days: 1));
+      final sTomorrow = ScheduleModel(
+        id: 's_tomorrow', projectId: projectId, date: dateTomorrow, plannedWords: 200,
+        isRestDay: false, completed: false, automaticRestDay: false, locked: false,
+      );
+
+      await scheduleRepo.insertSchedules([s1, sToday, sTomorrow]);
+
+      // Call conversion logic for today (May 2nd)
+      final notifier = container.read(projectsProvider.notifier);
+      await notifier.convertDayToRestDay(project, sToday);
+
+      // 1. Verify May 2nd became a rest day with 0 planned words
+      final updatedTodaySchedule = await scheduleRepo.getScheduleForDate(projectId, cleanToday);
+      expect(updatedTodaySchedule, isNotNull);
+      expect(updatedTodaySchedule!.isRestDay, isTrue);
+      expect(updatedTodaySchedule.plannedWords, 0);
+
+      // 2. Verify project's pendingCarryForward has been successfully restored to the pool (set to 1)
+      final updatedProject = await projectRepo.getProjectById(projectId);
+      expect(updatedProject, isNotNull);
+      expect(updatedProject!.pendingCarryForward, 1);
+
+      // Verify tomorrow's target remains standard (200) until tomorrow becomes today and the carry-forward is applied
+      final updatedTomorrowSchedule = await scheduleRepo.getScheduleForDate(projectId, dateTomorrow);
+      expect(updatedTomorrowSchedule, isNotNull);
+      expect(updatedTomorrowSchedule!.plannedWords, 200);
+    });
   });
 }

@@ -582,8 +582,17 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           .where((s) => !s.locked && (s.date.isAfter(cleanToday) || s.date.isAtSameMomentAs(cleanToday)))
           .toList();
           
-      // Calculate total planned words from unlocked future schedules
-      final totalFuturePlannedWords = futureSchedules.fold<int>(0, (sum, s) => sum + s.plannedWords);
+      // Detect and restore any active carry-forward credit applied to today's schedule
+      int restoredCredit = 0;
+      if (project.projectType != ProjectType.ongoing && todaySchedule.plannedWords < project.dailyWordTarget) {
+        final isFinalWritingDay = !schedules.any((s) => s.date.isAfter(todaySchedule.date) && !s.isRestDay && s.plannedWords > 0);
+        if (!isFinalWritingDay) {
+          restoredCredit = project.dailyWordTarget - todaySchedule.plannedWords;
+        }
+      }
+
+      // Calculate total planned words from unlocked future schedules, restoring the credit to the pool
+      final totalFuturePlannedWords = futureSchedules.fold<int>(0, (sum, s) => sum + s.plannedWords) + restoredCredit;
 
       // 3. Update today's schedule row (Rest Day, 0 planned words, locked)
       final updatedTodaySchedule = todaySchedule.copyWith(
@@ -622,6 +631,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         
         final updatedProject = project.copyWith(
           remainingRestDays: project.remainingRestDays - 1 < 0 ? 0 : project.remainingRestDays - 1,
+          pendingCarryForward: project.pendingCarryForward + restoredCredit,
           updatedAt: DateTime.now(),
         );
         await _projectRepo.updateProject(updatedProject);
