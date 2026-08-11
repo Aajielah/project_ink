@@ -118,6 +118,22 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
   ) : super(const AsyncValue.loading()) {
     loadProjects();
   }
+  Future<void> _sortProjectsList(List<ProjectModel> projectsList) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final orderedIds = prefs.getStringList('projects_custom_order') ?? [];
+      if (orderedIds.isNotEmpty) {
+        projectsList.sort((a, b) {
+          final indexA = orderedIds.indexOf(a.id);
+          final indexB = orderedIds.indexOf(b.id);
+          if (indexA == -1 && indexB == -1) return 0;
+          if (indexA == -1) return 1; // Unlisted projects go to the end
+          if (indexB == -1) return -1;
+          return indexA.compareTo(indexB);
+        });
+      }
+    } catch (_) {}
+  }
 
   Future<void> loadProjects({bool silent = false}) async {
     if (!silent) {
@@ -125,22 +141,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     }
     try {
       final list = await _projectRepo.getAllProjects();
-      
-      // Load custom order from SharedPreferences and sort the projects list accordingly
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final orderedIds = prefs.getStringList('projects_custom_order') ?? [];
-        if (orderedIds.isNotEmpty) {
-          list.sort((a, b) {
-            final indexA = orderedIds.indexOf(a.id);
-            final indexB = orderedIds.indexOf(b.id);
-            if (indexA == -1 && indexB == -1) return 0;
-            if (indexA == -1) return 1; // Unlisted projects go to the end
-            if (indexB == -1) return -1;
-            return indexA.compareTo(indexB);
-          });
-        }
-      } catch (_) {}
+      await _sortProjectsList(list);
       
       // Auto-activation sweep: Check if any upcoming project start date is reached/passed
       final today = getLogicalToday();
@@ -162,6 +163,9 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       }
       
       final finalList = listChanged ? await _projectRepo.getAllProjects() : list;
+      if (listChanged) {
+        await _sortProjectsList(finalList);
+      }
       final active = finalList.where((p) => p.status == ProjectStatus.active).toList();
       final activeOngoing = active.where((p) => p.projectType == ProjectType.ongoing).toList();
       
@@ -183,6 +187,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       await lifecycleService.checkAndPauseInactiveProjects(active);
 
       final updatedList = await _projectRepo.getAllProjects();
+      await _sortProjectsList(updatedList);
       state = AsyncValue.data(updatedList);
       await _updateNotificationSchedule(updatedList);
     } catch (e, st) {
