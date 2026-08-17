@@ -5,6 +5,7 @@ class SettingsModel {
   final bool dailyQuotes;
   final bool backupReminder;
   final bool vibration;
+  final int streakShields;
 
   const SettingsModel({
     required this.id,
@@ -13,6 +14,7 @@ class SettingsModel {
     required this.dailyQuotes,
     required this.backupReminder,
     required this.vibration,
+    this.streakShields = 2,
   });
 
   SettingsModel copyWith({
@@ -22,6 +24,7 @@ class SettingsModel {
     bool? dailyQuotes,
     bool? backupReminder,
     bool? vibration,
+    int? streakShields,
   }) {
     return SettingsModel(
       id: id ?? this.id,
@@ -30,6 +33,7 @@ class SettingsModel {
       dailyQuotes: dailyQuotes ?? this.dailyQuotes,
       backupReminder: backupReminder ?? this.backupReminder,
       vibration: vibration ?? this.vibration,
+      streakShields: streakShields ?? this.streakShields,
     );
   }
 
@@ -41,6 +45,7 @@ class SettingsModel {
       'dailyQuotes': dailyQuotes,
       'backupReminder': backupReminder,
       'vibration': vibration,
+      'streakShields': streakShields,
     };
   }
 
@@ -52,6 +57,7 @@ class SettingsModel {
       dailyQuotes: json['dailyQuotes'] as bool,
       backupReminder: json['backupReminder'] as bool,
       vibration: json['vibration'] as bool,
+      streakShields: json['streakShields'] as int? ?? 2,
     );
   }
 }

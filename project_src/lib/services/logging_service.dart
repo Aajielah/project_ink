@@ -109,10 +109,10 @@ class LoggingService {
 
     await _logRepo.insertLog(dailyLog);
 
-    // 4. Update today's schedule row to completed and locked
     final updatedSchedule = schedule.copyWith(
       completed: isCompleted,
       locked: true,
+      isShielded: isCompleted ? false : schedule.isShielded,
     );
     await _scheduleRepo.updateSchedule(updatedSchedule);
 
@@ -153,6 +153,15 @@ class LoggingService {
     final isProjectCompleted = !isOngoing && newRemainingWords == 0;
     final finalPendingCarryForward = isProjectCompleted ? 0 : pendingCarryForward;
 
+    // Clear time freeze if yesterday's frozen target was completed
+    bool shouldClearFreeze = false;
+    if (isCompleted && project.frozenDate != null &&
+        cleanDate.year == project.frozenDate!.year &&
+        cleanDate.month == project.frozenDate!.month &&
+        cleanDate.day == project.frozenDate!.day) {
+      shouldClearFreeze = true;
+    }
+
     final updatedProject = project.copyWith(
       writtenWords: newWrittenWords,
       remainingWords: newRemainingWords,
@@ -162,6 +171,7 @@ class LoggingService {
       projectStreak: newStreak,
       longestProjectStreak: newLongestStreak,
       pendingCarryForward: finalPendingCarryForward,
+      clearFreeze: shouldClearFreeze,
       updatedAt: DateTime.now(),
     );
 
@@ -241,7 +251,7 @@ class LoggingService {
     while (true) {
       final sched = await _scheduleRepo.getScheduleForDate(projectId, checkDate);
       if (sched == null) break;
-      if (sched.isRestDay) {
+      if (sched.isRestDay || sched.isShielded) {
         checkDate = checkDate.subtract(const Duration(days: 1));
         continue;
       }

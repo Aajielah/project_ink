@@ -18,6 +18,7 @@ class ScheduleRepository {
       automaticRestDay: data.automaticRestDay,
       locked: data.locked,
       isRecoveryDay: data.isRecoveryDay,
+      isShielded: data.isShielded,
     );
   }
 
@@ -32,6 +33,7 @@ class ScheduleRepository {
       automaticRestDay: Value(model.automaticRestDay),
       locked: Value(model.locked),
       isRecoveryDay: Value(model.isRecoveryDay),
+      isShielded: Value(model.isShielded),
     );
   }
 

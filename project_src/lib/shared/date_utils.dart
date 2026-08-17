@@ -27,6 +27,28 @@ DateTime getLogicalTodayForProject({
 }) {
   final now = DateTime.now();
   final calendarToday = DateTime(now.year, now.month, now.day);
+  
+  // Active time-freeze check (expires in 24 hours)
+  if (project.frozenDate != null && project.freezeActivatedAt != null) {
+    final elapsed = now.difference(project.freezeActivatedAt!);
+    if (elapsed < const Duration(hours: 24)) {
+      final cleanFrozen = DateTime(project.frozenDate!.year, project.frozenDate!.month, project.frozenDate!.day);
+      ScheduleModel? frozenSched;
+      for (final s in schedules) {
+        if (s.projectId == project.id &&
+            s.date.year == cleanFrozen.year &&
+            s.date.month == cleanFrozen.month &&
+            s.date.day == cleanFrozen.day) {
+          frozenSched = s;
+          break;
+        }
+      }
+      if (frozenSched != null && !frozenSched.completed) {
+        return cleanFrozen;
+      }
+    }
+  }
+
   if (Platform.environment.containsKey('FLUTTER_TEST')) {
     return calendarToday;
   }

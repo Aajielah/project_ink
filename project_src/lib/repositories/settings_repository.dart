@@ -16,6 +16,7 @@ class SettingsRepository {
       dailyQuotes: data.dailyQuotes,
       backupReminder: data.backupReminder,
       vibration: data.vibration,
+      streakShields: data.streakShields,
     );
   }
 
@@ -27,6 +28,7 @@ class SettingsRepository {
       dailyQuotes: Value(model.dailyQuotes),
       backupReminder: Value(model.backupReminder),
       vibration: Value(model.vibration),
+      streakShields: Value(model.streakShields),
     );
   }
 
@@ -40,6 +42,7 @@ class SettingsRepository {
         dailyQuotes: true,
         backupReminder: true,
         vibration: true,
+        streakShields: 2,
       );
       await insertSettings(defaultSettings);
       return defaultSettings;

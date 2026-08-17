@@ -35,6 +35,8 @@ class ProjectRepository {
       pendingCarryForward: data.pendingCarryForward,
       ongoingStyle: data.ongoingStyle ?? 'daily',
       writingSession: data.writingSession ?? 'none',
+      frozenDate: data.frozenDate,
+      freezeActivatedAt: data.freezeActivatedAt,
     );
   }
 
@@ -66,6 +68,8 @@ class ProjectRepository {
       pendingCarryForward: Value(model.pendingCarryForward),
       ongoingStyle: Value(model.ongoingStyle),
       writingSession: Value(model.writingSession),
+      frozenDate: Value(model.frozenDate),
+      freezeActivatedAt: Value(model.freezeActivatedAt),
     );
   }
 

@@ -265,6 +265,19 @@ class SettingsScreen extends ConsumerWidget {
                         ref.read(settingsProvider.notifier).toggleVibration(val);
                       },
                     ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.shield_outlined),
+                      title: const Text('Streak Shields'),
+                      subtitle: const Text('Protects active streaks when you forget to log words.'),
+                      trailing: Text(
+                        '${settings.streakShields} / 2 remaining',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: settings.streakShields > 0 ? theme.colorScheme.primary : theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

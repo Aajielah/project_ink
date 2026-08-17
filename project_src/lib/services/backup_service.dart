@@ -76,14 +76,17 @@ class BackupService {
         'coverType': p.coverType,
         'projectType': p.projectType, 'pendingCarryForward': p.pendingCarryForward,
         'ongoingStyle': p.ongoingStyle,
-        'writingSession': p.writingSession
+        'writingSession': p.writingSession,
+        'frozenDate': p.frozenDate?.toIso8601String(),
+        'freezeActivatedAt': p.freezeActivatedAt?.toIso8601String()
       }).toList());
 
 
       writeJsonFile('schedule.json', schedules.map((s) => {
         'id': s.id, 'projectId': s.projectId, 'date': s.date.toIso8601String(),
         'plannedWords': s.plannedWords, 'isRestDay': s.isRestDay, 'completed': s.completed,
-        'automaticRestDay': s.automaticRestDay, 'locked': s.locked, 'isRecoveryDay': s.isRecoveryDay
+        'automaticRestDay': s.automaticRestDay, 'locked': s.locked, 'isRecoveryDay': s.isRecoveryDay,
+        'isShielded': s.isShielded
       }).toList());
 
       writeJsonFile('logs.json', logs.map((l) => {
@@ -111,7 +114,7 @@ class BackupService {
 
       writeJsonFile('settings.json', settings.map((s) => {
         'id': s.id, 'theme': s.theme, 'notifications': s.notifications, 'dailyQuotes': s.dailyQuotes,
-        'backupReminder': s.backupReminder, 'vibration': s.vibration
+        'backupReminder': s.backupReminder, 'vibration': s.vibration, 'streakShields': s.streakShields
       }).toList());
 
       // Zip the folder recursively using the archive library
@@ -257,6 +260,8 @@ class BackupService {
               pendingCarryForward: Value(p['pendingCarryForward'] ?? 0),
               ongoingStyle: Value(p['ongoingStyle'] ?? 'daily'),
               writingSession: Value(p['writingSession'] ?? 'none'),
+              frozenDate: Value(p['frozenDate'] != null ? DateTime.parse(p['frozenDate']) : null),
+              freezeActivatedAt: Value(p['freezeActivatedAt'] != null ? DateTime.parse(p['freezeActivatedAt']) : null),
             ));
           }
         }
@@ -275,6 +280,7 @@ class BackupService {
               automaticRestDay: Value(s['automaticRestDay'] ?? false),
               locked: Value(s['locked'] ?? false),
               isRecoveryDay: Value(s['isRecoveryDay'] ?? false),
+              isShielded: Value(s['isShielded'] ?? false),
             ));
           }
         }
@@ -349,6 +355,7 @@ class BackupService {
               dailyQuotes: Value(s['dailyQuotes'] ?? true),
               backupReminder: Value(s['backupReminder'] ?? true),
               vibration: Value(s['vibration'] ?? true),
+              streakShields: Value(s['streakShields'] ?? 2),
             ));
           }
         }

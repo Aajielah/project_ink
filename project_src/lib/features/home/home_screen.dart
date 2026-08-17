@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -55,6 +56,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         setState(() {});
       }
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowStreakShieldDialog();
+    });
+  }
+
+  Future<void> _checkAndShowStreakShieldDialog() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasPending = prefs.getBool('streak_shield_used_pending') ?? false;
+      if (hasPending && mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.shield_outlined, color: Colors.orange, size: 28),
+                SizedBox(width: 8),
+                Text('Streak Protected!', style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: const Text(
+              'One of your Streak Shields was used to freeze time for your book(s).\n\n'
+              'You have 24 hours to write and log your words before the streak breaks!',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
+        );
+        await prefs.setBool('streak_shield_used_pending', false);
+      }
+    } catch (_) {}
   }
 
   @override

@@ -547,6 +547,18 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('none'));
+  static const VerificationMeta _frozenDateMeta =
+      const VerificationMeta('frozenDate');
+  @override
+  late final GeneratedColumn<DateTime> frozenDate = GeneratedColumn<DateTime>(
+      'frozen_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _freezeActivatedAtMeta =
+      const VerificationMeta('freezeActivatedAt');
+  @override
+  late final GeneratedColumn<DateTime> freezeActivatedAt =
+      GeneratedColumn<DateTime>('freeze_activated_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -574,7 +586,9 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         projectType,
         pendingCarryForward,
         ongoingStyle,
-        writingSession
+        writingSession,
+        frozenDate,
+        freezeActivatedAt
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -747,6 +761,18 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           writingSession.isAcceptableOrUnknown(
               data['writing_session']!, _writingSessionMeta));
     }
+    if (data.containsKey('frozen_date')) {
+      context.handle(
+          _frozenDateMeta,
+          frozenDate.isAcceptableOrUnknown(
+              data['frozen_date']!, _frozenDateMeta));
+    }
+    if (data.containsKey('freeze_activated_at')) {
+      context.handle(
+          _freezeActivatedAtMeta,
+          freezeActivatedAt.isAcceptableOrUnknown(
+              data['freeze_activated_at']!, _freezeActivatedAtMeta));
+    }
     return context;
   }
 
@@ -809,6 +835,10 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           .read(DriftSqlType.string, data['${effectivePrefix}ongoing_style']),
       writingSession: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}writing_session']),
+      frozenDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}frozen_date']),
+      freezeActivatedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}freeze_activated_at']),
     );
   }
 
@@ -845,6 +875,8 @@ class Project extends DataClass implements Insertable<Project> {
   final int pendingCarryForward;
   final String? ongoingStyle;
   final String? writingSession;
+  final DateTime? frozenDate;
+  final DateTime? freezeActivatedAt;
   const Project(
       {required this.id,
       required this.name,
@@ -871,7 +903,9 @@ class Project extends DataClass implements Insertable<Project> {
       required this.projectType,
       required this.pendingCarryForward,
       this.ongoingStyle,
-      this.writingSession});
+      this.writingSession,
+      this.frozenDate,
+      this.freezeActivatedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -912,6 +946,12 @@ class Project extends DataClass implements Insertable<Project> {
     }
     if (!nullToAbsent || writingSession != null) {
       map['writing_session'] = Variable<String>(writingSession);
+    }
+    if (!nullToAbsent || frozenDate != null) {
+      map['frozen_date'] = Variable<DateTime>(frozenDate);
+    }
+    if (!nullToAbsent || freezeActivatedAt != null) {
+      map['freeze_activated_at'] = Variable<DateTime>(freezeActivatedAt);
     }
     return map;
   }
@@ -956,6 +996,12 @@ class Project extends DataClass implements Insertable<Project> {
       writingSession: writingSession == null && nullToAbsent
           ? const Value.absent()
           : Value(writingSession),
+      frozenDate: frozenDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(frozenDate),
+      freezeActivatedAt: freezeActivatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(freezeActivatedAt),
     );
   }
 
@@ -993,6 +1039,9 @@ class Project extends DataClass implements Insertable<Project> {
           serializer.fromJson<int>(json['pendingCarryForward']),
       ongoingStyle: serializer.fromJson<String?>(json['ongoingStyle']),
       writingSession: serializer.fromJson<String?>(json['writingSession']),
+      frozenDate: serializer.fromJson<DateTime?>(json['frozenDate']),
+      freezeActivatedAt:
+          serializer.fromJson<DateTime?>(json['freezeActivatedAt']),
     );
   }
   @override
@@ -1025,6 +1074,8 @@ class Project extends DataClass implements Insertable<Project> {
       'pendingCarryForward': serializer.toJson<int>(pendingCarryForward),
       'ongoingStyle': serializer.toJson<String?>(ongoingStyle),
       'writingSession': serializer.toJson<String?>(writingSession),
+      'frozenDate': serializer.toJson<DateTime?>(frozenDate),
+      'freezeActivatedAt': serializer.toJson<DateTime?>(freezeActivatedAt),
     };
   }
 
@@ -1054,7 +1105,9 @@ class Project extends DataClass implements Insertable<Project> {
           String? projectType,
           int? pendingCarryForward,
           Value<String?> ongoingStyle = const Value.absent(),
-          Value<String?> writingSession = const Value.absent()}) =>
+          Value<String?> writingSession = const Value.absent(),
+          Value<DateTime?> frozenDate = const Value.absent(),
+          Value<DateTime?> freezeActivatedAt = const Value.absent()}) =>
       Project(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1087,6 +1140,10 @@ class Project extends DataClass implements Insertable<Project> {
             ongoingStyle.present ? ongoingStyle.value : this.ongoingStyle,
         writingSession:
             writingSession.present ? writingSession.value : this.writingSession,
+        frozenDate: frozenDate.present ? frozenDate.value : this.frozenDate,
+        freezeActivatedAt: freezeActivatedAt.present
+            ? freezeActivatedAt.value
+            : this.freezeActivatedAt,
       );
   Project copyWithCompanion(ProjectsCompanion data) {
     return Project(
@@ -1148,6 +1205,11 @@ class Project extends DataClass implements Insertable<Project> {
       writingSession: data.writingSession.present
           ? data.writingSession.value
           : this.writingSession,
+      frozenDate:
+          data.frozenDate.present ? data.frozenDate.value : this.frozenDate,
+      freezeActivatedAt: data.freezeActivatedAt.present
+          ? data.freezeActivatedAt.value
+          : this.freezeActivatedAt,
     );
   }
 
@@ -1179,7 +1241,9 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('projectType: $projectType, ')
           ..write('pendingCarryForward: $pendingCarryForward, ')
           ..write('ongoingStyle: $ongoingStyle, ')
-          ..write('writingSession: $writingSession')
+          ..write('writingSession: $writingSession, ')
+          ..write('frozenDate: $frozenDate, ')
+          ..write('freezeActivatedAt: $freezeActivatedAt')
           ..write(')'))
         .toString();
   }
@@ -1211,7 +1275,9 @@ class Project extends DataClass implements Insertable<Project> {
         projectType,
         pendingCarryForward,
         ongoingStyle,
-        writingSession
+        writingSession,
+        frozenDate,
+        freezeActivatedAt
       ]);
   @override
   bool operator ==(Object other) =>
@@ -1242,7 +1308,9 @@ class Project extends DataClass implements Insertable<Project> {
           other.projectType == this.projectType &&
           other.pendingCarryForward == this.pendingCarryForward &&
           other.ongoingStyle == this.ongoingStyle &&
-          other.writingSession == this.writingSession);
+          other.writingSession == this.writingSession &&
+          other.frozenDate == this.frozenDate &&
+          other.freezeActivatedAt == this.freezeActivatedAt);
 }
 
 class ProjectsCompanion extends UpdateCompanion<Project> {
@@ -1272,6 +1340,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<int> pendingCarryForward;
   final Value<String?> ongoingStyle;
   final Value<String?> writingSession;
+  final Value<DateTime?> frozenDate;
+  final Value<DateTime?> freezeActivatedAt;
   final Value<int> rowid;
   const ProjectsCompanion({
     this.id = const Value.absent(),
@@ -1300,6 +1370,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.pendingCarryForward = const Value.absent(),
     this.ongoingStyle = const Value.absent(),
     this.writingSession = const Value.absent(),
+    this.frozenDate = const Value.absent(),
+    this.freezeActivatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectsCompanion.insert({
@@ -1329,6 +1401,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.pendingCarryForward = const Value.absent(),
     this.ongoingStyle = const Value.absent(),
     this.writingSession = const Value.absent(),
+    this.frozenDate = const Value.absent(),
+    this.freezeActivatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1368,6 +1442,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<int>? pendingCarryForward,
     Expression<String>? ongoingStyle,
     Expression<String>? writingSession,
+    Expression<DateTime>? frozenDate,
+    Expression<DateTime>? freezeActivatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1400,6 +1476,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
         'pending_carry_forward': pendingCarryForward,
       if (ongoingStyle != null) 'ongoing_style': ongoingStyle,
       if (writingSession != null) 'writing_session': writingSession,
+      if (frozenDate != null) 'frozen_date': frozenDate,
+      if (freezeActivatedAt != null) 'freeze_activated_at': freezeActivatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1431,6 +1509,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       Value<int>? pendingCarryForward,
       Value<String?>? ongoingStyle,
       Value<String?>? writingSession,
+      Value<DateTime?>? frozenDate,
+      Value<DateTime?>? freezeActivatedAt,
       Value<int>? rowid}) {
     return ProjectsCompanion(
       id: id ?? this.id,
@@ -1459,6 +1539,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
       ongoingStyle: ongoingStyle ?? this.ongoingStyle,
       writingSession: writingSession ?? this.writingSession,
+      frozenDate: frozenDate ?? this.frozenDate,
+      freezeActivatedAt: freezeActivatedAt ?? this.freezeActivatedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1545,6 +1627,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (writingSession.present) {
       map['writing_session'] = Variable<String>(writingSession.value);
     }
+    if (frozenDate.present) {
+      map['frozen_date'] = Variable<DateTime>(frozenDate.value);
+    }
+    if (freezeActivatedAt.present) {
+      map['freeze_activated_at'] = Variable<DateTime>(freezeActivatedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1580,6 +1668,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('pendingCarryForward: $pendingCarryForward, ')
           ..write('ongoingStyle: $ongoingStyle, ')
           ..write('writingSession: $writingSession, ')
+          ..write('frozenDate: $frozenDate, ')
+          ..write('freezeActivatedAt: $freezeActivatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1665,6 +1755,16 @@ class $SchedulesTable extends Schedules
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("is_recovery_day" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _isShieldedMeta =
+      const VerificationMeta('isShielded');
+  @override
+  late final GeneratedColumn<bool> isShielded = GeneratedColumn<bool>(
+      'is_shielded', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_shielded" IN (0, 1))'),
+      defaultValue: const Constant(false));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1675,7 +1775,8 @@ class $SchedulesTable extends Schedules
         completed,
         automaticRestDay,
         locked,
-        isRecoveryDay
+        isRecoveryDay,
+        isShielded
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1738,6 +1839,12 @@ class $SchedulesTable extends Schedules
           isRecoveryDay.isAcceptableOrUnknown(
               data['is_recovery_day']!, _isRecoveryDayMeta));
     }
+    if (data.containsKey('is_shielded')) {
+      context.handle(
+          _isShieldedMeta,
+          isShielded.isAcceptableOrUnknown(
+              data['is_shielded']!, _isShieldedMeta));
+    }
     return context;
   }
 
@@ -1769,6 +1876,8 @@ class $SchedulesTable extends Schedules
           .read(DriftSqlType.bool, data['${effectivePrefix}locked'])!,
       isRecoveryDay: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_recovery_day'])!,
+      isShielded: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_shielded'])!,
     );
   }
 
@@ -1788,6 +1897,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
   final bool automaticRestDay;
   final bool locked;
   final bool isRecoveryDay;
+  final bool isShielded;
   const Schedule(
       {required this.id,
       required this.projectId,
@@ -1797,7 +1907,8 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       required this.completed,
       required this.automaticRestDay,
       required this.locked,
-      required this.isRecoveryDay});
+      required this.isRecoveryDay,
+      required this.isShielded});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1810,6 +1921,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     map['automatic_rest_day'] = Variable<bool>(automaticRestDay);
     map['locked'] = Variable<bool>(locked);
     map['is_recovery_day'] = Variable<bool>(isRecoveryDay);
+    map['is_shielded'] = Variable<bool>(isShielded);
     return map;
   }
 
@@ -1824,6 +1936,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       automaticRestDay: Value(automaticRestDay),
       locked: Value(locked),
       isRecoveryDay: Value(isRecoveryDay),
+      isShielded: Value(isShielded),
     );
   }
 
@@ -1840,6 +1953,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       automaticRestDay: serializer.fromJson<bool>(json['automaticRestDay']),
       locked: serializer.fromJson<bool>(json['locked']),
       isRecoveryDay: serializer.fromJson<bool>(json['isRecoveryDay']),
+      isShielded: serializer.fromJson<bool>(json['isShielded']),
     );
   }
   @override
@@ -1855,6 +1969,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       'automaticRestDay': serializer.toJson<bool>(automaticRestDay),
       'locked': serializer.toJson<bool>(locked),
       'isRecoveryDay': serializer.toJson<bool>(isRecoveryDay),
+      'isShielded': serializer.toJson<bool>(isShielded),
     };
   }
 
@@ -1867,7 +1982,8 @@ class Schedule extends DataClass implements Insertable<Schedule> {
           bool? completed,
           bool? automaticRestDay,
           bool? locked,
-          bool? isRecoveryDay}) =>
+          bool? isRecoveryDay,
+          bool? isShielded}) =>
       Schedule(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
@@ -1878,6 +1994,7 @@ class Schedule extends DataClass implements Insertable<Schedule> {
         automaticRestDay: automaticRestDay ?? this.automaticRestDay,
         locked: locked ?? this.locked,
         isRecoveryDay: isRecoveryDay ?? this.isRecoveryDay,
+        isShielded: isShielded ?? this.isShielded,
       );
   Schedule copyWithCompanion(SchedulesCompanion data) {
     return Schedule(
@@ -1896,6 +2013,8 @@ class Schedule extends DataClass implements Insertable<Schedule> {
       isRecoveryDay: data.isRecoveryDay.present
           ? data.isRecoveryDay.value
           : this.isRecoveryDay,
+      isShielded:
+          data.isShielded.present ? data.isShielded.value : this.isShielded,
     );
   }
 
@@ -1910,14 +2029,15 @@ class Schedule extends DataClass implements Insertable<Schedule> {
           ..write('completed: $completed, ')
           ..write('automaticRestDay: $automaticRestDay, ')
           ..write('locked: $locked, ')
-          ..write('isRecoveryDay: $isRecoveryDay')
+          ..write('isRecoveryDay: $isRecoveryDay, ')
+          ..write('isShielded: $isShielded')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(id, projectId, date, plannedWords, isRestDay,
-      completed, automaticRestDay, locked, isRecoveryDay);
+      completed, automaticRestDay, locked, isRecoveryDay, isShielded);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1930,7 +2050,8 @@ class Schedule extends DataClass implements Insertable<Schedule> {
           other.completed == this.completed &&
           other.automaticRestDay == this.automaticRestDay &&
           other.locked == this.locked &&
-          other.isRecoveryDay == this.isRecoveryDay);
+          other.isRecoveryDay == this.isRecoveryDay &&
+          other.isShielded == this.isShielded);
 }
 
 class SchedulesCompanion extends UpdateCompanion<Schedule> {
@@ -1943,6 +2064,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
   final Value<bool> automaticRestDay;
   final Value<bool> locked;
   final Value<bool> isRecoveryDay;
+  final Value<bool> isShielded;
   final Value<int> rowid;
   const SchedulesCompanion({
     this.id = const Value.absent(),
@@ -1954,6 +2076,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     this.automaticRestDay = const Value.absent(),
     this.locked = const Value.absent(),
     this.isRecoveryDay = const Value.absent(),
+    this.isShielded = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SchedulesCompanion.insert({
@@ -1966,6 +2089,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     this.automaticRestDay = const Value.absent(),
     this.locked = const Value.absent(),
     this.isRecoveryDay = const Value.absent(),
+    this.isShielded = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         projectId = Value(projectId),
@@ -1981,6 +2105,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     Expression<bool>? automaticRestDay,
     Expression<bool>? locked,
     Expression<bool>? isRecoveryDay,
+    Expression<bool>? isShielded,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1993,6 +2118,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
       if (automaticRestDay != null) 'automatic_rest_day': automaticRestDay,
       if (locked != null) 'locked': locked,
       if (isRecoveryDay != null) 'is_recovery_day': isRecoveryDay,
+      if (isShielded != null) 'is_shielded': isShielded,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2007,6 +2133,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
       Value<bool>? automaticRestDay,
       Value<bool>? locked,
       Value<bool>? isRecoveryDay,
+      Value<bool>? isShielded,
       Value<int>? rowid}) {
     return SchedulesCompanion(
       id: id ?? this.id,
@@ -2018,6 +2145,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
       automaticRestDay: automaticRestDay ?? this.automaticRestDay,
       locked: locked ?? this.locked,
       isRecoveryDay: isRecoveryDay ?? this.isRecoveryDay,
+      isShielded: isShielded ?? this.isShielded,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2052,6 +2180,9 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     if (isRecoveryDay.present) {
       map['is_recovery_day'] = Variable<bool>(isRecoveryDay.value);
     }
+    if (isShielded.present) {
+      map['is_shielded'] = Variable<bool>(isShielded.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2070,6 +2201,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
           ..write('automaticRestDay: $automaticRestDay, ')
           ..write('locked: $locked, ')
           ..write('isRecoveryDay: $isRecoveryDay, ')
+          ..write('isShielded: $isShielded, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3751,9 +3883,24 @@ class $SettingsTableTable extends SettingsTable
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("vibration" IN (0, 1))'),
       defaultValue: const Constant(true));
+  static const VerificationMeta _streakShieldsMeta =
+      const VerificationMeta('streakShields');
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, theme, notifications, dailyQuotes, backupReminder, vibration];
+  late final GeneratedColumn<int> streakShields = GeneratedColumn<int>(
+      'streak_shields', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(2));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        theme,
+        notifications,
+        dailyQuotes,
+        backupReminder,
+        vibration,
+        streakShields
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3795,6 +3942,12 @@ class $SettingsTableTable extends SettingsTable
       context.handle(_vibrationMeta,
           vibration.isAcceptableOrUnknown(data['vibration']!, _vibrationMeta));
     }
+    if (data.containsKey('streak_shields')) {
+      context.handle(
+          _streakShieldsMeta,
+          streakShields.isAcceptableOrUnknown(
+              data['streak_shields']!, _streakShieldsMeta));
+    }
     return context;
   }
 
@@ -3816,6 +3969,8 @@ class $SettingsTableTable extends SettingsTable
           .read(DriftSqlType.bool, data['${effectivePrefix}backup_reminder'])!,
       vibration: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}vibration'])!,
+      streakShields: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}streak_shields'])!,
     );
   }
 
@@ -3833,13 +3988,15 @@ class SettingsTableData extends DataClass
   final bool dailyQuotes;
   final bool backupReminder;
   final bool vibration;
+  final int streakShields;
   const SettingsTableData(
       {required this.id,
       required this.theme,
       required this.notifications,
       required this.dailyQuotes,
       required this.backupReminder,
-      required this.vibration});
+      required this.vibration,
+      required this.streakShields});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3849,6 +4006,7 @@ class SettingsTableData extends DataClass
     map['daily_quotes'] = Variable<bool>(dailyQuotes);
     map['backup_reminder'] = Variable<bool>(backupReminder);
     map['vibration'] = Variable<bool>(vibration);
+    map['streak_shields'] = Variable<int>(streakShields);
     return map;
   }
 
@@ -3860,6 +4018,7 @@ class SettingsTableData extends DataClass
       dailyQuotes: Value(dailyQuotes),
       backupReminder: Value(backupReminder),
       vibration: Value(vibration),
+      streakShields: Value(streakShields),
     );
   }
 
@@ -3873,6 +4032,7 @@ class SettingsTableData extends DataClass
       dailyQuotes: serializer.fromJson<bool>(json['dailyQuotes']),
       backupReminder: serializer.fromJson<bool>(json['backupReminder']),
       vibration: serializer.fromJson<bool>(json['vibration']),
+      streakShields: serializer.fromJson<int>(json['streakShields']),
     );
   }
   @override
@@ -3885,6 +4045,7 @@ class SettingsTableData extends DataClass
       'dailyQuotes': serializer.toJson<bool>(dailyQuotes),
       'backupReminder': serializer.toJson<bool>(backupReminder),
       'vibration': serializer.toJson<bool>(vibration),
+      'streakShields': serializer.toJson<int>(streakShields),
     };
   }
 
@@ -3894,7 +4055,8 @@ class SettingsTableData extends DataClass
           bool? notifications,
           bool? dailyQuotes,
           bool? backupReminder,
-          bool? vibration}) =>
+          bool? vibration,
+          int? streakShields}) =>
       SettingsTableData(
         id: id ?? this.id,
         theme: theme ?? this.theme,
@@ -3902,6 +4064,7 @@ class SettingsTableData extends DataClass
         dailyQuotes: dailyQuotes ?? this.dailyQuotes,
         backupReminder: backupReminder ?? this.backupReminder,
         vibration: vibration ?? this.vibration,
+        streakShields: streakShields ?? this.streakShields,
       );
   SettingsTableData copyWithCompanion(SettingsTableCompanion data) {
     return SettingsTableData(
@@ -3916,6 +4079,9 @@ class SettingsTableData extends DataClass
           ? data.backupReminder.value
           : this.backupReminder,
       vibration: data.vibration.present ? data.vibration.value : this.vibration,
+      streakShields: data.streakShields.present
+          ? data.streakShields.value
+          : this.streakShields,
     );
   }
 
@@ -3927,14 +4093,15 @@ class SettingsTableData extends DataClass
           ..write('notifications: $notifications, ')
           ..write('dailyQuotes: $dailyQuotes, ')
           ..write('backupReminder: $backupReminder, ')
-          ..write('vibration: $vibration')
+          ..write('vibration: $vibration, ')
+          ..write('streakShields: $streakShields')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, theme, notifications, dailyQuotes, backupReminder, vibration);
+  int get hashCode => Object.hash(id, theme, notifications, dailyQuotes,
+      backupReminder, vibration, streakShields);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3944,7 +4111,8 @@ class SettingsTableData extends DataClass
           other.notifications == this.notifications &&
           other.dailyQuotes == this.dailyQuotes &&
           other.backupReminder == this.backupReminder &&
-          other.vibration == this.vibration);
+          other.vibration == this.vibration &&
+          other.streakShields == this.streakShields);
 }
 
 class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
@@ -3954,6 +4122,7 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
   final Value<bool> dailyQuotes;
   final Value<bool> backupReminder;
   final Value<bool> vibration;
+  final Value<int> streakShields;
   final Value<int> rowid;
   const SettingsTableCompanion({
     this.id = const Value.absent(),
@@ -3962,6 +4131,7 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
     this.dailyQuotes = const Value.absent(),
     this.backupReminder = const Value.absent(),
     this.vibration = const Value.absent(),
+    this.streakShields = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SettingsTableCompanion.insert({
@@ -3971,6 +4141,7 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
     this.dailyQuotes = const Value.absent(),
     this.backupReminder = const Value.absent(),
     this.vibration = const Value.absent(),
+    this.streakShields = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<SettingsTableData> custom({
@@ -3980,6 +4151,7 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
     Expression<bool>? dailyQuotes,
     Expression<bool>? backupReminder,
     Expression<bool>? vibration,
+    Expression<int>? streakShields,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3989,6 +4161,7 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
       if (dailyQuotes != null) 'daily_quotes': dailyQuotes,
       if (backupReminder != null) 'backup_reminder': backupReminder,
       if (vibration != null) 'vibration': vibration,
+      if (streakShields != null) 'streak_shields': streakShields,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4000,6 +4173,7 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
       Value<bool>? dailyQuotes,
       Value<bool>? backupReminder,
       Value<bool>? vibration,
+      Value<int>? streakShields,
       Value<int>? rowid}) {
     return SettingsTableCompanion(
       id: id ?? this.id,
@@ -4008,6 +4182,7 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
       dailyQuotes: dailyQuotes ?? this.dailyQuotes,
       backupReminder: backupReminder ?? this.backupReminder,
       vibration: vibration ?? this.vibration,
+      streakShields: streakShields ?? this.streakShields,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4033,6 +4208,9 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
     if (vibration.present) {
       map['vibration'] = Variable<bool>(vibration.value);
     }
+    if (streakShields.present) {
+      map['streak_shields'] = Variable<int>(streakShields.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4048,6 +4226,7 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
           ..write('dailyQuotes: $dailyQuotes, ')
           ..write('backupReminder: $backupReminder, ')
           ..write('vibration: $vibration, ')
+          ..write('streakShields: $streakShields, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4318,6 +4497,8 @@ typedef $$ProjectsTableCreateCompanionBuilder = ProjectsCompanion Function({
   Value<int> pendingCarryForward,
   Value<String?> ongoingStyle,
   Value<String?> writingSession,
+  Value<DateTime?> frozenDate,
+  Value<DateTime?> freezeActivatedAt,
   Value<int> rowid,
 });
 typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
@@ -4347,6 +4528,8 @@ typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
   Value<int> pendingCarryForward,
   Value<String?> ongoingStyle,
   Value<String?> writingSession,
+  Value<DateTime?> frozenDate,
+  Value<DateTime?> freezeActivatedAt,
   Value<int> rowid,
 });
 
@@ -4480,6 +4663,13 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<String> get writingSession => $composableBuilder(
       column: $table.writingSession,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get frozenDate => $composableBuilder(
+      column: $table.frozenDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get freezeActivatedAt => $composableBuilder(
+      column: $table.freezeActivatedAt,
       builder: (column) => ColumnFilters(column));
 
   Expression<bool> schedulesRefs(
@@ -4625,6 +4815,13 @@ class $$ProjectsTableOrderingComposer
   ColumnOrderings<String> get writingSession => $composableBuilder(
       column: $table.writingSession,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get frozenDate => $composableBuilder(
+      column: $table.frozenDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get freezeActivatedAt => $composableBuilder(
+      column: $table.freezeActivatedAt,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$ProjectsTableAnnotationComposer
@@ -4713,6 +4910,12 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<String> get writingSession => $composableBuilder(
       column: $table.writingSession, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get frozenDate => $composableBuilder(
+      column: $table.frozenDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get freezeActivatedAt => $composableBuilder(
+      column: $table.freezeActivatedAt, builder: (column) => column);
 
   Expression<T> schedulesRefs<T extends Object>(
       Expression<T> Function($$SchedulesTableAnnotationComposer a) f) {
@@ -4806,6 +5009,8 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<int> pendingCarryForward = const Value.absent(),
             Value<String?> ongoingStyle = const Value.absent(),
             Value<String?> writingSession = const Value.absent(),
+            Value<DateTime?> frozenDate = const Value.absent(),
+            Value<DateTime?> freezeActivatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion(
@@ -4835,6 +5040,8 @@ class $$ProjectsTableTableManager extends RootTableManager<
             pendingCarryForward: pendingCarryForward,
             ongoingStyle: ongoingStyle,
             writingSession: writingSession,
+            frozenDate: frozenDate,
+            freezeActivatedAt: freezeActivatedAt,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -4864,6 +5071,8 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<int> pendingCarryForward = const Value.absent(),
             Value<String?> ongoingStyle = const Value.absent(),
             Value<String?> writingSession = const Value.absent(),
+            Value<DateTime?> frozenDate = const Value.absent(),
+            Value<DateTime?> freezeActivatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion.insert(
@@ -4893,6 +5102,8 @@ class $$ProjectsTableTableManager extends RootTableManager<
             pendingCarryForward: pendingCarryForward,
             ongoingStyle: ongoingStyle,
             writingSession: writingSession,
+            frozenDate: frozenDate,
+            freezeActivatedAt: freezeActivatedAt,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -4965,6 +5176,7 @@ typedef $$SchedulesTableCreateCompanionBuilder = SchedulesCompanion Function({
   Value<bool> automaticRestDay,
   Value<bool> locked,
   Value<bool> isRecoveryDay,
+  Value<bool> isShielded,
   Value<int> rowid,
 });
 typedef $$SchedulesTableUpdateCompanionBuilder = SchedulesCompanion Function({
@@ -4977,6 +5189,7 @@ typedef $$SchedulesTableUpdateCompanionBuilder = SchedulesCompanion Function({
   Value<bool> automaticRestDay,
   Value<bool> locked,
   Value<bool> isRecoveryDay,
+  Value<bool> isShielded,
   Value<int> rowid,
 });
 
@@ -5048,6 +5261,9 @@ class $$SchedulesTableFilterComposer
 
   ColumnFilters<bool> get isRecoveryDay => $composableBuilder(
       column: $table.isRecoveryDay, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isShielded => $composableBuilder(
+      column: $table.isShielded, builder: (column) => ColumnFilters(column));
 
   $$ProjectsTableFilterComposer get projectId {
     final $$ProjectsTableFilterComposer composer = $composerBuilder(
@@ -5127,6 +5343,9 @@ class $$SchedulesTableOrderingComposer
       column: $table.isRecoveryDay,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isShielded => $composableBuilder(
+      column: $table.isShielded, builder: (column) => ColumnOrderings(column));
+
   $$ProjectsTableOrderingComposer get projectId {
     final $$ProjectsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -5180,6 +5399,9 @@ class $$SchedulesTableAnnotationComposer
 
   GeneratedColumn<bool> get isRecoveryDay => $composableBuilder(
       column: $table.isRecoveryDay, builder: (column) => column);
+
+  GeneratedColumn<bool> get isShielded => $composableBuilder(
+      column: $table.isShielded, builder: (column) => column);
 
   $$ProjectsTableAnnotationComposer get projectId {
     final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
@@ -5255,6 +5477,7 @@ class $$SchedulesTableTableManager extends RootTableManager<
             Value<bool> automaticRestDay = const Value.absent(),
             Value<bool> locked = const Value.absent(),
             Value<bool> isRecoveryDay = const Value.absent(),
+            Value<bool> isShielded = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SchedulesCompanion(
@@ -5267,6 +5490,7 @@ class $$SchedulesTableTableManager extends RootTableManager<
             automaticRestDay: automaticRestDay,
             locked: locked,
             isRecoveryDay: isRecoveryDay,
+            isShielded: isShielded,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -5279,6 +5503,7 @@ class $$SchedulesTableTableManager extends RootTableManager<
             Value<bool> automaticRestDay = const Value.absent(),
             Value<bool> locked = const Value.absent(),
             Value<bool> isRecoveryDay = const Value.absent(),
+            Value<bool> isShielded = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SchedulesCompanion.insert(
@@ -5291,6 +5516,7 @@ class $$SchedulesTableTableManager extends RootTableManager<
             automaticRestDay: automaticRestDay,
             locked: locked,
             isRecoveryDay: isRecoveryDay,
+            isShielded: isShielded,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -6369,6 +6595,7 @@ typedef $$SettingsTableTableCreateCompanionBuilder = SettingsTableCompanion
   Value<bool> dailyQuotes,
   Value<bool> backupReminder,
   Value<bool> vibration,
+  Value<int> streakShields,
   Value<int> rowid,
 });
 typedef $$SettingsTableTableUpdateCompanionBuilder = SettingsTableCompanion
@@ -6379,6 +6606,7 @@ typedef $$SettingsTableTableUpdateCompanionBuilder = SettingsTableCompanion
   Value<bool> dailyQuotes,
   Value<bool> backupReminder,
   Value<bool> vibration,
+  Value<int> streakShields,
   Value<int> rowid,
 });
 
@@ -6409,6 +6637,9 @@ class $$SettingsTableTableFilterComposer
 
   ColumnFilters<bool> get vibration => $composableBuilder(
       column: $table.vibration, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get streakShields => $composableBuilder(
+      column: $table.streakShields, builder: (column) => ColumnFilters(column));
 }
 
 class $$SettingsTableTableOrderingComposer
@@ -6439,6 +6670,10 @@ class $$SettingsTableTableOrderingComposer
 
   ColumnOrderings<bool> get vibration => $composableBuilder(
       column: $table.vibration, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get streakShields => $composableBuilder(
+      column: $table.streakShields,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$SettingsTableTableAnnotationComposer
@@ -6467,6 +6702,9 @@ class $$SettingsTableTableAnnotationComposer
 
   GeneratedColumn<bool> get vibration =>
       $composableBuilder(column: $table.vibration, builder: (column) => column);
+
+  GeneratedColumn<int> get streakShields => $composableBuilder(
+      column: $table.streakShields, builder: (column) => column);
 }
 
 class $$SettingsTableTableTableManager extends RootTableManager<
@@ -6501,6 +6739,7 @@ class $$SettingsTableTableTableManager extends RootTableManager<
             Value<bool> dailyQuotes = const Value.absent(),
             Value<bool> backupReminder = const Value.absent(),
             Value<bool> vibration = const Value.absent(),
+            Value<int> streakShields = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SettingsTableCompanion(
@@ -6510,6 +6749,7 @@ class $$SettingsTableTableTableManager extends RootTableManager<
             dailyQuotes: dailyQuotes,
             backupReminder: backupReminder,
             vibration: vibration,
+            streakShields: streakShields,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -6519,6 +6759,7 @@ class $$SettingsTableTableTableManager extends RootTableManager<
             Value<bool> dailyQuotes = const Value.absent(),
             Value<bool> backupReminder = const Value.absent(),
             Value<bool> vibration = const Value.absent(),
+            Value<int> streakShields = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SettingsTableCompanion.insert(
@@ -6528,6 +6769,7 @@ class $$SettingsTableTableTableManager extends RootTableManager<
             dailyQuotes: dailyQuotes,
             backupReminder: backupReminder,
             vibration: vibration,
+            streakShields: streakShields,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

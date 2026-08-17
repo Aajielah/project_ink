@@ -198,7 +198,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
   Future<void> _updateNotificationSchedule(List<ProjectModel> projects) async {
     try {
       final settings = await _ref.read(settingsRepositoryProvider).getSettings();
-      if (settings == null || !settings.notifications) {
+      if (!settings.notifications) {
         await NotificationService.instance.cancelDaily12AMNotification();
         await NotificationService.instance.cancelDailyMorningNotification();
         await NotificationService.instance.cancelDailyEveningNotification();
@@ -718,6 +718,15 @@ class SettingsNotifier extends StateNotifier<AsyncValue<SettingsModel>> {
     final current = state.value;
     if (current != null) {
       final updated = current.copyWith(vibration: val);
+      await _settingsRepo.updateSettings(updated);
+      state = AsyncValue.data(updated);
+    }
+  }
+
+  Future<void> updateStreakShields(int val) async {
+    final current = state.value;
+    if (current != null) {
+      final updated = current.copyWith(streakShields: val);
       await _settingsRepo.updateSettings(updated);
       state = AsyncValue.data(updated);
     }

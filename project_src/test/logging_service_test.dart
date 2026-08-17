@@ -11,8 +11,31 @@ import '../lib/repositories/statistics_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../lib/shared/providers.dart';
 import '../lib/services/ongoing_sync_service.dart';
+import '../lib/models/settings.dart';
+import '../lib/repositories/settings_repository.dart';
 
-// --- FAKE IN-MEMORY REPOSITORIES ---
+class FakeSettingsRepository implements SettingsRepository {
+  SettingsModel _settings = const SettingsModel(
+    id: 'settings',
+    theme: 'system',
+    notifications: true,
+    dailyQuotes: true,
+    backupReminder: true,
+    vibration: true,
+    streakShields: 2,
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  Future<SettingsModel> getSettings() async => _settings;
+
+  @override
+  Future<void> updateSettings(SettingsModel newSettings) async {
+    _settings = newSettings;
+  }
+}
 
 class FakeProjectRepository implements ProjectRepository {
   final Map<String, ProjectModel> db = {};
@@ -226,6 +249,7 @@ void main() {
           projectRepositoryProvider.overrideWithValue(projectRepo),
           scheduleRepositoryProvider.overrideWithValue(scheduleRepo),
           dailyLogRepositoryProvider.overrideWithValue(logRepo),
+          settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
         ],
       );
       final syncService = container.read(ongoingSyncServiceProvider);

@@ -267,6 +267,7 @@ void main() {
 
       // Call conversion logic for today (May 2nd)
       final notifier = container.read(projectsProvider.notifier);
+      await notifier.loadProjects();
       await notifier.convertDayToRestDay(project, sToday);
 
       // 1. Verify May 2nd became a rest day with 0 planned words

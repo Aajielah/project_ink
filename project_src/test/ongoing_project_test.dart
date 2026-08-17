@@ -12,7 +12,31 @@ import '../lib/repositories/schedule_repository.dart';
 import '../lib/repositories/daily_log_repository.dart';
 import '../lib/repositories/statistics_repository.dart';
 import '../lib/shared/providers.dart';
-import '../lib/shared/date_utils.dart';
+import '../lib/models/settings.dart';
+import '../lib/repositories/settings_repository.dart';
+
+class FakeSettingsRepository implements SettingsRepository {
+  SettingsModel _settings = const SettingsModel(
+    id: 'settings',
+    theme: 'system',
+    notifications: true,
+    dailyQuotes: true,
+    backupReminder: true,
+    vibration: true,
+    streakShields: 2,
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
+  Future<SettingsModel> getSettings() async => _settings;
+
+  @override
+  Future<void> updateSettings(SettingsModel newSettings) async {
+    _settings = newSettings;
+  }
+}
 
 // --- FAKE IN-MEMORY REPOSITORIES ---
 
@@ -153,6 +177,7 @@ void main() {
         projectRepositoryProvider.overrideWithValue(projectRepo),
         dailyLogRepositoryProvider.overrideWithValue(logRepo),
         statisticsRepositoryProvider.overrideWithValue(statsRepo),
+        settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
       ],
     );
 

@@ -41,6 +41,8 @@ class Projects extends Table {
   IntColumn get pendingCarryForward => integer().withDefault(const Constant(0))();
   TextColumn get ongoingStyle => text().nullable().withDefault(const Constant('daily'))();
   TextColumn get writingSession => text().nullable().withDefault(const Constant('none'))();
+  DateTimeColumn get frozenDate => dateTime().nullable()();
+  DateTimeColumn get freezeActivatedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -57,6 +59,7 @@ class Schedules extends Table {
   BoolColumn get automaticRestDay => boolean().withDefault(const Constant(false))();
   BoolColumn get locked => boolean().withDefault(const Constant(false))();
   BoolColumn get isRecoveryDay => boolean().withDefault(const Constant(false))();
+  BoolColumn get isShielded => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -127,6 +130,7 @@ class SettingsTable extends Table {
   BoolColumn get dailyQuotes => boolean().withDefault(const Constant(true))();
   BoolColumn get backupReminder => boolean().withDefault(const Constant(true))();
   BoolColumn get vibration => boolean().withDefault(const Constant(true))();
+  IntColumn get streakShields => integer().withDefault(const Constant(2))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -146,7 +150,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -171,6 +175,12 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 6) {
           await m.addColumn(projects, projects.writingSession);
+        }
+        if (from < 7) {
+          await m.addColumn(schedules, schedules.isShielded);
+          await m.addColumn(settingsTable, settingsTable.streakShields);
+          await m.addColumn(projects, projects.frozenDate);
+          await m.addColumn(projects, projects.freezeActivatedAt);
         }
       },
       beforeOpen: (details) async {

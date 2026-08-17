@@ -40,6 +40,8 @@ class ProjectModel {
   final int pendingCarryForward;
   final String ongoingStyle; // 'daily' or 'rhythm'
   final String writingSession; // 'none', 'morning', 'evening'
+  final DateTime? frozenDate;
+  final DateTime? freezeActivatedAt;
 
   const ProjectModel({
     required this.id,
@@ -68,6 +70,8 @@ class ProjectModel {
     this.pendingCarryForward = 0,
     this.ongoingStyle = 'daily',
     this.writingSession = 'none',
+    this.frozenDate,
+    this.freezeActivatedAt,
   });
 
 
@@ -99,6 +103,9 @@ class ProjectModel {
     int? pendingCarryForward,
     String? ongoingStyle,
     String? writingSession,
+    DateTime? frozenDate,
+    DateTime? freezeActivatedAt,
+    bool clearFreeze = false,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -127,6 +134,8 @@ class ProjectModel {
       pendingCarryForward: pendingCarryForward ?? this.pendingCarryForward,
       ongoingStyle: ongoingStyle ?? this.ongoingStyle,
       writingSession: writingSession ?? this.writingSession,
+      frozenDate: clearFreeze ? null : (frozenDate ?? this.frozenDate),
+      freezeActivatedAt: clearFreeze ? null : (freezeActivatedAt ?? this.freezeActivatedAt),
     );
   }
 
@@ -158,6 +167,8 @@ class ProjectModel {
       'pendingCarryForward': pendingCarryForward,
       'ongoingStyle': ongoingStyle,
       'writingSession': writingSession,
+      'frozenDate': frozenDate?.toIso8601String(),
+      'freezeActivatedAt': freezeActivatedAt?.toIso8601String(),
     };
   }
 
@@ -191,6 +202,8 @@ class ProjectModel {
       pendingCarryForward: json['pendingCarryForward'] as int? ?? 0,
       ongoingStyle: json['ongoingStyle'] as String? ?? 'daily',
       writingSession: json['writingSession'] as String? ?? 'none',
+      frozenDate: json['frozenDate'] != null ? DateTime.parse(json['frozenDate'] as String) : null,
+      freezeActivatedAt: json['freezeActivatedAt'] != null ? DateTime.parse(json['freezeActivatedAt'] as String) : null,
     );
   }
 }

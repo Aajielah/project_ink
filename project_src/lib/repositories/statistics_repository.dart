@@ -150,8 +150,8 @@ class StatisticsRepository {
           int completedWritingSchedules = 0;
 
           for (final s in dayScheds) {
-            final isRestOrRecovery = s.isRestDay || s.automaticRestDay || s.isRecoveryDay;
-            if (!isRestOrRecovery) {
+            final isRestOrRecoveryOrShield = s.isRestDay || s.automaticRestDay || s.isRecoveryDay || s.isShielded;
+            if (!isRestOrRecoveryOrShield) {
               totalWritingSchedules++;
               if (s.completed) {
                 completedWritingSchedules++;
