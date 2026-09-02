@@ -226,7 +226,7 @@ class BackupService {
         // Restore Projects
         if (decodedProjects != null) {
           final appDir = await getApplicationDocumentsDirectory();
-          for (final p in decodedProjects) {
+          for (final p in decodedProjects!) {
             String? restoredCoverPath = p['coverImagePath'];
             if (p['coverType'] == 'uploaded' && restoredCoverPath != null) {
               final filename = restoredCoverPath.split('/').last.split('\\').last;
@@ -256,6 +256,7 @@ class BackupService {
               updatedAt: DateTime.parse(p['updatedAt']),
               coverImagePath: Value(restoredCoverPath),
               coverType: Value(p['coverType']),
+              groupId: Value(p['groupId'] ?? p['id']),
               projectType: Value(p['projectType'] ?? 'fixed'),
               pendingCarryForward: Value(p['pendingCarryForward'] ?? 0),
               ongoingStyle: Value(p['ongoingStyle'] ?? 'daily'),
