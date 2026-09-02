@@ -14,7 +14,6 @@ jobs:
   build:
     name: Build Daily Counter APK
     runs-on: ubuntu-latest
-    timeout-minutes: 15
 
     steps:
       - name: Checkout Code
@@ -32,9 +31,6 @@ jobs:
         with:
           channel: 'stable'
           cache: true
-
-      - name: Set Gradle Wrapper Permissions
-        run: chmod +x Daily_Counter/android/gradlew
 
       - name: Install Dependencies
         run: |
