@@ -362,6 +362,9 @@ class BackupService {
       });
 
       await StatisticsRepository(_db).recalculateStatistics();
+      
+      // Reclaim space and clean up database
+      await _db.customStatement('VACUUM');
       return true;
     } catch (e) {
       return false;

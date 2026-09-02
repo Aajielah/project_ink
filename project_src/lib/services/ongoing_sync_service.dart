@@ -68,7 +68,7 @@ class OngoingSyncService {
           // Clear isShielded on the expired schedule
           final expiredSched = await schedRepo.getScheduleForDate(project.id, frozenDate);
           if (expiredSched != null && expiredSched.isShielded) {
-            await schedRepo.updateSchedule(expiredSched.copyWith(isShielded: false));
+            await schedRepo.updateSchedule(expiredSched.copyWith(isShielded: false, locked: false));
           }
         }
       }
@@ -157,6 +157,12 @@ class OngoingSyncService {
       bool ongoingFrozen = false;
       for (final s in schedules) {
         if (s.date.isBefore(cleanToday) && !s.completed && (!s.isRestDay || s.plannedWords > 0)) {
+          final existingLogForRollover = await logRepo.getLogForDate(project.id, s.date);
+          final backlogCreatedVal = existingLogForRollover?.backlogCreated ?? 0;
+          if (backlogCreatedVal != 0) {
+            continue;
+          }
+
           if (project.ongoingStyle == 'rhythm') {
             final activeStreak = project.projectStreak;
             final settingsRepo = _ref.read(settingsRepositoryProvider);
@@ -396,7 +402,7 @@ class OngoingSyncService {
           // Clear isShielded on the expired schedule
           final expiredSched = await schedRepo.getScheduleForDate(project.id, frozenDate);
           if (expiredSched != null && expiredSched.isShielded) {
-            await schedRepo.updateSchedule(expiredSched.copyWith(isShielded: false));
+            await schedRepo.updateSchedule(expiredSched.copyWith(isShielded: false, locked: false));
           }
         }
       }
@@ -465,6 +471,13 @@ class OngoingSyncService {
           if (s.isRestDay || s.automaticRestDay) {
             currentRemainingRestDays = currentRemainingRestDays - 1 < 0 ? 0 : currentRemainingRestDays - 1;
           } else if (!s.completed) {
+            final existingLogForRollover = await logRepo.getLogForDate(project.id, s.date);
+            final backlogCreatedVal = existingLogForRollover?.backlogCreated ?? 0;
+            if (backlogCreatedVal != 0) {
+              tempDate = tempDate.add(const Duration(days: 1));
+              continue;
+            }
+
             // Check if we can activate a Streak Shield freeze
             final activeStreak = project.projectStreak;
             final settingsRepo = _ref.read(settingsRepositoryProvider);

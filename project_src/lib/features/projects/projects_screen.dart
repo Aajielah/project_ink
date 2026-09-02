@@ -14,6 +14,48 @@ import '../../shared/providers.dart';
 import '../../models/project.dart';
 import 'widgets/book_cover_widget.dart';
 
+class ProjectGroup {
+  final String groupId;
+  final List<ProjectModel> projects;
+
+  ProjectGroup({required this.groupId, required this.projects});
+
+  ProjectModel? get runningProject {
+    try {
+      return projects.firstWhere(
+        (p) =>
+            p.status == ProjectStatus.active ||
+            p.status == ProjectStatus.paused ||
+            p.status == ProjectStatus.frozen ||
+            p.status == ProjectStatus.upcoming,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<ProjectModel> get completedProjects =>
+      projects.where((p) => p.status == ProjectStatus.completed).toList()
+        ..sort((a, b) => (b.actualFinishDate ?? b.updatedAt).compareTo(a.actualFinishDate ?? a.updatedAt));
+
+  bool get hasCompletedRuns => completedProjects.isNotEmpty;
+
+  bool get hasMultipleRuns => (runningProject != null && completedProjects.isNotEmpty) || completedProjects.length > 1;
+
+  ProjectModel get primaryProject => runningProject ?? (completedProjects.isNotEmpty ? completedProjects.first : projects.first);
+
+  int get totalWordsAllRuns => projects.fold<int>(0, (sum, p) => sum + p.writtenWords);
+}
+
+List<ProjectGroup> groupProjectsList(List<ProjectModel> projects) {
+  final Map<String, List<ProjectModel>> map = {};
+  for (final p in projects) {
+    final gid = p.groupId ?? p.id;
+    map.putIfAbsent(gid, () => []).add(p);
+  }
+  return map.entries.map((e) => ProjectGroup(groupId: e.key, projects: e.value)).toList();
+}
+
 class ProjectsScreen extends ConsumerWidget {
   const ProjectsScreen({super.key});
 
@@ -36,15 +78,16 @@ class ProjectsScreen extends ConsumerWidget {
         ),
         body: projectsAsync.when(
           data: (projects) {
-            final active = projects.where((p) => p.status == ProjectStatus.active).toList();
-            final inactive = projects.where((p) => p.status == ProjectStatus.paused || p.status == ProjectStatus.frozen || p.status == ProjectStatus.upcoming).toList();
-            final completed = projects.where((p) => p.status == ProjectStatus.completed).toList();
+            final allGroups = groupProjectsList(projects);
+            final active = allGroups.where((g) => g.runningProject?.status == ProjectStatus.active).toList();
+            final inactive = allGroups.where((g) => g.runningProject != null && (g.runningProject!.status == ProjectStatus.paused || g.runningProject!.status == ProjectStatus.frozen || g.runningProject!.status == ProjectStatus.upcoming)).toList();
+            final completed = allGroups.where((g) => g.runningProject == null && g.hasCompletedRuns).toList();
 
             return TabBarView(
               children: [
-                _ProjectList(projects: active, emptyMessage: 'No active projects. Start a new writing project today!'),
-                _ProjectList(projects: inactive, emptyMessage: 'No paused or frozen projects.'),
-                _ProjectList(projects: completed, emptyMessage: 'No completed projects yet. Keep writing!'),
+                _ProjectGroupList(groups: active, emptyMessage: 'No active projects. Start a new writing project today!'),
+                _ProjectGroupList(groups: inactive, emptyMessage: 'No paused or frozen projects.'),
+                _ProjectGroupList(groups: completed, emptyMessage: 'No completed projects yet. Keep writing!'),
               ],
             );
           },
@@ -61,17 +104,17 @@ class ProjectsScreen extends ConsumerWidget {
   }
 }
 
-class _ProjectList extends ConsumerWidget {
-  final List<ProjectModel> projects;
+class _ProjectGroupList extends ConsumerWidget {
+  final List<ProjectGroup> groups;
   final String emptyMessage;
 
-  const _ProjectList({super.key, required this.projects, required this.emptyMessage});
+  const _ProjectGroupList({super.key, required this.groups, required this.emptyMessage});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    if (projects.isEmpty) {
+    if (groups.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -93,51 +136,38 @@ class _ProjectList extends ConsumerWidget {
       );
     }
 
-    return ReorderableListView.builder(
-      buildDefaultDragHandles: false,
+    return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: projects.length,
+      itemCount: groups.length,
       itemBuilder: (context, index) {
-        final project = projects[index];
-        return _ProjectCard(
-          key: ValueKey(project.id),
-          index: index,
-          project: project,
+        final group = groups[index];
+        return _ProjectGroupCard(
+          key: ValueKey(group.groupId),
+          group: group,
         );
-      },
-      onReorder: (oldIndex, newIndex) async {
-        final tabList = List<ProjectModel>.from(projects);
-        if (oldIndex < newIndex) {
-          newIndex -= 1;
-        }
-        final item = tabList.removeAt(oldIndex);
-        tabList.insert(newIndex, item);
-
-        final allProjects = ref.read(projectsProvider).value ?? [];
-        final otherProjects = allProjects.where((p) => !projects.any((tp) => tp.id == p.id)).toList();
-        final newAllProjects = [...tabList, ...otherProjects];
-
-        await ref.read(projectsProvider.notifier).reorderProjects(newAllProjects);
       },
     );
   }
 }
 
-class _ProjectCard extends ConsumerWidget {
-  final int index;
-  final ProjectModel project;
+class _ProjectGroupCard extends ConsumerWidget {
+  final ProjectGroup group;
 
-  const _ProjectCard({super.key, required this.index, required this.project});
+  const _ProjectGroupCard({super.key, required this.group});
 
-  Future<void> _pickCustomCover(BuildContext context, WidgetRef ref) async {
+  Future<void> _pickCustomCover(BuildContext context, WidgetRef ref, ProjectModel project) async {
     try {
       final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 600,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
       if (pickedFile != null) {
         final pickedPath = pickedFile.path;
         final appDir = await getApplicationDocumentsDirectory();
         
-        // Check if an identical image already exists to avoid duplication
         final existingPath = await findExistingMatchingCover(File(pickedPath), appDir);
         
         String finalPath;
@@ -173,7 +203,7 @@ class _ProjectCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _rollRandomCover(BuildContext context, WidgetRef ref) async {
+  Future<void> _rollRandomCover(BuildContext context, WidgetRef ref, ProjectModel project) async {
     final random = Random();
     final chosen = defaultCovers[random.nextInt(defaultCovers.length)];
     
@@ -192,7 +222,7 @@ class _ProjectCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _removeCover(BuildContext context, WidgetRef ref) async {
+  Future<void> _removeCover(BuildContext context, WidgetRef ref, ProjectModel project) async {
     final updated = project.copyWith(
       coverType: null,
       coverImagePath: null,
@@ -203,12 +233,12 @@ class _ProjectCard extends ConsumerWidget {
     
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cover cover removed.')),
+        const SnackBar(content: Text('Cover removed.')),
       );
     }
   }
 
-  void _showCoverActionSheet(BuildContext context, WidgetRef ref) {
+  void _showCoverActionSheet(BuildContext context, WidgetRef ref, ProjectModel project) {
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -230,7 +260,7 @@ class _ProjectCard extends ConsumerWidget {
                 title: const Text('📷 Upload Custom Cover'),
                 onTap: () {
                   Navigator.pop(context);
-                  _pickCustomCover(context, ref);
+                  _pickCustomCover(context, ref, project);
                 },
               ),
               ListTile(
@@ -238,7 +268,7 @@ class _ProjectCard extends ConsumerWidget {
                 title: const Text('🖼 Choose Random Default Cover'),
                 onTap: () {
                   Navigator.pop(context);
-                  _rollRandomCover(context, ref);
+                  _rollRandomCover(context, ref, project);
                 },
               ),
               if (project.coverType != null)
@@ -247,7 +277,7 @@ class _ProjectCard extends ConsumerWidget {
                   title: const Text('❌ Remove Cover', style: TextStyle(color: Colors.red)),
                   onTap: () {
                     Navigator.pop(context);
-                    _removeCover(context, ref);
+                    _removeCover(context, ref, project);
                   },
                 ),
               const SizedBox(height: 12),
@@ -258,9 +288,296 @@ class _ProjectCard extends ConsumerWidget {
     );
   }
 
+  void _showGroupRunsSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        final primary = group.primaryProject;
+        final running = group.runningProject;
+        final completed = group.completedProjects;
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Header
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BookCoverWidget(
+                        title: primary.name,
+                        coverImagePath: primary.coverImagePath,
+                        coverType: primary.coverType,
+                        width: 60,
+                        height: 80,
+                        borderRadius: 6.0,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              primary.name,
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${NumberFormat('#,###').format(group.totalWordsAllRuns)} words total across all runs',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${running != null ? "1 Active Run • " : ""}${completed.length} Completed Run${completed.length > 1 ? "s" : ""}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 12),
+
+                  // SECTION 1: RUNNING PROJECT (if any)
+                  if (running != null) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.bolt, color: theme.colorScheme.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'CURRENT RUNNING PROJECT',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.1,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Card(
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.4)),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/projects/${running.id}');
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      running.name,
+                                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _StatusChip(status: running.status),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                running.projectType == ProjectType.ongoing
+                                    ? '${NumberFormat('#,###').format(running.writtenWords)} words written'
+                                    : '${running.writtenWords} / ${running.targetWords} words (${(running.targetWords > 0 ? running.writtenWords * 100 ~/ running.targetWords : 0)}%)',
+                                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 6),
+                              if (running.projectType == ProjectType.fixed)
+                                LinearProgressIndicator(
+                                  value: running.targetWords > 0 ? min(1.0, running.writtenWords / running.targetWords) : 0,
+                                  minHeight: 6,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Started ${DateFormat.yMMMd().format(running.startDate)}',
+                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                  ),
+                                  FilledButton.tonalIcon(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      context.push('/projects/${running.id}');
+                                    },
+                                    icon: const Icon(Icons.arrow_forward, size: 16),
+                                    label: const Text('Open'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // If no running project, offer "+ Start Next Project Run"
+                  if (running == null) ...[
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        context.push('/projects/create?cloneFrom=${primary.id}');
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Start Next Project Run'),
+                      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // SECTION 2: COMPLETED RUNS
+                  if (completed.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.archive_outlined, color: theme.colorScheme.outline, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'COMPLETED RUNS (READ-ONLY)',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.1,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    ...completed.map((comp) {
+                      final finishDate = comp.actualFinishDate ?? comp.updatedAt;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 10.0),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          leading: const CircleAvatar(
+                            backgroundColor: Colors.green,
+                            child: Icon(Icons.check, color: Colors.white, size: 20),
+                          ),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  comp.name,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+                            ],
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(
+                                '${NumberFormat('#,###').format(comp.writtenWords)} words written',
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Finished on ${DateFormat.yMMMd().format(finishDate)}',
+                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                              ),
+                            ],
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                            tooltip: 'Delete completed run',
+                            onPressed: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Delete Completed Run?'),
+                                  content: Text('Are you sure you want to delete this completed record for "${comp.name}"? This will not affect other runs.'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                await ref.read(projectsProvider.notifier).deleteProject(comp.id);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
+                              }
+                            },
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                            context.push('/projects/${comp.id}');
+                          },
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final project = group.primaryProject;
     final isOngoing = project.projectType == ProjectType.ongoing;
     final progress = project.targetWords > 0 ? project.writtenWords / project.targetWords : 0.0;
     final percent = (progress * 100).toInt();
@@ -269,8 +586,14 @@ class _ProjectCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12.0),
       child: InkWell(
         borderRadius: BorderRadius.circular(12.0),
-        onTap: () => context.go('/projects/${project.id}'),
-        onLongPress: () => _showCoverActionSheet(context, ref),
+        onTap: () {
+          if (group.hasMultipleRuns) {
+            _showGroupRunsSheet(context, ref);
+          } else {
+            context.go('/projects/${project.id}');
+          }
+        },
+        onLongPress: () => _showCoverActionSheet(context, ref, project),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Row(
@@ -349,19 +672,24 @@ class _ProjectCard extends ConsumerWidget {
                           ),
                       ],
                     ),
+                    if (group.hasCompletedRuns && group.runningProject != null) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondaryContainer.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '📚 ${group.completedProjects.length} Completed Run${group.completedProjects.length > 1 ? 's' : ''}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Dedicated Drag Handle
-              ReorderableDragStartListener(
-                index: index,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
-                  child: Icon(
-                    Icons.drag_handle,
-                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
-                  ),
                 ),
               ),
             ],

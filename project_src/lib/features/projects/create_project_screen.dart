@@ -17,7 +17,8 @@ import 'project_duration_type.dart';
 import 'widgets/book_cover_widget.dart';
 
 class CreateProjectScreen extends ConsumerStatefulWidget {
-  const CreateProjectScreen({super.key});
+  final String? cloneFromId;
+  const CreateProjectScreen({super.key, this.cloneFromId});
 
   @override
   ConsumerState<CreateProjectScreen> createState() => _CreateProjectScreenState();
@@ -42,6 +43,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   final List<int> _fixedRestDays = []; // 1 = Mon, 7 = Sun
   String _ongoingStyle = 'daily';
   String _writingSession = 'none';
+  String? _inheritedGroupId;
 
   // Book Cover State
   String? _coverType;
@@ -57,6 +59,57 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
     final chosen = defaultCovers[random.nextInt(defaultCovers.length)];
     _coverType = 'default';
     _coverImagePath = chosen.id;
+
+    if (widget.cloneFromId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _populateFromClone(widget.cloneFromId!);
+      });
+    }
+  }
+
+  Future<void> _populateFromClone(String cloneId) async {
+    try {
+      final project = await ref.read(projectRepositoryProvider).getProjectById(cloneId);
+      if (project == null || !mounted) return;
+
+      _inheritedGroupId = project.groupId ?? project.id;
+      _nameController.text = project.name;
+      _descController.text = project.description ?? '';
+      _projectType = project.projectType;
+      if (project.targetWords > 0) {
+        _targetWordsController.text = project.targetWords.toString();
+      }
+      _dailyTargetController.text = project.dailyWordTarget.toString();
+      
+      // Default start date to tomorrow for the cloned new run
+      final logicalToday = getLogicalToday();
+      final tomorrow = logicalToday.add(const Duration(days: 1));
+      _startDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
+      _endDate = null;
+
+      if (project.projectType == ProjectType.fixed) {
+        final durationDays = getDaysDifference(project.startDate, project.expectedFinishDate) + 1;
+        _qtyController.text = durationDays.toString();
+        _durationType = DurationType.days;
+        _restMode = project.restMode;
+        _allowedRestDays = project.allowedRestDays;
+        
+        if (project.restMode == RestMode.fixed) {
+          final schedules = await ref.read(scheduleRepositoryProvider).getSchedulesForProject(project.id);
+          final restWeekdays = schedules.where((s) => s.isRestDay).map((s) => s.date.weekday).toSet().toList();
+          _fixedRestDays.clear();
+          _fixedRestDays.addAll(restWeekdays);
+        }
+      } else {
+        _ongoingStyle = project.ongoingStyle;
+      }
+
+      _writingSession = project.writingSession;
+      _coverType = project.coverType;
+      _coverImagePath = project.coverImagePath;
+
+      setState(() {});
+    } catch (_) {}
   }
 
   @override
@@ -107,7 +160,12 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
   Future<void> _pickCustomCover() async {
     try {
       final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 600,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
       if (pickedFile != null) {
         final pickedPath = pickedFile.path;
         final appDir = await getApplicationDocumentsDirectory();
@@ -226,6 +284,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
         coverImagePath: _coverImagePath,
         coverType: _coverType,
         writingSession: _writingSession,
+        groupId: _inheritedGroupId,
       );
     } else {
       final dailyTarget = int.parse(_dailyTargetController.text);
@@ -245,6 +304,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
         coverType: _coverType,
         ongoingStyle: _ongoingStyle,
         writingSession: _writingSession,
+        groupId: _inheritedGroupId,
       );
     }
 
@@ -757,7 +817,8 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Card(
+              ],
+              Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -878,7 +939,6 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-              ],
               const SizedBox(height: 32),
 
               FilledButton.icon(

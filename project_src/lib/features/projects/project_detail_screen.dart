@@ -114,6 +114,86 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
     );
   }
 
+  void _showProjectFinishedDialog(BuildContext context, String projectId, String projectName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.celebration, color: Colors.amber, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Project Completed! 🎉',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Congratulations! You have completed all words for "$projectName"!',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Do you want to start another project?',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Create the next run or sequel with pre-filled settings and start writing tomorrow.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No, Finish'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/projects/create?cloneFrom=$projectId');
+            },
+            icon: const Icon(Icons.add_circle_outline, size: 18),
+            label: const Text('Yes, Start Next Run'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _logWords(int planned) async {
     final text = _logController.text.trim();
     if (text.isEmpty) return;
@@ -156,6 +236,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
 
     final project = ref.read(projectsProvider).value?.firstWhere((p) => p.id == widget.projectId);
     if (project == null) return;
+    final wasProjectCompletedBefore = project.status == ProjectStatus.completed;
     
     final schedules = await ref.read(scheduleRepositoryProvider).getSchedulesForProject(widget.projectId);
     final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
@@ -171,26 +252,25 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
       _logController.clear();
       _loadTodayLog();
 
-      String? projectName;
-      ref.read(projectsProvider).whenOrNull(
-        data: (projects) {
-          try {
-            projectName = projects.firstWhere((p) => p.id == widget.projectId).name;
-          } catch (_) {}
-        },
-      );
-
       await ref.read(projectsProvider.notifier).loadProjects(silent: true);
       ref.invalidate(statisticsProvider);
       ref.invalidate(homeQuoteProvider(widget.projectId));
       ref.invalidate(homeEncouragementProvider(widget.projectId));
       setState(() {});
 
-      if (wasCompleted && projectName != null) {
+      final projectAfter = ref.read(projectsProvider).value?.firstWhere((p) => p.id == widget.projectId);
+      final isProjectNowCompleted = projectAfter?.status == ProjectStatus.completed;
+      final projectName = projectAfter?.name ?? project.name;
+
+      if (!wasProjectCompletedBefore && isProjectNowCompleted) {
         if (mounted) {
-          _showCompletionDialog(context, projectName!);
+          _showProjectFinishedDialog(context, widget.projectId, projectName);
         }
-      } else if (!wasCompleted) {
+      } else if (wasCompleted) {
+        if (mounted) {
+          _showCompletionDialog(context, projectName);
+        }
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Words logged successfully!')),
         );
@@ -904,6 +984,26 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> with 
                                   : 'This project is paused manually.',
                               style: TextStyle(
                                 color: isAutoPaused ? Colors.orange[900] : theme.colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (project.status == ProjectStatus.completed)
+                    Container(
+                      color: Colors.green.withOpacity(0.12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.lock_outline, color: Colors.green),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'This project run is completed and preserved in read-only mode.',
+                              style: TextStyle(
+                                color: Colors.green[900],
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1955,7 +2055,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (l.backlogCreated > 0) ...[
+                                if (activeProject.status != ProjectStatus.completed && l.backlogCreated > 0) ...[
                                   IconButton(
                                     icon: const Icon(Icons.playlist_add_check, color: Colors.orange, size: 24),
                                     tooltip: "Resolve backlog",
@@ -1976,7 +2076,8 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                                     ],
                                   ),
                                 ],
-                                if (isEditable &&
+                                if (activeProject.status != ProjectStatus.completed &&
+                                    isEditable &&
                                     l.date.year == logicalToday.year &&
                                     l.date.month == logicalToday.month &&
                                     l.date.day == logicalToday.day) ...[
@@ -2070,12 +2171,12 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                   await logRepo.insertLog(log.copyWith(
                     actualWords: newActual,
                     backlogCreated: newBacklog,
-                    completed: isCompleted,
+                    completed: false, // Keep completed false to prevent retroactive streak restoration
                   ));
 
                   if (schedule != null) {
                     await schedRepo.updateSchedule(schedule.copyWith(
-                      completed: isCompleted,
+                      completed: false, // Keep completed false to prevent retroactive streak restoration
                     ));
                   }
 
@@ -2181,6 +2282,9 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
 
                 if (confirmed == true) {
                   try {
+                    final projectBefore = ref.read(projectsProvider).value?.firstWhere((p) => p.id == log.projectId);
+                    final wasProjectCompletedBefore = projectBefore?.status == ProjectStatus.completed;
+
                     final schedules = await ref.read(scheduleRepositoryProvider).getSchedulesForProject(log.projectId);
                     final logicalToday = getLogicalTodayForProject(project: activeProject, schedules: schedules);
 
@@ -2196,9 +2300,19 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                     ref.invalidate(homeQuoteProvider(log.projectId));
                     ref.invalidate(homeEncouragementProvider(log.projectId));
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Log updated successfully!')),
-                    );
+                    final projectAfter = ref.read(projectsProvider).value?.firstWhere((p) => p.id == log.projectId);
+                    final isProjectNowCompleted = projectAfter?.status == ProjectStatus.completed;
+                    final projectName = projectAfter?.name ?? projectBefore?.name ?? 'Project';
+
+                    if (!wasProjectCompletedBefore && isProjectNowCompleted) {
+                      if (context.mounted) {
+                        _showProjectFinishedDialog(context, log.projectId, projectName);
+                      }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Log updated successfully!')),
+                      );
+                    }
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Failed to update log: $e')),
@@ -2244,18 +2358,22 @@ class _ManageTab extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Adjust writing goals, timeline, or rest day setups. Project Ink will recalculate future days while preserving your logs.',
+                  project.status == ProjectStatus.completed
+                      ? 'This project run is completed and locked in read-only mode to preserve your historical milestone records.'
+                      : 'Adjust writing goals, timeline, or rest day setups. Project Ink will recalculate future days while preserving your logs.',
                   style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: () => onEditConfiguration(project),
-                  icon: const Icon(Icons.settings),
-                  label: const Text('Edit Project Configuration'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14.0),
+                if (project.status != ProjectStatus.completed) ...[
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () => onEditConfiguration(project),
+                    icon: const Icon(Icons.settings),
+                    label: const Text('Edit Project Configuration'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14.0),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

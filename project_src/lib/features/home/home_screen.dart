@@ -826,6 +826,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     try {
       final project = ref.read(projectsProvider).value?.firstWhere((p) => p.id == projectId);
       if (project == null) return;
+      final wasProjectCompletedBefore = project.status == ProjectStatus.completed;
 
       final schedules = await ref.read(scheduleRepositoryProvider).getSchedulesForProject(projectId);
       final logicalToday = getLogicalTodayForProject(project: project, schedules: schedules);
@@ -836,12 +837,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             actualWords: words,
             isAdditive: isAdditive,
           );
-      _refreshAll();
-      if (wasCompleted && project != null) {
+      await _refreshAll();
+      
+      final projectAfter = ref.read(projectsProvider).value?.firstWhere((p) => p.id == projectId);
+      final isProjectNowCompleted = projectAfter?.status == ProjectStatus.completed;
+      final projectName = projectAfter?.name ?? project.name;
+
+      if (!wasProjectCompletedBefore && isProjectNowCompleted) {
         if (context.mounted) {
-          _showCompletionDialog(context, project.name);
+          _showProjectFinishedDialog(context, projectId, projectName);
         }
-      } else if (!wasCompleted) {
+      } else if (wasCompleted) {
+        if (context.mounted) {
+          _showCompletionDialog(context, projectName);
+        }
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Successfully logged $words words!')),
         );
@@ -1169,6 +1179,86 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
           FilledButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Great!'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showProjectFinishedDialog(BuildContext context, String projectId, String projectName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.celebration, color: Colors.amber, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Project Completed! 🎉',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Congratulations! You have completed all words for "$projectName"!',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Do you want to start another project?',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Create the next run or sequel with pre-filled settings and start writing tomorrow.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No, Finish'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/projects/create?cloneFrom=$projectId');
+            },
+            icon: const Icon(Icons.add_circle_outline, size: 18),
+            label: const Text('Yes, Start Next Run'),
           ),
         ],
       ),

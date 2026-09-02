@@ -42,6 +42,7 @@ class ProjectModel {
   final String writingSession; // 'none', 'morning', 'evening'
   final DateTime? frozenDate;
   final DateTime? freezeActivatedAt;
+  final String? groupId;
 
   const ProjectModel({
     required this.id,
@@ -72,6 +73,7 @@ class ProjectModel {
     this.writingSession = 'none',
     this.frozenDate,
     this.freezeActivatedAt,
+    this.groupId,
   });
 
 
@@ -106,6 +108,7 @@ class ProjectModel {
     DateTime? frozenDate,
     DateTime? freezeActivatedAt,
     bool clearFreeze = false,
+    String? groupId,
   }) {
     return ProjectModel(
       id: id ?? this.id,
@@ -136,6 +139,7 @@ class ProjectModel {
       writingSession: writingSession ?? this.writingSession,
       frozenDate: clearFreeze ? null : (frozenDate ?? this.frozenDate),
       freezeActivatedAt: clearFreeze ? null : (freezeActivatedAt ?? this.freezeActivatedAt),
+      groupId: groupId ?? this.groupId,
     );
   }
 
@@ -169,6 +173,7 @@ class ProjectModel {
       'writingSession': writingSession,
       'frozenDate': frozenDate?.toIso8601String(),
       'freezeActivatedAt': freezeActivatedAt?.toIso8601String(),
+      'groupId': groupId,
     };
   }
 
@@ -204,6 +209,7 @@ class ProjectModel {
       writingSession: json['writingSession'] as String? ?? 'none',
       frozenDate: json['frozenDate'] != null ? DateTime.parse(json['frozenDate'] as String) : null,
       freezeActivatedAt: json['freezeActivatedAt'] != null ? DateTime.parse(json['freezeActivatedAt'] as String) : null,
+      groupId: json['groupId'] as String?,
     );
   }
 }

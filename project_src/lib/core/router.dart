@@ -31,7 +31,9 @@ final GoRouter appRouter = GoRouter(
               routes: [
                 GoRoute(
                   path: 'create',
-                  builder: (context, state) => const CreateProjectScreen(),
+                  builder: (context, state) => CreateProjectScreen(
+                    cloneFromId: state.uri.queryParameters['cloneFrom'],
+                  ),
                 ),
                 GoRoute(
                   path: ':id',

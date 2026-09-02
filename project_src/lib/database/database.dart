@@ -43,6 +43,7 @@ class Projects extends Table {
   TextColumn get writingSession => text().nullable().withDefault(const Constant('none'))();
   DateTimeColumn get frozenDate => dateTime().nullable()();
   DateTimeColumn get freezeActivatedAt => dateTime().nullable()();
+  TextColumn get groupId => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -150,7 +151,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -181,6 +182,9 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(settingsTable, settingsTable.streakShields);
           await m.addColumn(projects, projects.frozenDate);
           await m.addColumn(projects, projects.freezeActivatedAt);
+        }
+        if (from < 8) {
+          await m.addColumn(projects, projects.groupId);
         }
       },
       beforeOpen: (details) async {

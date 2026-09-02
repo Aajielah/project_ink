@@ -37,6 +37,7 @@ class ProjectRepository {
       writingSession: data.writingSession ?? 'none',
       frozenDate: data.frozenDate,
       freezeActivatedAt: data.freezeActivatedAt,
+      groupId: data.groupId ?? data.id,
     );
   }
 
@@ -70,6 +71,7 @@ class ProjectRepository {
       writingSession: Value(model.writingSession),
       frozenDate: Value(model.frozenDate),
       freezeActivatedAt: Value(model.freezeActivatedAt),
+      groupId: Value(model.groupId ?? model.id),
     );
   }
 

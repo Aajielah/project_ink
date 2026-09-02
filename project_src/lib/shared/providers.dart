@@ -279,6 +279,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     String? coverType,
     String ongoingStyle = 'daily',
     String writingSession = 'none',
+    String? groupId,
   }) async {
     if (projectType == ProjectType.fixed) {
       final err = _schedulingService.validateInputs(
@@ -295,6 +296,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
     try {
       final uuid = const Uuid();
       final projectId = uuid.v4();
+      final effectiveGroupId = groupId ?? projectId;
       final today = getLogicalToday();
       final cleanStartDate = DateTime(startDate.year, startDate.month, startDate.day);
       final cleanToday = DateTime(today.year, today.month, today.day);
@@ -348,6 +350,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           coverType: coverType,
           ongoingStyle: 'daily',
           writingSession: writingSession,
+          groupId: effectiveGroupId,
         );
 
         await _projectRepo.insertProject(project);
@@ -380,6 +383,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           coverType: coverType,
           ongoingStyle: ongoingStyle,
           writingSession: writingSession,
+          groupId: effectiveGroupId,
         );
 
         await _projectRepo.insertProject(project);
@@ -470,6 +474,9 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
       _invalidateAllDependentProviders();
       await loadProjects(silent: true);
       await cleanupOrphanedCovers();
+
+      // Reclaim unused disk space
+      await db.customStatement('VACUUM');
     } catch (_) {}
   }
 

@@ -5,12 +5,15 @@ on:
     branches:
       - main
       - master
+    paths-ignore:
+      - 'Daily_Counter/**'
   workflow_dispatch: # Allows you to manually trigger the build from the GitHub website
 
 jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Code
@@ -36,7 +39,7 @@ jobs:
       - name: Run Build Runner (Database Gen)
         run: |
           cd project_src
-          flutter pub run build_runner build --delete-conflicting-outputs
+          dart run build_runner build --delete-conflicting-outputs
 
       - name: Run Unit Tests
         run: |

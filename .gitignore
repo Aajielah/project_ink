@@ -1,0 +1,8 @@
+# Screenshots & Media
+Screenshot_*.jpg
+Screenshot_*.png
+*.tmp
+
+# Miscellaneous
+.DS_Store
+Thumbs.db

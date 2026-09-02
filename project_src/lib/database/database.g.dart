@@ -559,6 +559,12 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
   late final GeneratedColumn<DateTime> freezeActivatedAt =
       GeneratedColumn<DateTime>('freeze_activated_at', aliasedName, true,
           type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _groupIdMeta =
+      const VerificationMeta('groupId');
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+      'group_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -588,7 +594,8 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         ongoingStyle,
         writingSession,
         frozenDate,
-        freezeActivatedAt
+        freezeActivatedAt,
+        groupId
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -773,6 +780,10 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           freezeActivatedAt.isAcceptableOrUnknown(
               data['freeze_activated_at']!, _freezeActivatedAtMeta));
     }
+    if (data.containsKey('group_id')) {
+      context.handle(_groupIdMeta,
+          groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta));
+    }
     return context;
   }
 
@@ -839,6 +850,8 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}frozen_date']),
       freezeActivatedAt: attachedDatabase.typeMapping.read(
           DriftSqlType.dateTime, data['${effectivePrefix}freeze_activated_at']),
+      groupId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}group_id']),
     );
   }
 
@@ -877,6 +890,7 @@ class Project extends DataClass implements Insertable<Project> {
   final String? writingSession;
   final DateTime? frozenDate;
   final DateTime? freezeActivatedAt;
+  final String? groupId;
   const Project(
       {required this.id,
       required this.name,
@@ -905,7 +919,8 @@ class Project extends DataClass implements Insertable<Project> {
       this.ongoingStyle,
       this.writingSession,
       this.frozenDate,
-      this.freezeActivatedAt});
+      this.freezeActivatedAt,
+      this.groupId});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -952,6 +967,9 @@ class Project extends DataClass implements Insertable<Project> {
     }
     if (!nullToAbsent || freezeActivatedAt != null) {
       map['freeze_activated_at'] = Variable<DateTime>(freezeActivatedAt);
+    }
+    if (!nullToAbsent || groupId != null) {
+      map['group_id'] = Variable<String>(groupId);
     }
     return map;
   }
@@ -1002,6 +1020,9 @@ class Project extends DataClass implements Insertable<Project> {
       freezeActivatedAt: freezeActivatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(freezeActivatedAt),
+      groupId: groupId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupId),
     );
   }
 
@@ -1042,6 +1063,7 @@ class Project extends DataClass implements Insertable<Project> {
       frozenDate: serializer.fromJson<DateTime?>(json['frozenDate']),
       freezeActivatedAt:
           serializer.fromJson<DateTime?>(json['freezeActivatedAt']),
+      groupId: serializer.fromJson<String?>(json['groupId']),
     );
   }
   @override
@@ -1076,6 +1098,7 @@ class Project extends DataClass implements Insertable<Project> {
       'writingSession': serializer.toJson<String?>(writingSession),
       'frozenDate': serializer.toJson<DateTime?>(frozenDate),
       'freezeActivatedAt': serializer.toJson<DateTime?>(freezeActivatedAt),
+      'groupId': serializer.toJson<String?>(groupId),
     };
   }
 
@@ -1107,7 +1130,8 @@ class Project extends DataClass implements Insertable<Project> {
           Value<String?> ongoingStyle = const Value.absent(),
           Value<String?> writingSession = const Value.absent(),
           Value<DateTime?> frozenDate = const Value.absent(),
-          Value<DateTime?> freezeActivatedAt = const Value.absent()}) =>
+          Value<DateTime?> freezeActivatedAt = const Value.absent(),
+          Value<String?> groupId = const Value.absent()}) =>
       Project(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1144,6 +1168,7 @@ class Project extends DataClass implements Insertable<Project> {
         freezeActivatedAt: freezeActivatedAt.present
             ? freezeActivatedAt.value
             : this.freezeActivatedAt,
+        groupId: groupId.present ? groupId.value : this.groupId,
       );
   Project copyWithCompanion(ProjectsCompanion data) {
     return Project(
@@ -1210,6 +1235,7 @@ class Project extends DataClass implements Insertable<Project> {
       freezeActivatedAt: data.freezeActivatedAt.present
           ? data.freezeActivatedAt.value
           : this.freezeActivatedAt,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
     );
   }
 
@@ -1243,7 +1269,8 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('ongoingStyle: $ongoingStyle, ')
           ..write('writingSession: $writingSession, ')
           ..write('frozenDate: $frozenDate, ')
-          ..write('freezeActivatedAt: $freezeActivatedAt')
+          ..write('freezeActivatedAt: $freezeActivatedAt, ')
+          ..write('groupId: $groupId')
           ..write(')'))
         .toString();
   }
@@ -1277,7 +1304,8 @@ class Project extends DataClass implements Insertable<Project> {
         ongoingStyle,
         writingSession,
         frozenDate,
-        freezeActivatedAt
+        freezeActivatedAt,
+        groupId
       ]);
   @override
   bool operator ==(Object other) =>
@@ -1310,7 +1338,8 @@ class Project extends DataClass implements Insertable<Project> {
           other.ongoingStyle == this.ongoingStyle &&
           other.writingSession == this.writingSession &&
           other.frozenDate == this.frozenDate &&
-          other.freezeActivatedAt == this.freezeActivatedAt);
+          other.freezeActivatedAt == this.freezeActivatedAt &&
+          other.groupId == this.groupId);
 }
 
 class ProjectsCompanion extends UpdateCompanion<Project> {
@@ -1342,6 +1371,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<String?> writingSession;
   final Value<DateTime?> frozenDate;
   final Value<DateTime?> freezeActivatedAt;
+  final Value<String?> groupId;
   final Value<int> rowid;
   const ProjectsCompanion({
     this.id = const Value.absent(),
@@ -1372,6 +1402,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.writingSession = const Value.absent(),
     this.frozenDate = const Value.absent(),
     this.freezeActivatedAt = const Value.absent(),
+    this.groupId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectsCompanion.insert({
@@ -1403,6 +1434,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     this.writingSession = const Value.absent(),
     this.frozenDate = const Value.absent(),
     this.freezeActivatedAt = const Value.absent(),
+    this.groupId = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1444,6 +1476,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Expression<String>? writingSession,
     Expression<DateTime>? frozenDate,
     Expression<DateTime>? freezeActivatedAt,
+    Expression<String>? groupId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1478,6 +1511,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       if (writingSession != null) 'writing_session': writingSession,
       if (frozenDate != null) 'frozen_date': frozenDate,
       if (freezeActivatedAt != null) 'freeze_activated_at': freezeActivatedAt,
+      if (groupId != null) 'group_id': groupId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1511,6 +1545,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       Value<String?>? writingSession,
       Value<DateTime?>? frozenDate,
       Value<DateTime?>? freezeActivatedAt,
+      Value<String?>? groupId,
       Value<int>? rowid}) {
     return ProjectsCompanion(
       id: id ?? this.id,
@@ -1541,6 +1576,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
       writingSession: writingSession ?? this.writingSession,
       frozenDate: frozenDate ?? this.frozenDate,
       freezeActivatedAt: freezeActivatedAt ?? this.freezeActivatedAt,
+      groupId: groupId ?? this.groupId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1633,6 +1669,9 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (freezeActivatedAt.present) {
       map['freeze_activated_at'] = Variable<DateTime>(freezeActivatedAt.value);
     }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1670,6 +1709,7 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('writingSession: $writingSession, ')
           ..write('frozenDate: $frozenDate, ')
           ..write('freezeActivatedAt: $freezeActivatedAt, ')
+          ..write('groupId: $groupId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4499,6 +4539,7 @@ typedef $$ProjectsTableCreateCompanionBuilder = ProjectsCompanion Function({
   Value<String?> writingSession,
   Value<DateTime?> frozenDate,
   Value<DateTime?> freezeActivatedAt,
+  Value<String?> groupId,
   Value<int> rowid,
 });
 typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
@@ -4530,6 +4571,7 @@ typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
   Value<String?> writingSession,
   Value<DateTime?> frozenDate,
   Value<DateTime?> freezeActivatedAt,
+  Value<String?> groupId,
   Value<int> rowid,
 });
 
@@ -4671,6 +4713,9 @@ class $$ProjectsTableFilterComposer
   ColumnFilters<DateTime> get freezeActivatedAt => $composableBuilder(
       column: $table.freezeActivatedAt,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get groupId => $composableBuilder(
+      column: $table.groupId, builder: (column) => ColumnFilters(column));
 
   Expression<bool> schedulesRefs(
       Expression<bool> Function($$SchedulesTableFilterComposer f) f) {
@@ -4822,6 +4867,9 @@ class $$ProjectsTableOrderingComposer
   ColumnOrderings<DateTime> get freezeActivatedAt => $composableBuilder(
       column: $table.freezeActivatedAt,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get groupId => $composableBuilder(
+      column: $table.groupId, builder: (column) => ColumnOrderings(column));
 }
 
 class $$ProjectsTableAnnotationComposer
@@ -4917,6 +4965,9 @@ class $$ProjectsTableAnnotationComposer
   GeneratedColumn<DateTime> get freezeActivatedAt => $composableBuilder(
       column: $table.freezeActivatedAt, builder: (column) => column);
 
+  GeneratedColumn<String> get groupId =>
+      $composableBuilder(column: $table.groupId, builder: (column) => column);
+
   Expression<T> schedulesRefs<T extends Object>(
       Expression<T> Function($$SchedulesTableAnnotationComposer a) f) {
     final $$SchedulesTableAnnotationComposer composer = $composerBuilder(
@@ -5011,6 +5062,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<String?> writingSession = const Value.absent(),
             Value<DateTime?> frozenDate = const Value.absent(),
             Value<DateTime?> freezeActivatedAt = const Value.absent(),
+            Value<String?> groupId = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion(
@@ -5042,6 +5094,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             writingSession: writingSession,
             frozenDate: frozenDate,
             freezeActivatedAt: freezeActivatedAt,
+            groupId: groupId,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -5073,6 +5126,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             Value<String?> writingSession = const Value.absent(),
             Value<DateTime?> frozenDate = const Value.absent(),
             Value<DateTime?> freezeActivatedAt = const Value.absent(),
+            Value<String?> groupId = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ProjectsCompanion.insert(
@@ -5104,6 +5158,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
             writingSession: writingSession,
             frozenDate: frozenDate,
             freezeActivatedAt: freezeActivatedAt,
+            groupId: groupId,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
