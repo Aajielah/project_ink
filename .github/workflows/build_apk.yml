@@ -32,9 +32,6 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Set Gradle Wrapper Permissions
-        run: chmod +x project_src/android/gradlew
-
       - name: Install Dependencies
         run: |
           cd project_src
