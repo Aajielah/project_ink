@@ -6,35 +6,75 @@ import '../../../core/utils/duration_utils.dart';
 import '../../../shared/models/project.dart';
 import '../../../shared/models/daily_record.dart';
 
-class HomeController extends AsyncNotifier<List<Project>> {
+class HomeDashboardData {
+  final List<Project> dueToday;
+  final List<Project> completedToday;
+  final int totalActive;
+  final int totalPaused;
+  final int totalCompleted;
+  final int totalAllTimeCheckIns;
+
+  HomeDashboardData({
+    required this.dueToday,
+    required this.completedToday,
+    required this.totalActive,
+    required this.totalPaused,
+    required this.totalCompleted,
+    required this.totalAllTimeCheckIns,
+  });
+}
+
+class HomeController extends AsyncNotifier<HomeDashboardData> {
   @override
-  FutureOr<List<Project>> build() async {
-    return _loadActiveTodayProjects();
+  FutureOr<HomeDashboardData> build() async {
+    return _loadDashboardData();
   }
 
-  Future<List<Project>> _loadActiveTodayProjects() async {
+  Future<HomeDashboardData> _loadDashboardData() async {
     final db = ref.watch(databaseServiceProvider);
     final projects = await db.getAllProjects();
     final logicalToday = DayFinalizerService.getLogicalTrackingDate(DateTime.now());
 
-    final List<Project> activeToday = [];
+    final List<Project> dueToday = [];
+    final List<Project> completedToday = [];
+    int activeCount = 0;
+    int pausedCount = 0;
+    int completedCount = 0;
+    int totalCheckIns = 0;
+
     for (var project in projects) {
-      // 1. Must be active status
+      if (project.status == 'active') {
+        activeCount++;
+      } else if (project.status == 'paused') {
+        pausedCount++;
+      } else if (project.status == 'completed') {
+        completedCount++;
+      }
+
+      final records = await db.getRecordsForProject(project.id);
+      totalCheckIns += records.where((r) => r.status == 'completed').length;
+
       if (project.status != 'active') continue;
 
-      // 2. Start date must be on or before logical today
       final normalizedStart = DurationUtils.normalizeDate(project.startDate);
       if (normalizedStart.isAfter(logicalToday)) continue;
 
-      // 3. Must NOT have a completed or missed record for logical today
-      final record = await db.getRecordForDate(project.id, logicalToday);
-      if (record != null && (record.status == 'completed' || record.status == 'missed')) {
-        continue;
+      final todayRecord = await db.getRecordForDate(project.id, logicalToday);
+      if (todayRecord != null && todayRecord.status == 'completed') {
+        completedToday.add(project);
+      } else if (todayRecord == null || (todayRecord.status != 'completed' && todayRecord.status != 'missed')) {
+        dueToday.add(project);
       }
-
-      activeToday.add(project);
     }
-    return activeToday;
+
+    return HomeDashboardData(
+      dueToday: dueToday,
+      completedToday: completedToday,
+      totalActive: activeCount,
+      totalPaused: pausedCount,
+      totalCompleted: completedCount,
+      totalAllTimeCheckIns: totalCheckIns,
+    );
   }
 
   Future<void> completeProject(int projectId) async {
@@ -43,7 +83,6 @@ class HomeController extends AsyncNotifier<List<Project>> {
       final db = ref.read(databaseServiceProvider);
       final logicalToday = DayFinalizerService.getLogicalTrackingDate(DateTime.now());
 
-      // Save completed record for the active logical tracking date
       var record = await db.getRecordForDate(projectId, logicalToday);
       if (record == null) {
         record = DailyRecord()
@@ -65,16 +104,16 @@ class HomeController extends AsyncNotifier<List<Project>> {
         }
       }
 
-      return _loadActiveTodayProjects();
+      return _loadDashboardData();
     });
   }
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _loadActiveTodayProjects());
+    state = await AsyncValue.guard(() => _loadDashboardData());
   }
 }
 
-final homeControllerProvider = AsyncNotifierProvider<HomeController, List<Project>>(() {
+final homeControllerProvider = AsyncNotifierProvider<HomeController, HomeDashboardData>(() {
   return HomeController();
 });

@@ -43,7 +43,7 @@ void main() {
   });
 
   test('HomeController active projects listing and check-off disappear logic test', () async {
-    // 1. Create one active project and one future/archived project
+    // 1. Create one active project and one future project
     final activeProject = Project()
       ..title = 'Active Novel'
       ..category = 'Reading'
@@ -83,20 +83,24 @@ void main() {
     );
 
     // Read homeControllerProvider and await initial loading
-    final initialProjects = await container.read(homeControllerProvider.future);
+    final initialData = await container.read(homeControllerProvider.future);
 
-    // Verify only the active project (with start date <= today) is returned
-    expect(initialProjects.length, equals(1));
-    expect(initialProjects.first.title, equals('Active Novel'));
+    // Verify only the active project due today is returned in dueToday
+    expect(initialData.dueToday.length, equals(1));
+    expect(initialData.dueToday.first.title, equals('Active Novel'));
+    expect(initialData.completedToday, isEmpty);
+    expect(initialData.totalActive, equals(2));
 
     // 3. Complete the active project for today
     await container.read(homeControllerProvider.notifier).completeProject(activeProject.id);
 
-    // Await the new projects list state
-    final updatedProjects = await container.read(homeControllerProvider.future);
+    // Await the new dashboard state
+    final updatedData = await container.read(homeControllerProvider.future);
 
-    // Verify the project disappears from the active today list (empty list)
-    expect(updatedProjects, isEmpty);
+    // Verify the project disappears from dueToday and appears in completedToday
+    expect(updatedData.dueToday, isEmpty);
+    expect(updatedData.completedToday.length, equals(1));
+    expect(updatedData.completedToday.first.title, equals('Active Novel'));
 
     // 4. Verify database state is updated correctly
     final savedRecord = await dbService.getRecordForDate(activeProject.id, DateTime.now());
@@ -105,6 +109,6 @@ void main() {
 
     final updatedProject = await dbService.getProject(activeProject.id);
     expect(updatedProject, isNotNull);
-    expect(updatedProject!.completedDays, equals(11)); // Incremented from 10 to 11
+    expect(updatedProject!.completedDays, equals(11));
   });
 }

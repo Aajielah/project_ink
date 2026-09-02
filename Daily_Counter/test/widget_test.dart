@@ -72,7 +72,7 @@ void main() {
       expect(find.text('Daily Counter'), findsOneWidget);
 
       // Verify that the empty state is displayed
-      expect(find.text('No active trackers today. Create a new promise to yourself to begin.'), findsOneWidget);
+      expect(find.text('All Caught Up for Today! 🎉'), findsOneWidget);
     });
   });
 }
