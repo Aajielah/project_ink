@@ -14,6 +14,7 @@ jobs:
   build:
     name: Build Daily Counter APK
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Code
