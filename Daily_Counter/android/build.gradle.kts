@@ -21,11 +21,16 @@ subprojects {
         if (project.plugins.hasPlugin("com.android.application") ||
             project.plugins.hasPlugin("com.android.library")) {
             val android = project.extensions.findByName("android") as? com.android.build.gradle.BaseExtension
-            if (android != null && android.namespace == null) {
-                android.namespace = if (project.group.toString().isNotEmpty()) {
-                    project.group.toString()
-                } else {
-                    "dev.isar.${project.name.replace('-', '_')}"
+            if (android != null) {
+                // Force all plugins (including isar_flutter_libs) to compile against Android SDK 36
+                android.compileSdkVersion(36)
+
+                if (android.namespace == null) {
+                    android.namespace = if (project.group.toString().isNotEmpty()) {
+                        project.group.toString()
+                    } else {
+                        "dev.isar.${project.name.replace('-', '_')}"
+                    }
                 }
             }
         }
