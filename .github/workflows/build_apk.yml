@@ -13,7 +13,7 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
       - name: Checkout Code
@@ -37,12 +37,7 @@ jobs:
           cd project_src
           flutter pub get
 
-      - name: Run Build Runner (Database Gen)
-        run: |
-          cd project_src
-          dart run build_runner build --delete-conflicting-outputs
-
-      - name: Run Unit Tests
+      - name: Run All Automated Tests
         run: |
           cd project_src
           flutter test
@@ -52,7 +47,7 @@ jobs:
           cd project_src
           flutter build apk --release
 
-      - name: Upload APK Artifact
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: project-ink-release-apk
