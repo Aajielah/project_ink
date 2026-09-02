@@ -11,15 +11,27 @@ final allProjectsProvider = FutureProvider.autoDispose<List<Project>>((ref) asyn
   return db.getAllProjects();
 });
 
-class ProjectsHubPage extends ConsumerWidget {
+class ProjectsHubPage extends ConsumerStatefulWidget {
   const ProjectsHubPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProjectsHubPage> createState() => _ProjectsHubPageState();
+}
+
+class _ProjectsHubPageState extends ConsumerState<ProjectsHubPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.invalidate(allProjectsProvider));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final projectsAsync = ref.watch(allProjectsProvider);
+    final today = DurationUtils.normalizeDate(DateTime.now());
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('All Goals & Commitments', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -34,7 +46,8 @@ class ProjectsHubPage extends ConsumerWidget {
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             tabs: [
-              Tab(text: 'Active (Running)'),
+              Tab(text: 'Running (Active)'),
+              Tab(text: 'Upcoming'),
               Tab(text: 'Paused'),
               Tab(text: 'Completed'),
               Tab(text: 'Archived'),
@@ -43,14 +56,16 @@ class ProjectsHubPage extends ConsumerWidget {
         ),
         body: projectsAsync.when(
           data: (projects) {
-            final active = projects.where((p) => p.status == 'active').toList();
+            final running = projects.where((p) => p.status == 'active' && !DurationUtils.normalizeDate(p.startDate).isAfter(today)).toList();
+            final upcoming = projects.where((p) => p.status == 'active' && DurationUtils.normalizeDate(p.startDate).isAfter(today)).toList();
             final paused = projects.where((p) => p.status == 'paused').toList();
             final completed = projects.where((p) => p.status == 'completed').toList();
             final archived = projects.where((p) => p.status == 'archived').toList();
 
             return TabBarView(
               children: [
-                _buildProjectList(context, ref, active, 'No active running goals. Tap + to start one!'),
+                _buildProjectList(context, ref, running, 'No currently running goals. Tap + to start one!'),
+                _buildProjectList(context, ref, upcoming, 'No upcoming scheduled goals.'),
                 _buildProjectList(context, ref, paused, 'No paused goals currently on hold.'),
                 _buildProjectList(context, ref, completed, 'No completed goals yet. Keep going!'),
                 _buildProjectList(context, ref, archived, 'No archived goals.'),
@@ -61,7 +76,10 @@ class ProjectsHubPage extends ConsumerWidget {
           error: (err, _) => Center(child: Text('Error loading goals: $err')),
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => context.push('/create'),
+          onPressed: () async {
+            await context.push('/create');
+            ref.invalidate(allProjectsProvider);
+          },
           icon: const Icon(Icons.add_rounded),
           label: const Text('New Goal'),
         ),
@@ -111,13 +129,18 @@ class ProjectsHubPage extends ConsumerWidget {
     final progressPercent = (project.targetDays > 0)
         ? (project.completedDays / project.targetDays).clamp(0.0, 1.0)
         : 0.0;
+    final isUpcoming = DurationUtils.normalizeDate(project.startDate)
+        .isAfter(DurationUtils.normalizeDate(DateTime.now()));
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => context.push('/overview/${project.id}'),
+        onTap: () async {
+          await context.push('/overview/${project.id}');
+          ref.invalidate(allProjectsProvider);
+        },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -150,7 +173,17 @@ class ProjectsHubPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  _buildStatusChip(project.status),
+                  if (isUpcoming && project.status == 'active')
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text('UPCOMING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue)),
+                    )
+                  else
+                    _buildStatusChip(project.status),
                 ],
               ),
               if (project.motivation.isNotEmpty) ...[
@@ -191,7 +224,9 @@ class ProjectsHubPage extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'End: ${DurationUtils.formatDate(project.endDate)}',
+                    isUpcoming
+                        ? 'Starts: ${DurationUtils.formatDate(project.startDate)}'
+                        : 'End: ${DurationUtils.formatDate(project.endDate)}',
                     style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
                   Row(
@@ -204,7 +239,10 @@ class ProjectsHubPage extends ConsumerWidget {
                       TextButton.icon(
                         icon: const Icon(Icons.edit_outlined, size: 16),
                         label: const Text('Edit', style: TextStyle(fontSize: 12)),
-                        onPressed: () => context.push('/edit/${project.id}'),
+                        onPressed: () async {
+                          await context.push('/edit/${project.id}');
+                          ref.invalidate(allProjectsProvider);
+                        },
                       ),
                     ],
                   ),

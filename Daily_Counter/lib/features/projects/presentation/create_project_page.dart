@@ -6,6 +6,8 @@ import '../../../core/utils/category_utils.dart';
 import '../../../core/utils/duration_utils.dart';
 import '../../../core/utils/motivation_utils.dart';
 import '../../../shared/models/project.dart';
+import '../../home/presentation/home_controller.dart';
+import 'projects_hub_page.dart';
 
 class CreateProjectPage extends ConsumerStatefulWidget {
   const CreateProjectPage({super.key});
@@ -31,7 +33,7 @@ class _CreateProjectPageState extends ConsumerState<CreateProjectPage> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _startDate = DurationUtils.normalizeDate(now.add(const Duration(days: 1)));
+    _startDate = DurationUtils.normalizeDate(now);
     _motivationController.text = MotivationUtils.getDefaultMotivation(_selectedCategory);
   }
 
@@ -114,6 +116,9 @@ class _CreateProjectPageState extends ConsumerState<CreateProjectPage> {
     try {
       final db = ref.read(databaseServiceProvider);
       await db.saveProject(project);
+
+      ref.read(homeControllerProvider.notifier).refresh();
+      ref.invalidate(allProjectsProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

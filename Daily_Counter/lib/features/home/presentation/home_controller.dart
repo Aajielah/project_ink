@@ -9,6 +9,7 @@ import '../../../shared/models/daily_record.dart';
 class HomeDashboardData {
   final List<Project> dueToday;
   final List<Project> completedToday;
+  final List<Project> upcoming;
   final int totalActive;
   final int totalPaused;
   final int totalCompleted;
@@ -17,6 +18,7 @@ class HomeDashboardData {
   HomeDashboardData({
     required this.dueToday,
     required this.completedToday,
+    required this.upcoming,
     required this.totalActive,
     required this.totalPaused,
     required this.totalCompleted,
@@ -37,6 +39,7 @@ class HomeController extends AsyncNotifier<HomeDashboardData> {
 
     final List<Project> dueToday = [];
     final List<Project> completedToday = [];
+    final List<Project> upcoming = [];
     int activeCount = 0;
     int pausedCount = 0;
     int completedCount = 0;
@@ -57,7 +60,10 @@ class HomeController extends AsyncNotifier<HomeDashboardData> {
       if (project.status != 'active') continue;
 
       final normalizedStart = DurationUtils.normalizeDate(project.startDate);
-      if (normalizedStart.isAfter(logicalToday)) continue;
+      if (normalizedStart.isAfter(logicalToday)) {
+        upcoming.add(project);
+        continue;
+      }
 
       final todayRecord = await db.getRecordForDate(project.id, logicalToday);
       if (todayRecord != null && todayRecord.status == 'completed') {
@@ -70,6 +76,7 @@ class HomeController extends AsyncNotifier<HomeDashboardData> {
     return HomeDashboardData(
       dueToday: dueToday,
       completedToday: completedToday,
+      upcoming: upcoming,
       totalActive: activeCount,
       totalPaused: pausedCount,
       totalCompleted: completedCount,

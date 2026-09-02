@@ -93,6 +93,26 @@ class HomePage extends ConsumerWidget {
                   ...data.completedToday.map((p) => _buildCompletedTaskCard(context, p)),
                   const SizedBox(height: 20),
                 ],
+
+                // 5. Upcoming Goals Section (if any)
+                if (data.upcoming.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule_rounded, color: Colors.blue, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Upcoming Goals (${data.upcoming.length})',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ...data.upcoming.map((p) => _buildUpcomingTaskCard(context, p)),
+                  const SizedBox(height: 20),
+                ],
               ],
             ),
           );
@@ -109,12 +129,14 @@ class HomePage extends ConsumerWidget {
   }
 
   Widget _buildStatsOverview(BuildContext context, HomeDashboardData data) {
+    final runningCount = (data.totalActive - data.upcoming.length).clamp(0, 9999);
+
     return Card(
       elevation: 0,
       color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -122,7 +144,9 @@ class HomePage extends ConsumerWidget {
             _buildStatDivider(),
             _buildStatColumn('Done Today', '${data.completedToday.length}', Colors.green),
             _buildStatDivider(),
-            _buildStatColumn('Active', '${data.totalActive}', Colors.blue),
+            _buildStatColumn('Running', '$runningCount', Colors.blue),
+            _buildStatDivider(),
+            _buildStatColumn('Upcoming', '${data.upcoming.length}', Colors.teal),
             _buildStatDivider(),
             _buildStatColumn('Paused', '${data.totalPaused}', Colors.amber),
           ],
@@ -270,6 +294,31 @@ class HomePage extends ConsumerWidget {
         title: Text(project.title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text('Day ${project.completedDays} of ${project.targetDays} completed', style: const TextStyle(fontSize: 12)),
         trailing: const Icon(Icons.check_circle_rounded, color: Colors.green),
+        onTap: () => context.push('/overview/${project.id}'),
+      ),
+    );
+  }
+
+  Widget _buildUpcomingTaskCard(BuildContext context, Project project) {
+    final categoryColor = CategoryUtils.getColor(project.category, context);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: Icon(CategoryUtils.getIcon(project.category), color: categoryColor),
+        title: Text(project.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text('Starts on ${DurationUtils.formatDate(project.startDate)}', style: const TextStyle(fontSize: 12)),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.blue.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text('UPCOMING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue)),
+        ),
         onTap: () => context.push('/overview/${project.id}'),
       ),
     );
