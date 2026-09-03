@@ -46,7 +46,10 @@ class HomePage extends ConsumerWidget {
               children: [
                 // 1. Quick Stats Overview Bar
                 _buildStatsOverview(context, data),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+
+                // Grace Period Notification Banner (if between 00:00 and 04:59 AM)
+                _buildGracePeriodBanner(context),
 
                 // 2. Due Today Header
                 Row(
@@ -320,6 +323,66 @@ class HomePage extends ConsumerWidget {
           child: const Text('UPCOMING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue)),
         ),
         onTap: () => context.push('/overview/${project.id}'),
+      ),
+    );
+  }
+
+  Widget _buildGracePeriodBanner(BuildContext context) {
+    final now = DateTime.now();
+    final isGracePeriod = now.hour < 5;
+    if (!isGracePeriod) return const SizedBox.shrink();
+
+    final remainingHours = 5 - now.hour - (now.minute > 0 ? 1 : 0);
+    final remainingMinutes = now.minute > 0 ? 60 - now.minute : 0;
+    final timeStr = remainingHours > 0
+        ? '$remainingHours hr $remainingMinutes min'
+        : '$remainingMinutes min';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade700.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.nightlight_round, color: Colors.amber.shade800, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      '5:00 AM Grace Period Active',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber.shade900),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade800,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '$timeStr left',
+                        style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Your tracking day resets at 5:00 AM (not midnight). You can still check in for yesterday until 5:00 AM!',
+                  style: TextStyle(fontSize: 11, color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

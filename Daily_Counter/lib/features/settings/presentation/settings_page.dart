@@ -235,15 +235,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         padding: const EdgeInsets.all(20),
         children: [
           // Notifications Section
-          Text('Reminders', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text('Reminders & Tracking Day', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
-            child: ListTile(
-              leading: const Icon(Icons.alarm_rounded, color: Colors.blue),
-              title: const Text('Daily Reminder Time'),
-              subtitle: Text('Current: $timeStr'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: _selectReminderTime,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.alarm_rounded, color: Colors.blue),
+                  title: const Text('Daily Reminder Time'),
+                  subtitle: Text('Current: $timeStr'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: _selectReminderTime,
+                ),
+                const Divider(height: 1),
+                const ListTile(
+                  leading: Icon(Icons.nightlight_round, color: Colors.amber),
+                  title: Text('5:00 AM Daily Reset (Grace Period)'),
+                  subtitle: Text(
+                    'Tracking days run from 5:00 AM to 5:00 AM next day. This gives you a 5-hour grace window after midnight to complete and record yesterday\'s goals.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
