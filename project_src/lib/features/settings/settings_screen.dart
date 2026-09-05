@@ -416,6 +416,8 @@ class SettingsScreen extends ConsumerWidget {
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
+  }
+
   void _showAppIconPicker(BuildContext context, WidgetRef ref, String currentMode) {
     showModalBottomSheet(
       context: context,

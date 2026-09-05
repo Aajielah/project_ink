@@ -1730,6 +1730,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                             ),
                           ],
                         ),
+                      ),
                       // Concept A: Daily Focus Progress Card
                       if (totalPlannedToday > 0) ...[
                         Card(
