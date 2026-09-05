@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../shared/providers.dart';
 import '../../models/settings.dart';
 import '../../services/dynamic_icon_service.dart';
+import '../../core/theme/app_theme.dart';
+import '../../shared/theme_provider.dart';
 
 final appIconModeProvider = FutureProvider<String>((ref) async {
   return DynamicIconService.getIconMode();
@@ -231,6 +233,42 @@ class SettingsScreen extends ConsumerWidget {
                     const Divider(height: 1),
                     Consumer(
                       builder: (context, ref, _) {
+                        final currentPalette = ref.watch(themePaletteProvider);
+                        return ListTile(
+                          leading: const Icon(Icons.color_lens_outlined),
+                          title: const Text('Theme Palette'),
+                          subtitle: Text(currentPalette.displayName),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: currentPalette.previewPrimary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: currentPalette.previewSecondary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                          onTap: () => _showThemePalettePicker(context, ref, currentPalette),
+                        );
+                      },
+                    ),
+                    const Divider(height: 1),
+                    Consumer(
+                      builder: (context, ref, _) {
                         final appIconModeAsync = ref.watch(appIconModeProvider);
                         final currentMode = appIconModeAsync.value ?? 'dynamic';
                         String subtitleText;
@@ -450,6 +488,95 @@ class SettingsScreen extends ConsumerWidget {
                     }
                   },
                 ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showThemePalettePicker(BuildContext context, WidgetRef ref, AppPalette currentPalette) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Theme Style & Palette',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Personalize your writing space with curated color themes.',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 16),
+                ...AppPalette.values.map((palette) {
+                  final isSelected = palette == currentPalette;
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: palette.previewDarkBg,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? theme.colorScheme.primary : Colors.grey.withOpacity(0.3),
+                          width: isSelected ? 2.5 : 1.0,
+                        ),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: palette.previewPrimary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: palette.previewSecondary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      palette.displayName,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? theme.colorScheme.primary : null,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
+                        : null,
+                    onTap: () {
+                      ref.read(themePaletteProvider.notifier).setPalette(palette);
+                      Navigator.pop(context);
+                    },
+                  );
+                }),
               ],
             ),
           ),

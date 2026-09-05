@@ -180,7 +180,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: scaffoldBg,
       cardColor: cardColor,
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardColor,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -275,7 +275,7 @@ class AppTheme {
       brightness: Brightness.light,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: scaffoldBg,
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0.5,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.0),

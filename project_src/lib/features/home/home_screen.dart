@@ -441,8 +441,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     );
   }
 
-  void _showSplitLogDialog(List<TodayWritingTask> tasks) {
-    final totalController = TextEditingController();
+  void _showSplitLogDialog(List<TodayWritingTask> tasks, {int? initialTotal}) {
+    final totalController = TextEditingController(text: initialTotal != null ? initialTotal.toString() : '');
     String selectedMethod = 'even'; // 'even', 'proportional', 'smart', 'manual'
     
     showDialog(
@@ -861,6 +861,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         SnackBar(content: Text('Failed to log words: $e')),
       );
     }
+  }
+
+  void _triggerQuickLogWithPreset(List<TodayWritingTask> tasks, int preset) {
+    final writingTasks = tasks.where((t) => !t.schedule.isRestDay && !t.schedule.completed).toList();
+    if (writingTasks.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All scheduled projects are already completed for today!')),
+      );
+      return;
+    }
+
+    if (writingTasks.length == 1) {
+      final task = writingTasks.first;
+      final current = task.log?.actualWords ?? 0;
+      final controller = TextEditingController(text: (current + preset).toString());
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text('Quick Log +$preset for "${task.project.name}"'),
+            content: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: 'Total Words Written Today',
+                suffixText: 'words',
+                helperText: 'Previous: $current • Target: ${task.schedule.plannedWords} words',
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              FilledButton(
+                onPressed: () async {
+                  final text = controller.text.trim();
+                  final words = int.tryParse(text) ?? 0;
+                  if (words <= 0) return;
+                  Navigator.pop(context);
+                  await _submitLog(task.project.id, words);
+                },
+                child: const Text('Log Words'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      _showSplitLogDialog(writingTasks, initialTotal: preset);
+    }
+  }
+
+  Widget _buildQuickLogPill(BuildContext context, List<TodayWritingTask> tasks, int words, ThemeData theme) {
+    return ActionChip(
+      visualDensity: VisualDensity.compact,
+      side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.4)),
+      backgroundColor: theme.colorScheme.surface,
+      label: Text(
+        '+$words',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: theme.colorScheme.primary,
+        ),
+      ),
+      onPressed: () => _triggerQuickLogWithPreset(tasks, words),
+    );
   }
 
   Future<void> _applyAllocations(
@@ -1555,8 +1624,156 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
+                      // Concept A: Daily Focus Progress Card
+                      if (totalPlannedToday > 0) ...[
+                        Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: theme.colorScheme.primary.withOpacity(0.3),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  theme.colorScheme.primary.withOpacity(0.08),
+                                  theme.colorScheme.secondary.withOpacity(0.04),
+                                ],
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(18.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.track_changes, color: theme.colorScheme.primary, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'DAILY FOCUS',
+                                      style: theme.textTheme.labelLarge?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.2,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    // Circular Progress Ring
+                                    SizedBox(
+                                      width: 84,
+                                      height: 84,
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 84,
+                                            height: 84,
+                                            child: CircularProgressIndicator(
+                                              value: totalPlannedToday > 0
+                                                  ? min(1.0, totalLoggedToday / totalPlannedToday)
+                                                  : 0.0,
+                                              strokeWidth: 8.0,
+                                              backgroundColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                                              color: theme.colorScheme.primary,
+                                              strokeCap: StrokeCap.round,
+                                            ),
+                                          ),
+                                          Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.local_fire_department, size: 18, color: theme.colorScheme.primary),
+                                              Text(
+                                                '${totalPlannedToday > 0 ? (min(1.0, totalLoggedToday / totalPlannedToday) * 100).toInt() : 0}%',
+                                                style: theme.textTheme.titleMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 20),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${NumberFormat('#,###').format(totalLoggedToday)} / ${NumberFormat('#,###').format(totalPlannedToday)}',
+                                            style: theme.textTheme.titleLarge?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'words written today',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primaryContainer.withOpacity(0.4),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              totalLoggedToday >= totalPlannedToday
+                                                  ? '🎉 Today\'s goal achieved!'
+                                                  : '${NumberFormat('#,###').format(totalPlannedToday - totalLoggedToday)} words left to go',
+                                              style: theme.textTheme.labelSmall?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.colorScheme.primary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (uncompletedTasks.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 12),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          'Quick log:',
+                                          style: theme.textTheme.labelSmall?.copyWith(
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _buildQuickLogPill(context, todayTasks, 250, theme),
+                                        const SizedBox(width: 6),
+                                        _buildQuickLogPill(context, todayTasks, 500, theme),
+                                        const SizedBox(width: 6),
+                                        _buildQuickLogPill(context, todayTasks, 1000, theme),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
                       // Writing Advisor Section
                       Card(
