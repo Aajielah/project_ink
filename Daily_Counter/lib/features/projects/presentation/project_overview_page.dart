@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/services/day_finalizer_service.dart';
 import '../../../core/utils/category_utils.dart';
 import '../../../core/utils/duration_utils.dart';
 import '../../../shared/models/project.dart';
@@ -53,7 +54,7 @@ class _ProjectOverviewPageState extends ConsumerState<ProjectOverviewPage> {
         final totalWeeks = (endMonday.difference(startMonday).inDays ~/ 7) + 1;
         final currentWeekIndex = ((state.currentWeekMonday.difference(startMonday).inDays ~/ 7) + 1).clamp(1, totalWeeks);
 
-        final today = DurationUtils.normalizeDate(DateTime.now());
+        final today = DayFinalizerService.getLogicalTrackingDate(DateTime.now());
         final todayRecord = state.getRecordForDate(today);
         final isTodayCompleted = todayRecord != null && todayRecord.status == 'completed';
 
@@ -395,7 +396,7 @@ class _ProjectOverviewPageState extends ConsumerState<ProjectOverviewPage> {
     DateTime normEnd,
   ) {
     const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    final today = DurationUtils.normalizeDate(DateTime.now());
+    final today = DayFinalizerService.getLogicalTrackingDate(DateTime.now());
     final isTrust = project.trackingMode == 'trust';
 
     return Row(
@@ -508,7 +509,7 @@ class _ProjectOverviewPageState extends ConsumerState<ProjectOverviewPage> {
     DateTime normStart,
     DateTime normEnd,
   ) {
-    final today = DurationUtils.normalizeDate(DateTime.now());
+    final today = DayFinalizerService.getLogicalTrackingDate(DateTime.now());
     final isTrust = project.trackingMode == 'trust';
     final totalDays = project.targetDays;
 

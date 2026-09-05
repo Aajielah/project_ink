@@ -14,13 +14,20 @@ final statsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) asy
 
   int totalCompletedCheckIns = 0;
   int totalMissedCheckIns = 0;
+  final Set<String> activeCalendarDates = {};
   final Map<String, int> categoryCounts = {};
 
   for (var p in projects) {
     categoryCounts[p.category] = (categoryCounts[p.category] ?? 0) + 1;
     final records = await db.getRecordsForProject(p.id);
-    totalCompletedCheckIns += records.where((r) => r.status == 'completed').length;
-    totalMissedCheckIns += records.where((r) => r.status == 'missed').length;
+    for (var r in records) {
+      if (r.status == 'completed') {
+        totalCompletedCheckIns++;
+        activeCalendarDates.add('${r.date.year}-${r.date.month}-${r.date.day}');
+      } else if (r.status == 'missed') {
+        totalMissedCheckIns++;
+      }
+    }
   }
 
   final totalLogged = totalCompletedCheckIns + totalMissedCheckIns;
@@ -35,16 +42,28 @@ final statsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) asy
     'paused': pausedCount,
     'completedCheckIns': totalCompletedCheckIns,
     'missedCheckIns': totalMissedCheckIns,
+    'daysActive': activeCalendarDates.length,
     'consistencyScore': consistencyScore,
     'categoryCounts': categoryCounts,
   };
 });
 
-class StatsPage extends ConsumerWidget {
+class StatsPage extends ConsumerStatefulWidget {
   const StatsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StatsPage> createState() => _StatsPageState();
+}
+
+class _StatsPageState extends ConsumerState<StatsPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.invalidate(statsProvider));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final statsAsync = ref.watch(statsProvider);
 
     return Scaffold(
@@ -62,6 +81,7 @@ class StatsPage extends ConsumerWidget {
         data: (stats) {
           final theme = Theme.of(context);
           final consistency = stats['consistencyScore'] as int;
+          final daysActive = stats['daysActive'] as int;
           final categoryMap = stats['categoryCounts'] as Map<String, int>;
 
           return ListView(
@@ -87,6 +107,29 @@ class StatsPage extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$daysActive Calendar Days Active',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       Text(
                         consistency >= 80
                             ? 'Excellent discipline! You are honoring your daily promises.'
@@ -107,7 +150,7 @@ class StatsPage extends ConsumerWidget {
                 children: [
                   Expanded(child: _buildMetricCard('Total Goals', '${stats['totalGoals']}', Icons.flag_rounded, Colors.blue)),
                   const SizedBox(width: 10),
-                  Expanded(child: _buildMetricCard('Completed', '${stats['completed']}', Icons.emoji_events_rounded, Colors.green)),
+                  Expanded(child: _buildMetricCard('Completed Goals', '${stats['completed']}', Icons.emoji_events_rounded, Colors.green)),
                 ],
               ),
               const SizedBox(height: 10),
@@ -121,9 +164,25 @@ class StatsPage extends ConsumerWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(child: _buildMetricCard('Days Done', '${stats['completedCheckIns']}', Icons.check_circle_rounded, Colors.teal)),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Check-Ins Done',
+                      '${stats['completedCheckIns']}',
+                      Icons.check_circle_rounded,
+                      Colors.teal,
+                      subtitle: 'Across all goals',
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: _buildMetricCard('Days Missed', '${stats['missedCheckIns']}', Icons.close_rounded, Colors.red)),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Check-Ins Missed',
+                      '${stats['missedCheckIns']}',
+                      Icons.close_rounded,
+                      Colors.red,
+                      subtitle: 'Strict auto-misses',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -154,7 +213,7 @@ class StatsPage extends ConsumerWidget {
                           ),
                           child: Text(
                             '$count ${count == 1 ? 'goal' : 'goals'}',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 12),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: color),
                           ),
                         ),
                       );
@@ -166,32 +225,60 @@ class StatsPage extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Error loading analytics: $err')),
+        error: (err, _) => Center(child: Text('Error loading stats: $err')),
       ),
     );
   }
 
-  Widget _buildMetricCard(String label, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color, {
+    String? subtitle,
+  }) {
     return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: color.withValues(alpha: 0.15)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 22),
+              child: Icon(icon, color: color, size: 20),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-                  Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 9, color: Colors.grey.withValues(alpha: 0.8)),
+                    ),
+                  ],
                 ],
               ),
             ),

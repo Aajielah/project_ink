@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/services/database_providers.dart';
+import '../../../core/services/day_finalizer_service.dart';
 import '../../../core/utils/category_utils.dart';
 import '../../../core/utils/duration_utils.dart';
 import '../../../core/utils/motivation_utils.dart';
@@ -180,10 +181,15 @@ class _EditProjectPageState extends ConsumerState<EditProjectPage> {
         activePause.endDate = DateTime.now();
         await db.savePause(activePause);
 
-        // Extend project end date by paused days
-        final pausedDays = activePause.endDate!.difference(activePause.startDate).inDays;
+        // Extend project end date by normalized calendar paused days
+        final normPauseStart = DurationUtils.normalizeDate(activePause.startDate);
+        final normPauseEnd = DurationUtils.normalizeDate(activePause.endDate!);
+        final pausedDays = normPauseEnd.difference(normPauseStart).inDays;
         if (pausedDays > 0) {
-          _project!.endDate = _project!.endDate.add(Duration(days: pausedDays));
+          _project!.endDate = DurationUtils.calculateEndDate(
+            _project!.startDate,
+            _project!.targetDays + pausedDays,
+          );
         }
       }
 
@@ -229,12 +235,12 @@ class _EditProjectPageState extends ConsumerState<EditProjectPage> {
       final db = ref.read(databaseServiceProvider);
       await db.clearProjectRecords(_project!.id);
 
-      final now = DurationUtils.normalizeDate(DateTime.now());
+      final logicalNow = DayFinalizerService.getLogicalTrackingDate(DateTime.now());
       _project!
         ..completedDays = 0
         ..status = 'active'
-        ..startDate = now
-        ..endDate = DurationUtils.calculateEndDate(now, _project!.targetDays)
+        ..startDate = logicalNow
+        ..endDate = DurationUtils.calculateEndDate(logicalNow, _project!.targetDays)
         ..updatedAt = DateTime.now();
 
       await db.saveProject(_project!);

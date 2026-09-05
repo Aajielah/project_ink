@@ -136,24 +136,51 @@ class _ProjectGroupList extends ConsumerWidget {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
+    return ReorderableListView.builder(
+      buildDefaultDragHandles: false,
+      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 96.0),
       itemCount: groups.length,
       itemBuilder: (context, index) {
         final group = groups[index];
         return _ProjectGroupCard(
           key: ValueKey(group.groupId),
+          index: index,
           group: group,
         );
+      },
+      onReorder: (oldIndex, newIndex) async {
+        final tabGroups = List<ProjectGroup>.from(groups);
+        if (oldIndex < newIndex) {
+          newIndex -= 1;
+        }
+        final item = tabGroups.removeAt(oldIndex);
+        tabGroups.insert(newIndex, item);
+
+        // Flatten the reordered groups into individual projects preserving group order
+        final allProjects = ref.read(projectsProvider).value ?? [];
+        final reorderedProjectIds = tabGroups.expand((g) => g.projects.map((p) => p.id)).toSet();
+
+        final reorderedList = <ProjectModel>[];
+        for (final g in tabGroups) {
+          reorderedList.addAll(g.projects);
+        }
+        for (final p in allProjects) {
+          if (!reorderedProjectIds.contains(p.id)) {
+            reorderedList.add(p);
+          }
+        }
+
+        await ref.read(projectsProvider.notifier).reorderProjects(reorderedList);
       },
     );
   }
 }
 
 class _ProjectGroupCard extends ConsumerWidget {
+  final int index;
   final ProjectGroup group;
 
-  const _ProjectGroupCard({super.key, required this.group});
+  const _ProjectGroupCard({super.key, required this.index, required this.group});
 
   Future<void> _pickCustomCover(BuildContext context, WidgetRef ref, ProjectModel project) async {
     try {
@@ -690,6 +717,18 @@ class _ProjectGroupCard extends ConsumerWidget {
                       ),
                     ],
                   ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Dedicated Drag Handle
+              ReorderableDragStartListener(
+                index: index,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 12.0),
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
+                  ),
                 ),
               ),
             ],

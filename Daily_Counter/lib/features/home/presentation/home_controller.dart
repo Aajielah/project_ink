@@ -109,6 +109,19 @@ class HomeController extends AsyncNotifier<HomeDashboardData> {
           }
           await db.saveProject(project);
         }
+      } else if (record.status != 'completed') {
+        record.status = 'completed';
+        record.modified = true;
+        await db.saveRecord(record);
+
+        final project = await db.getProject(projectId);
+        if (project != null) {
+          project.completedDays += 1;
+          if (project.completedDays >= project.targetDays) {
+            project.status = 'completed';
+          }
+          await db.saveProject(project);
+        }
       }
 
       return _loadDashboardData();

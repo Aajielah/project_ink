@@ -5,6 +5,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../shared/providers.dart';
 import '../../models/settings.dart';
+import '../../services/dynamic_icon_service.dart';
+
+final appIconModeProvider = FutureProvider<String>((ref) async {
+  return DynamicIconService.getIconMode();
+});
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -192,34 +197,61 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(Icons.palette_outlined),
-                          const SizedBox(width: 16),
-                          Text('Theme Mode'),
+                          const Row(
+                            children: [
+                              Icon(Icons.palette_outlined),
+                              SizedBox(width: 16),
+                              Text('Theme Mode'),
+                            ],
+                          ),
+                          DropdownButton<String>(
+                            value: settings.theme,
+                            underline: const SizedBox(),
+                            items: const [
+                              DropdownMenuItem(value: 'system', child: Text('System')),
+                              DropdownMenuItem(value: 'light', child: Text('Light')),
+                              DropdownMenuItem(value: 'dark', child: Text('Dark')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                ref.read(settingsProvider.notifier).updateTheme(val);
+                              }
+                            },
+                          ),
                         ],
                       ),
-                      DropdownButton<String>(
-                        value: settings.theme,
-                        underline: const SizedBox(),
-                        items: const [
-                          DropdownMenuItem(value: 'system', child: Text('System')),
-                          DropdownMenuItem(value: 'light', child: Text('Light')),
-                          DropdownMenuItem(value: 'dark', child: Text('Dark')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            ref.read(settingsProvider.notifier).updateTheme(val);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
+                    ),
+                    const Divider(height: 1),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final appIconModeAsync = ref.watch(appIconModeProvider);
+                        final currentMode = appIconModeAsync.value ?? 'dynamic';
+                        String subtitleText;
+                        if (currentMode == 'pen') {
+                          subtitleText = 'Minimalist Pen Nib';
+                        } else if (currentMode == 'bottle') {
+                          subtitleText = 'Glowing Ink Bottle';
+                        } else {
+                          subtitleText = '🔄 Dynamic (Alternates every 24h)';
+                        }
+
+                        return ListTile(
+                          leading: const Icon(Icons.auto_awesome_mosaic_outlined),
+                          title: const Text('App Icon'),
+                          subtitle: Text(subtitleText),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _showAppIconPicker(context, ref, currentMode),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
@@ -346,5 +378,84 @@ class SettingsScreen extends ConsumerWidget {
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
+  void _showAppIconPicker(BuildContext context, WidgetRef ref, String currentMode) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'App Icon Appearance',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Choose your launcher icon style on your home screen.',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 16),
+                RadioListTile<String>(
+                  value: 'dynamic',
+                  groupValue: currentMode,
+                  title: const Text('🔄 Dynamic (Alternates Daily)'),
+                  subtitle: const Text('Swaps between Pen Nib and Ink Bottle every 24 hours.'),
+                  onChanged: (val) async {
+                    if (val != null) {
+                      await DynamicIconService.setIconMode(val);
+                      ref.invalidate(appIconModeProvider);
+                      if (context.mounted) Navigator.pop(context);
+                    }
+                  },
+                ),
+                RadioListTile<String>(
+                  value: 'pen',
+                  groupValue: currentMode,
+                  secondary: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset('assets/icons/app_icon_pen.png', width: 40, height: 40),
+                  ),
+                  title: const Text('Minimalist Pen Nib'),
+                  subtitle: const Text('Always use the silver fountain pen nib.'),
+                  onChanged: (val) async {
+                    if (val != null) {
+                      await DynamicIconService.setIconMode(val);
+                      ref.invalidate(appIconModeProvider);
+                      if (context.mounted) Navigator.pop(context);
+                    }
+                  },
+                ),
+                RadioListTile<String>(
+                  value: 'bottle',
+                  groupValue: currentMode,
+                  secondary: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset('assets/icons/app_icon_bottle.png', width: 40, height: 40),
+                  ),
+                  title: const Text('Glowing Ink Bottle'),
+                  subtitle: const Text('Always use the cosmic glowing ink bottle & quill.'),
+                  onChanged: (val) async {
+                    if (val != null) {
+                      await DynamicIconService.setIconMode(val);
+                      ref.invalidate(appIconModeProvider);
+                      if (context.mounted) Navigator.pop(context);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
+

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../features/home/presentation/home_page.dart';
+import '../features/home/presentation/home_controller.dart';
 import '../features/projects/presentation/projects_hub_page.dart';
 import '../features/projects/presentation/create_project_page.dart';
 import '../features/projects/presentation/project_overview_page.dart';
@@ -92,18 +94,27 @@ final GoRouter appRouter = GoRouter(
   ),
 );
 
-class ScaffoldWithNavBar extends StatelessWidget {
+class ScaffoldWithNavBar extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   const ScaffoldWithNavBar({required this.navigationShell, super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) {
+          // Auto-refresh respective tab data immediately on tap
+          if (index == 0) {
+            ref.read(homeControllerProvider.notifier).refresh();
+          } else if (index == 1) {
+            ref.invalidate(allProjectsProvider);
+          } else if (index == 2) {
+            ref.invalidate(statsProvider);
+          }
+
           navigationShell.goBranch(
             index,
             initialLocation: index == navigationShell.currentIndex,

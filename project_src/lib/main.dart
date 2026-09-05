@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router.dart';
+import 'core/theme/app_theme.dart';
 import 'shared/providers.dart';
-
+import 'shared/theme_provider.dart';
 import 'services/notification_service.dart';
+import 'services/dynamic_icon_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.instance.init();
+  await DynamicIconService.checkAndApplyDailyIcon();
   runApp(
     const ProviderScope(
       child: ProjectInkApp(),
@@ -21,6 +24,7 @@ class ProjectInkApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsAsync = ref.watch(settingsProvider);
+    final activePalette = ref.watch(themePaletteProvider);
 
     // Initialize/seed the quotes in the background when the app starts
     ref.read(quoteRepositoryProvider).seedDatabaseQuotes();
@@ -36,31 +40,13 @@ class ProjectInkApp extends ConsumerWidget {
       }
     });
 
-    // Material 3 harmonious color schemes
-    final ColorScheme lightColorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF6750A4),
-      brightness: Brightness.light,
-    );
-
-    final ColorScheme darkColorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFFD0BCFF),
-      brightness: Brightness.dark,
-    );
-
     return MaterialApp.router(
       title: 'Project Ink',
       themeMode: themeMode,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: lightColorScheme,
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: darkColorScheme,
-      ),
+      theme: AppTheme.getTheme(activePalette, isDark: false),
+      darkTheme: AppTheme.getTheme(activePalette, isDark: true),
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
     );
-
   }
 }

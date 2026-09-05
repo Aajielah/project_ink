@@ -47,17 +47,20 @@ class DayFinalizerService {
       if (project.status != 'active') continue;
 
       final normStart = DurationUtils.normalizeDate(project.startDate);
-      if (logicalToday.isBefore(normStart)) continue;
+      final normCreated = DurationUtils.normalizeDate(getLogicalTrackingDate(project.createdAt));
+      final effectiveStart = normStart.isBefore(normCreated) ? normCreated : normStart;
+
+      if (logicalToday.isBefore(effectiveStart)) continue;
 
       final pastCutoff = logicalToday.subtract(const Duration(days: 1));
-      if (pastCutoff.isBefore(normStart)) continue;
+      if (pastCutoff.isBefore(effectiveStart)) continue;
 
       final pauses = await db.getPausesForProject(project.id);
-      final totalDaysToEvaluate = pastCutoff.difference(normStart).inDays + 1;
+      final totalDaysToEvaluate = pastCutoff.difference(effectiveStart).inDays + 1;
       bool projectUpdated = false;
 
       for (int i = 0; i < totalDaysToEvaluate; i++) {
-        final evaluateDate = normStart.add(Duration(days: i));
+        final evaluateDate = effectiveStart.add(Duration(days: i));
 
         // Skip days that were on pause
         if (isDateInPause(evaluateDate, pauses)) continue;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/services/database_providers.dart';
+import '../../../core/services/day_finalizer_service.dart';
 import '../../../core/utils/category_utils.dart';
 import '../../../core/utils/duration_utils.dart';
 import '../../../core/utils/motivation_utils.dart';
@@ -32,8 +33,7 @@ class _CreateProjectPageState extends ConsumerState<CreateProjectPage> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _startDate = DurationUtils.normalizeDate(now);
+    _startDate = DayFinalizerService.getLogicalTrackingDate(DateTime.now());
     _motivationController.text = MotivationUtils.getDefaultMotivation(_selectedCategory);
   }
 
@@ -60,8 +60,7 @@ class _CreateProjectPageState extends ConsumerState<CreateProjectPage> {
   }
 
   Future<void> _selectStartDate() async {
-    final now = DateTime.now();
-    final today = DurationUtils.normalizeDate(now);
+    final today = DayFinalizerService.getLogicalTrackingDate(DateTime.now());
     final picked = await showDatePicker(
       context: context,
       initialDate: _startDate.isBefore(today) ? today : _startDate,

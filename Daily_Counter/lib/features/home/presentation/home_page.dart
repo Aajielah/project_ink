@@ -6,8 +6,33 @@ import '../../../core/utils/duration_utils.dart';
 import '../../../shared/models/project.dart';
 import 'home_controller.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
+
+  @override
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    Future.microtask(() => ref.read(homeControllerProvider.notifier).refresh());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(homeControllerProvider.notifier).refresh();
+    }
+  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -17,7 +42,7 @@ class HomePage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final dashboardAsync = ref.watch(homeControllerProvider);
 
     return Scaffold(
@@ -42,7 +67,7 @@ class HomePage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () => ref.read(homeControllerProvider.notifier).refresh(),
             child: ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 96),
               children: [
                 // 1. Quick Stats Overview Bar
                 _buildStatsOverview(context, data),
