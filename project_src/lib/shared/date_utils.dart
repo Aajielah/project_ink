@@ -6,9 +6,9 @@ import '../models/schedule.dart';
 
 /// Calculates today's logical date based on the 5-hour grace period.
 /// Between 12:00 AM and 5:00 AM, the logical date is yesterday.
-DateTime getLogicalToday() {
-  final now = DateTime.now();
-  if (Platform.environment.containsKey('FLUTTER_TEST')) {
+DateTime getLogicalToday({DateTime? nowForTesting}) {
+  final now = nowForTesting ?? DateTime.now();
+  if (nowForTesting == null && Platform.environment.containsKey('FLUTTER_TEST')) {
     return DateTime(now.year, now.month, now.day);
   }
   if (now.hour < 5) {
@@ -17,15 +17,16 @@ DateTime getLogicalToday() {
   return DateTime(now.year, now.month, now.day);
 }
 
-/// Calculates today's logical date for a specific project based on completion status.
-/// During the grace period (12:00 AM - 5:00 AM), if yesterday's schedule exists,
-/// is a writing day, and is not completed, we keep it as yesterday's date.
-/// Otherwise, it immediately rolls over to calendar today.
+/// Calculates today's logical date for a specific project.
+/// Active time freeze allows working on an earlier frozen date within 24 hours.
+/// During the grace period (12:00 AM - 5:00 AM), the logical date is universally yesterday
+/// for all projects until the official 5:00 AM day reset occurs.
 DateTime getLogicalTodayForProject({
   required ProjectModel project,
   required List<ScheduleModel> schedules,
+  DateTime? nowForTesting,
 }) {
-  final now = DateTime.now();
+  final now = nowForTesting ?? DateTime.now();
   final calendarToday = DateTime(now.year, now.month, now.day);
   
   // Active time-freeze check (expires in 24 hours)
@@ -49,30 +50,13 @@ DateTime getLogicalTodayForProject({
     }
   }
 
-  if (Platform.environment.containsKey('FLUTTER_TEST')) {
+  if (nowForTesting == null && Platform.environment.containsKey('FLUTTER_TEST')) {
     return calendarToday;
   }
   if (now.hour >= 5) {
     return calendarToday;
   }
-  final yesterday = DateTime(calendarToday.year, calendarToday.month, calendarToday.day - 1);
-  ScheduleModel? yesterdaySchedule;
-  for (final s in schedules) {
-    if (s.projectId == project.id &&
-        s.date.year == yesterday.year &&
-        s.date.month == yesterday.month &&
-        s.date.day == yesterday.day) {
-      yesterdaySchedule = s;
-      break;
-    }
-  }
-  if (yesterdaySchedule != null &&
-      !yesterdaySchedule.isRestDay &&
-      !yesterdaySchedule.automaticRestDay &&
-      !yesterdaySchedule.completed) {
-    return yesterday;
-  }
-  return calendarToday;
+  return DateTime(calendarToday.year, calendarToday.month, calendarToday.day - 1);
 }
 
 /// Safely calculates difference in days between two dates, avoiding daylight saving offsets.

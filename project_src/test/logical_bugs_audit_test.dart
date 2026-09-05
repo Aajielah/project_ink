@@ -451,5 +451,135 @@ void main() {
       expect(safeId >= 0, isTrue);
       expect(safeId <= 2147483647, isTrue);
     });
+
+    test('9. Universal Grace Period: 2:00 AM keeps all books (writing & recovery) on yesterday until 5:00 AM reset', () {
+      final friday = DateTime(2026, 9, 4);
+      final saturday = DateTime(2026, 9, 5);
+      final twoAmSaturday = DateTime(2026, 9, 5, 2, 0);
+      final fiveAmSaturday = DateTime(2026, 9, 5, 5, 1);
+
+      final bookA = ProjectModel(
+        id: 'book_a',
+        name: 'Book A (Writing Friday)',
+        status: ProjectStatus.active,
+        projectType: ProjectType.ongoing,
+        ongoingStyle: 'rhythm',
+        targetWords: 0,
+        writtenWords: 0,
+        remainingWords: 0,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: friday,
+        expectedFinishDate: addCalendarDays(friday, 30),
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: friday,
+        updatedAt: friday,
+      );
+
+      final bookB = ProjectModel(
+        id: 'book_b',
+        name: 'Book B (Recovery Friday, Writing Saturday)',
+        status: ProjectStatus.active,
+        projectType: ProjectType.ongoing,
+        ongoingStyle: 'rhythm',
+        targetWords: 0,
+        writtenWords: 0,
+        remainingWords: 0,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: subtractCalendarDays(friday, 1),
+        expectedFinishDate: addCalendarDays(friday, 30),
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: friday,
+        updatedAt: friday,
+      );
+
+      // Friday schedule for Book A: Writing Day
+      final sBookAFri = ScheduleModel(
+        id: 's_a_fri',
+        projectId: bookA.id,
+        date: friday,
+        plannedWords: 500,
+        isRestDay: false,
+        isRecoveryDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+
+      // Friday schedule for Book B: Recovery Day
+      final sBookBFri = ScheduleModel(
+        id: 's_b_fri',
+        projectId: bookB.id,
+        date: friday,
+        plannedWords: 0,
+        isRestDay: true,
+        isRecoveryDay: true,
+        completed: true,
+        automaticRestDay: false,
+        locked: true,
+      );
+
+      // Saturday schedule for Book B: Writing Day
+      final sBookBSat = ScheduleModel(
+        id: 's_b_sat',
+        projectId: bookB.id,
+        date: saturday,
+        plannedWords: 500,
+        isRestDay: false,
+        isRecoveryDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+
+      // At 2:00 AM on Saturday:
+      // Book A must still be on Friday (gives user time to finish writing)
+      final logicalTodayA = getLogicalTodayForProject(
+        project: bookA,
+        schedules: [sBookAFri],
+        nowForTesting: twoAmSaturday,
+      );
+      expect(logicalTodayA.year, equals(2026));
+      expect(logicalTodayA.month, equals(9));
+      expect(logicalTodayA.day, equals(4)); // Friday!
+
+      // Book B must ALSO still be on Friday (stays on Recovery Day, Saturday writing NOT shown yet!)
+      final logicalTodayB = getLogicalTodayForProject(
+        project: bookB,
+        schedules: [sBookBFri, sBookBSat],
+        nowForTesting: twoAmSaturday,
+      );
+      expect(logicalTodayB.year, equals(2026));
+      expect(logicalTodayB.month, equals(9));
+      expect(logicalTodayB.day, equals(4)); // Friday! Not Saturday!
+
+      // At 5:01 AM on Saturday:
+      // Both books flip to Saturday together!
+      final resetTodayA = getLogicalTodayForProject(
+        project: bookA,
+        schedules: [sBookAFri],
+        nowForTesting: fiveAmSaturday,
+      );
+      expect(resetTodayA.day, equals(5)); // Saturday!
+
+      final resetTodayB = getLogicalTodayForProject(
+        project: bookB,
+        schedules: [sBookBFri, sBookBSat],
+        nowForTesting: fiveAmSaturday,
+      );
+      expect(resetTodayB.day, equals(5)); // Saturday!
+    });
   });
 }
+
