@@ -251,6 +251,7 @@ class _CreateProjectScreenState extends ConsumerState<CreateProjectScreen> {
         restMode: _restMode,
         fixedRestWeekdays: _fixedRestDays,
         allowedRestDays: _allowedRestDays,
+        startDate: _startDate,
       );
 
       if (validationError != null) {

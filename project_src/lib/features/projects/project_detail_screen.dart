@@ -2160,13 +2160,14 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
 
                 final schedule = await schedRepo.getScheduleForDate(log.projectId, log.date);
 
+                bool isCompletedNow = false;
+
                 await db.transaction(() async {
                   final newActual = log.actualWords + words;
                   int newBacklog = log.backlogCreated - words;
                   if (newBacklog == 0) {
                     newBacklog = -1; // Special flag for fully resolved
                   }
-                  final isCompleted = newActual >= log.plannedWords;
                   
                   await logRepo.insertLog(log.copyWith(
                     actualWords: newActual,
@@ -2182,12 +2183,16 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
 
                   final newWritten = project.writtenWords + words;
                   final newBacklogWords = max(0, project.backlogWords - words);
-                  final newRemaining = max(0, project.targetWords - newWritten);
+                  final isFixed = project.projectType == ProjectType.fixed;
+                  final newRemaining = isFixed ? max(0, project.targetWords - newWritten) : 0;
+                  isCompletedNow = isFixed && newRemaining == 0;
                   
                   await projRepo.updateProject(project.copyWith(
                     writtenWords: newWritten,
                     backlogWords: newBacklogWords,
                     remainingWords: newRemaining,
+                    status: isCompletedNow ? ProjectStatus.completed : project.status,
+                    actualFinishDate: isCompletedNow ? DateTime.now() : project.actualFinishDate,
                     updatedAt: DateTime.now(),
                   ));
                 });
@@ -2197,9 +2202,13 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                 await ref.read(projectsProvider.notifier).loadProjects(silent: true);
                 ref.invalidate(statisticsProvider);
                 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Resolved $words words of backlog!')),
-                );
+                if (isCompletedNow && context.mounted) {
+                  _showProjectFinishedDialog(context, project.id, project.name);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Resolved $words words of backlog!')),
+                  );
+                }
               },
               child: const Text('Submit'),
             )

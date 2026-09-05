@@ -12,7 +12,7 @@ DateTime getLogicalToday() {
     return DateTime(now.year, now.month, now.day);
   }
   if (now.hour < 5) {
-    return DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
+    return DateTime(now.year, now.month, now.day - 1);
   }
   return DateTime(now.year, now.month, now.day);
 }
@@ -55,7 +55,7 @@ DateTime getLogicalTodayForProject({
   if (now.hour >= 5) {
     return calendarToday;
   }
-  final yesterday = calendarToday.subtract(const Duration(days: 1));
+  final yesterday = DateTime(calendarToday.year, calendarToday.month, calendarToday.day - 1);
   ScheduleModel? yesterdaySchedule;
   for (final s in schedules) {
     if (s.projectId == project.id &&
@@ -80,4 +80,14 @@ int getDaysDifference(DateTime start, DateTime end) {
   final utcStart = DateTime.utc(start.year, start.month, start.day);
   final utcEnd = DateTime.utc(end.year, end.month, end.day);
   return utcEnd.difference(utcStart).inDays;
+}
+
+/// Safely adds calendar days on midnight dates without daylight saving duration shifts.
+DateTime addCalendarDays(DateTime date, int days) {
+  return DateTime(date.year, date.month, date.day + days);
+}
+
+/// Safely subtracts calendar days on midnight dates without daylight saving duration shifts.
+DateTime subtractCalendarDays(DateTime date, int days) {
+  return DateTime(date.year, date.month, date.day - days);
 }

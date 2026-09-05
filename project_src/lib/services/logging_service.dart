@@ -162,10 +162,11 @@ class LoggingService {
       shouldClearFreeze = true;
     }
 
+    final effectivePrevBacklog = prevBacklogCreated > 0 ? prevBacklogCreated : 0;
     final updatedProject = project.copyWith(
       writtenWords: newWrittenWords,
       remainingWords: newRemainingWords,
-      backlogWords: isOngoing ? 0 : max(0, project.backlogWords - prevBacklogCreated + backlogCreated),
+      backlogWords: isOngoing ? 0 : max(0, project.backlogWords - effectivePrevBacklog + backlogCreated),
       status: newStatus,
       actualFinishDate: actualFinish,
       projectStreak: newStreak,
@@ -247,19 +248,19 @@ class LoggingService {
 
   Future<int> _calculateStreakBeforeToday(String projectId, DateTime cleanToday) async {
     int streak = 0;
-    var checkDate = cleanToday.subtract(const Duration(days: 1));
+    var checkDate = DateTime(cleanToday.year, cleanToday.month, cleanToday.day - 1);
     while (true) {
       final sched = await _scheduleRepo.getScheduleForDate(projectId, checkDate);
       if (sched == null) break;
-      if (sched.isRestDay || sched.isShielded) {
-        checkDate = checkDate.subtract(const Duration(days: 1));
+      if (sched.isRestDay || sched.isShielded || sched.isRecoveryDay) {
+        checkDate = DateTime(checkDate.year, checkDate.month, checkDate.day - 1);
         continue;
       }
       final log = await _logRepo.getLogForDate(projectId, checkDate);
       final completed = log?.completed ?? false;
       if (completed) {
         streak++;
-        checkDate = checkDate.subtract(const Duration(days: 1));
+        checkDate = DateTime(checkDate.year, checkDate.month, checkDate.day - 1);
       } else {
         break;
       }

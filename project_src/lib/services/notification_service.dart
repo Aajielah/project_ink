@@ -226,13 +226,13 @@ class NotificationService {
   }
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
-    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    final DateTime nowLocal = DateTime.now();
+    DateTime scheduledLocal =
+        DateTime(nowLocal.year, nowLocal.month, nowLocal.day, hour, minute);
+    if (scheduledLocal.isBefore(nowLocal)) {
+      scheduledLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day + 1, hour, minute);
     }
-    return scheduledDate;
+    return tz.TZDateTime.from(scheduledLocal, tz.local);
   }
 
   tz.TZDateTime _nextInstanceOf12AM() {

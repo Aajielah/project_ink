@@ -15,6 +15,7 @@ class SchedulingService {
     required RestMode restMode,
     List<int>? fixedRestWeekdays,
     required int allowedRestDays,
+    DateTime? startDate,
   }) {
     if (targetWords <= 0) {
       return 'Target words must be greater than zero.';
@@ -32,10 +33,11 @@ class SchedulingService {
       if (fixedRestWeekdays == null || fixedRestWeekdays.isEmpty) {
         return 'Fixed rest days must specify which days of the week are rest days.';
       }
-      // Count how many rest days occur in the duration
+      // Count how many rest days occur in the duration starting from actual start date
+      final startWeekday = startDate?.weekday ?? 1;
       for (int i = 0; i < durationDays; i++) {
         // Monday = 1, Sunday = 7
-        final day = (i % 7) + 1;
+        final day = ((startWeekday - 1 + i) % 7) + 1;
         if (fixedRestWeekdays.contains(day)) {
           restDaysEstimate++;
         }
@@ -154,7 +156,7 @@ class SchedulingService {
 
     if (restMode == RestMode.fixed) {
       for (int i = 0; i < durationDays; i++) {
-        final date = cleanStartDate.add(Duration(days: i));
+        final date = DateTime(cleanStartDate.year, cleanStartDate.month, cleanStartDate.day + i);
         if (fixedRestWeekdays.contains(date.weekday)) {
           restDayMap[i] = true;
         }
@@ -176,7 +178,7 @@ class SchedulingService {
     }
 
     for (int i = 0; i < durationDays; i++) {
-      final date = cleanStartDate.add(Duration(days: i));
+      final date = DateTime(cleanStartDate.year, cleanStartDate.month, cleanStartDate.day + i);
       final isRest = restDayMap[i];
       int planned = 0;
 

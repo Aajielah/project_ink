@@ -142,7 +142,23 @@ class StatisticsRepository {
         final dayScheds = schedulesByDate[dateKey] ?? [];
         
         if (dayScheds.isEmpty) {
-          dailyStates.add('rest');
+          if (tempDate.isBefore(cleanToday)) {
+            // Check if any writing occurred on this unscheduled day
+            final hasWriting = logs.any((l) =>
+                l.actualWords > 0 &&
+                l.date.year == tempDate.year &&
+                l.date.month == tempDate.month &&
+                l.date.day == tempDate.day);
+            if (hasWriting) {
+              dailyStates.add('completed');
+            } else {
+              // Past unscheduled day with zero writing breaks the active streak
+              dailyStates.add('failed');
+            }
+          } else {
+            // Today with no schedules is neutral
+            dailyStates.add('rest');
+          }
         } else {
           final isToday = tempDate.isAtSameMomentAs(cleanToday);
           bool hasUncompletedWriting = false;
@@ -174,7 +190,7 @@ class StatisticsRepository {
           }
         }
         
-        tempDate = tempDate.add(const Duration(days: 1));
+        tempDate = DateTime(tempDate.year, tempDate.month, tempDate.day + 1);
       }
 
       int tempStreak = 0;

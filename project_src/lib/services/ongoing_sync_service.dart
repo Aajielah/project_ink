@@ -79,8 +79,8 @@ class OngoingSyncService {
       // Case 1: Brand new ongoing project, check and fill dates from startDate up to Sunday of current week
       if (schedules.isEmpty) {
         final cleanStart = DateTime(project.startDate.year, project.startDate.month, project.startDate.day);
-        final mondayOfToday = cleanToday.subtract(Duration(days: cleanToday.weekday - 1));
-        final sundayOfToday = mondayOfToday.add(const Duration(days: 6));
+        final mondayOfToday = DateTime(cleanToday.year, cleanToday.month, cleanToday.day - (cleanToday.weekday - 1));
+        final sundayOfToday = DateTime(mondayOfToday.year, mondayOfToday.month, mondayOfToday.day + 6);
 
         if (cleanToday.isAtSameMomentAs(cleanStart) || cleanToday.isAfter(cleanStart) || sundayOfToday.isAfter(cleanStart) || sundayOfToday.isAtSameMomentAs(cleanStart)) {
           final List<ScheduleModel> initialTasks = [];
@@ -113,7 +113,7 @@ class OngoingSyncService {
                 locked: true,
               ));
             }
-            tempDate = tempDate.add(const Duration(days: 1));
+            tempDate = DateTime(tempDate.year, tempDate.month, tempDate.day + 1);
           }
           while (tempDate.isBefore(sundayOfToday) || tempDate.isAtSameMomentAs(sundayOfToday)) {
             final diff = getDaysDifference(project.startDate, tempDate);
@@ -143,7 +143,7 @@ class OngoingSyncService {
                 locked: false,
               ));
             }
-            tempDate = tempDate.add(const Duration(days: 1));
+            tempDate = DateTime(tempDate.year, tempDate.month, tempDate.day + 1);
           }
           await schedRepo.insertSchedules(initialTasks);
         }
@@ -249,11 +249,11 @@ class OngoingSyncService {
       );
       final List<ScheduleModel> toInsert = [];
 
-      final mondayOfToday = cleanToday.subtract(Duration(days: cleanToday.weekday - 1));
-      final sundayOfToday = mondayOfToday.add(const Duration(days: 6));
+      final mondayOfToday = DateTime(cleanToday.year, cleanToday.month, cleanToday.day - (cleanToday.weekday - 1));
+      final sundayOfToday = DateTime(mondayOfToday.year, mondayOfToday.month, mondayOfToday.day + 6);
 
       if (latestDate.isBefore(sundayOfToday)) {
-        var tempDate = latestDate.add(const Duration(days: 1));
+        var tempDate = DateTime(latestDate.year, latestDate.month, latestDate.day + 1);
         while (tempDate.isBefore(sundayOfToday) || tempDate.isAtSameMomentAs(sundayOfToday)) {
           final diff = getDaysDifference(project.startDate, tempDate);
           final isRhythmRecovery = project.ongoingStyle == 'rhythm' && diff % 2 != 0;
@@ -309,7 +309,7 @@ class OngoingSyncService {
               ));
             }
           }
-          tempDate = tempDate.add(const Duration(days: 1));
+          tempDate = DateTime(tempDate.year, tempDate.month, tempDate.day + 1);
         }
       } else {
         // Safety check: ensure all dates from cleanToday to sundayOfToday exist
@@ -345,7 +345,7 @@ class OngoingSyncService {
               ));
             }
           }
-          tempDate = tempDate.add(const Duration(days: 1));
+          tempDate = DateTime(tempDate.year, tempDate.month, tempDate.day + 1);
         }
       }
 
@@ -474,7 +474,7 @@ class OngoingSyncService {
             final existingLogForRollover = await logRepo.getLogForDate(project.id, s.date);
             final backlogCreatedVal = existingLogForRollover?.backlogCreated ?? 0;
             if (backlogCreatedVal != 0) {
-              tempDate = tempDate.add(const Duration(days: 1));
+              tempDate = DateTime(tempDate.year, tempDate.month, tempDate.day + 1);
               continue;
             }
 
@@ -563,7 +563,7 @@ class OngoingSyncService {
                 projectModified = true;
 
                 // Redistribute planned words starting from tomorrow
-                final tomorrow = tempDate.add(const Duration(days: 1));
+                final tomorrow = DateTime(tempDate.year, tempDate.month, tempDate.day + 1);
                 final futureSchedules = currentSchedules
                     .where((x) => !x.locked && (x.date.isAfter(tempDate) || x.date.isAtSameMomentAs(tomorrow)))
                     .toList();
@@ -644,7 +644,7 @@ class OngoingSyncService {
           }
         }
 
-        tempDate = tempDate.add(const Duration(days: 1));
+        tempDate = DateTime(tempDate.year, tempDate.month, tempDate.day + 1);
       }
 
       // Check today's week transition as well
@@ -716,19 +716,19 @@ class OngoingSyncService {
     DailyLogRepository logRepo,
   ) async {
     int streak = 0;
-    var checkDate = cleanToday.subtract(const Duration(days: 1));
+    var checkDate = DateTime(cleanToday.year, cleanToday.month, cleanToday.day - 1);
     while (true) {
       final sched = await schedRepo.getScheduleForDate(projectId, checkDate);
       if (sched == null) break;
-      if (sched.isRestDay || sched.isShielded) {
-        checkDate = checkDate.subtract(const Duration(days: 1));
+      if (sched.isRestDay || sched.isShielded || sched.isRecoveryDay) {
+        checkDate = DateTime(checkDate.year, checkDate.month, checkDate.day - 1);
         continue;
       }
       final log = await logRepo.getLogForDate(projectId, checkDate);
       final completed = log?.completed ?? false;
       if (completed) {
         streak++;
-        checkDate = checkDate.subtract(const Duration(days: 1));
+        checkDate = DateTime(checkDate.year, checkDate.month, checkDate.day - 1);
       } else {
         break;
       }

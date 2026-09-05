@@ -289,6 +289,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         restMode: restMode,
         fixedRestWeekdays: fixedRestWeekdays,
         allowedRestDays: allowedRestDays,
+        startDate: startDate,
       );
       if (err != null) return err;
     }

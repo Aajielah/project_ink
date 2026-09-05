@@ -366,76 +366,122 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   }
 
   void _showSingleLogDialog(TodayWritingTask task) {
-    final controller = TextEditingController(
-      text: task.log != null ? task.log!.actualWords.toString() : '',
-    );
+    final currentWords = task.log?.actualWords ?? 0;
+    final controller = TextEditingController();
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Log Words for "${task.project.name}"'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: 'Words Written Today',
-              hintText: 'e.g. 500',
-              suffixText: 'words',
-              helperText: 'Target today: ${task.schedule.plannedWords} words',
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final text = controller.text.trim();
-                if (text.isEmpty) return;
-                final words = int.tryParse(text) ?? 0;
-                if (words <= 0) return;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final text = controller.text.trim();
+            final enteredWords = int.tryParse(text) ?? 0;
+            final newTotal = currentWords + enteredWords;
 
-                Navigator.pop(context);
-                
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text("Confirm Today's Log"),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            return AlertDialog(
+              title: Text('Log Words for "${task.project.name}"'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: 'Words Written in This Session',
+                      hintText: 'e.g. 300',
+                      suffixText: 'words',
+                      helperText: 'Target today: ${task.schedule.plannedWords} words',
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Book: ${task.project.name}"),
-                        const SizedBox(height: 8),
-                        Text("Words entered: $words"),
-                        const SizedBox(height: 12),
-                        const Text("Are you sure these are today's words?"),
+                        Text(
+                          'Earlier: $currentWords',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        Text(
+                          '+$enteredWords session',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        Text(
+                          'Total: $newTotal',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancel'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Confirm'),
-                      ),
-                    ],
                   ),
-                );
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    if (enteredWords <= 0) return;
+                    Navigator.pop(context);
 
-                if (confirmed == true) {
-                  await _submitLog(task.project.id, words);
-                }
-              },
-              child: const Text('Continue'),
-            )
-          ],
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text("Confirm Words"),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Book: ${task.project.name}"),
+                            const SizedBox(height: 8),
+                            Text("Adding: +$enteredWords words"),
+                            Text("New Total Today: $newTotal words"),
+                            const SizedBox(height: 12),
+                            const Text("Confirm this writing progress?"),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Confirm'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true) {
+                      await _submitLog(task.project.id, enteredWords, isAdditive: true);
+                    }
+                  },
+                  child: const Text('Log Words'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -463,7 +509,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                     autofocus: true,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: const InputDecoration(
-                      labelText: 'Words Written Today',
+                      labelText: 'Words Written in This Session',
                       hintText: 'Enter total words written across all books',
                       suffixText: 'words',
                       border: OutlineInputBorder(),
@@ -756,9 +802,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   void _showManualAllocationDialog(List<TodayWritingTask> tasks) {
     final controllers = {
       for (var t in tasks)
-        t.project.id: TextEditingController(
-          text: t.log != null ? t.log!.actualWords.toString() : '',
-        )
+        t.project.id: TextEditingController()
     };
 
     showDialog(
@@ -770,6 +814,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: tasks.map((t) {
+                final current = t.log?.actualWords ?? 0;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: TextField(
@@ -778,8 +823,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(
                       labelText: t.project.name,
+                      hintText: 'Words for this session',
                       suffixText: 'words',
-                      helperText: 'Target today: ${t.schedule.plannedWords} words',
+                      helperText: 'Earlier: $current • Target: ${t.schedule.plannedWords} words',
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -875,38 +921,83 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     if (writingTasks.length == 1) {
       final task = writingTasks.first;
       final current = task.log?.actualWords ?? 0;
-      final controller = TextEditingController(text: (current + preset).toString());
+      final controller = TextEditingController(text: preset.toString());
       showDialog(
         context: context,
         builder: (context) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text('Quick Log +$preset for "${task.project.name}"'),
-            content: TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                labelText: 'Total Words Written Today',
-                suffixText: 'words',
-                helperText: 'Previous: $current • Target: ${task.schedule.plannedWords} words',
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-              FilledButton(
-                onPressed: () async {
-                  final text = controller.text.trim();
-                  final words = int.tryParse(text) ?? 0;
-                  if (words <= 0) return;
-                  Navigator.pop(context);
-                  await _submitLog(task.project.id, words);
-                },
-                child: const Text('Log Words'),
-              ),
-            ],
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              final entered = int.tryParse(controller.text) ?? 0;
+              final newTotal = current + entered;
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: Text('Quick Log +$preset for "${task.project.name}"'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                      autofocus: true,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: InputDecoration(
+                        labelText: 'Words Written in This Session',
+                        suffixText: 'words',
+                        helperText: 'Target today: ${task.schedule.plannedWords} words',
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (_) => setDialogState(() {}),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Earlier: $current',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Text(
+                            '+$entered session',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          Text(
+                            'Total: $newTotal',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                  FilledButton(
+                    onPressed: () async {
+                      if (entered <= 0) return;
+                      Navigator.pop(context);
+                      await _submitLog(task.project.id, entered, isAdditive: true);
+                    },
+                    child: const Text('Log Words'),
+                  ),
+                ],
+              );
+            },
           );
         },
       );
@@ -939,19 +1030,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     String strategyLabel,
   ) async {
     final loggingService = ref.read(loggingServiceProvider);
-    final List<String> newlyCompletedBooks = [];
+    final scheduleRepo = ref.read(scheduleRepositoryProvider);
+    final List<String> newlyFinishedBooks = [];
+    final List<String> newlyCompletedDailyTargets = [];
 
     for (final entry in allocations.entries) {
       if (entry.value > 0) {
         try {
-          final wasCompleted = await loggingService.logWords(
+          final task = tasks.firstWhere((t) => t.project.id == entry.key);
+          final wasProjectCompletedBefore = task.project.status == ProjectStatus.completed;
+          final schedules = await scheduleRepo.getSchedulesForProject(entry.key);
+          final logicalToday = getLogicalTodayForProject(project: task.project, schedules: schedules);
+
+          final wasDailyTargetCompleted = await loggingService.logWords(
             projectId: entry.key,
-            date: DateTime.now(),
+            date: logicalToday,
             actualWords: entry.value,
+            isAdditive: true,
           );
-          if (wasCompleted) {
-            final task = tasks.firstWhere((t) => t.project.id == entry.key);
-            newlyCompletedBooks.add(task.project.name);
+
+          final projectAfter = ref.read(projectsProvider).value?.firstWhere((p) => p.id == entry.key);
+          final isProjectNowCompleted = projectAfter?.status == ProjectStatus.completed;
+
+          if (!wasProjectCompletedBefore && isProjectNowCompleted) {
+            newlyFinishedBooks.add(task.project.name);
+          } else if (wasDailyTargetCompleted) {
+            newlyCompletedDailyTargets.add(task.project.name);
           }
         } catch (_) {}
       }
@@ -959,11 +1063,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
     _refreshAll();
     
-    if (newlyCompletedBooks.isNotEmpty) {
-      if (context.mounted) {
-        _showCompletionDialog(context, newlyCompletedBooks.join(', '));
-      }
-    } else {
+    if (newlyFinishedBooks.isNotEmpty && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('🎉 Congratulations! You finished writing ${newlyFinishedBooks.join(", ")}!')),
+      );
+    } else if (newlyCompletedDailyTargets.isNotEmpty && context.mounted) {
+      _showCompletionDialog(context, newlyCompletedDailyTargets.join(', '));
+    } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Successfully logged $totalWords words via $strategyLabel!')),
       );

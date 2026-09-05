@@ -78,7 +78,8 @@ class BackupService {
         'ongoingStyle': p.ongoingStyle,
         'writingSession': p.writingSession,
         'frozenDate': p.frozenDate?.toIso8601String(),
-        'freezeActivatedAt': p.freezeActivatedAt?.toIso8601String()
+        'freezeActivatedAt': p.freezeActivatedAt?.toIso8601String(),
+        'groupId': p.groupId,
       }).toList());
 
 

@@ -40,7 +40,7 @@ class ProjectLifecycleService {
         await _projectRepo.updateProject(updatedProject);
 
         await NotificationService.instance.showInstantNotification(
-          p.id.hashCode,
+          p.id.hashCode & 0x7FFFFFFF,
           'Project Paused due to Inactivity',
           '"${p.name}" has been paused automatically after 7 days of inactivity.',
         );
