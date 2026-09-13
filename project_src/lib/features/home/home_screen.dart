@@ -161,6 +161,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     }
 
     final today = getLogicalToday();
+
+    final allResting = activeProjects.every((p) {
+      final task = todayTasks.firstWhere(
+        (t) => t.project.id == p.id,
+        orElse: () => TodayWritingTask(
+          project: p,
+          schedule: ScheduleModel(
+            id: '',
+            projectId: p.id,
+            date: today,
+            plannedWords: 0,
+            isRestDay: true,
+            completed: false,
+            automaticRestDay: false,
+            locked: false,
+          ),
+        ),
+      );
+      return task.schedule.isRestDay || task.schedule.automaticRestDay || task.schedule.isRecoveryDay;
+    });
+
+    if (allResting) {
+      return {
+        'name': 'Rest & Recharge',
+        'reason': 'All your projects are on a planned break today. Take time to relax and replenish your creative tank.',
+        'confidence': 100,
+        'project': null,
+        'isRestDay': true,
+      };
+    }
+
     double getProgress(ProjectModel p) => p.targetWords > 0 ? p.writtenWords / p.targetWords : 0.0;
 
     final List<_ProjectWithScore> scored = [];
@@ -313,12 +344,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
           ),
         ),
       );
-      if (task.schedule.isRecoveryDay) {
+      if (task.schedule.isRestDay || task.schedule.automaticRestDay || task.schedule.isRecoveryDay) {
         scored[i] = _ProjectWithScore(
           project: p,
           score: scored[i].score - 100000.0,
-          reason: 'Today is a scheduled Recovery Day. Enjoy your rest!',
-          confidence: 99,
+          reason: task.schedule.isRecoveryDay
+              ? 'Today is a scheduled Recovery Day. Enjoy your rest!'
+              : 'Today is a scheduled Rest Day. Enjoy your break!',
+          confidence: 90,
         );
       }
     }
@@ -1590,14 +1623,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             final rec = _computeRecommendation(filteredActiveProjects, todayTasks);
             final ProjectModel? recProject = rec['project'];
 
-            final completedTasks = todayTasks.where((t) => t.schedule.completed && !t.schedule.isRecoveryDay).toList();
-            final uncompletedTasks = todayTasks.where((t) => !t.schedule.completed && !t.schedule.isRecoveryDay).toList();
-            final visibleTasks = todayTasks.where((t) =>
+            final completedTasks = todayTasks.where((t) => t.schedule.completed && !t.schedule.isRecoveryDay && !t.schedule.isRestDay && !t.schedule.automaticRestDay).toList();
+            final uncompletedTasks = todayTasks.where((t) =>
               !t.schedule.completed &&
               !t.schedule.isRestDay &&
               !t.schedule.automaticRestDay &&
               !t.schedule.isRecoveryDay
             ).toList();
+            final visibleTasks = uncompletedTasks;
 
             int totalPlannedToday = 0;
             int totalLoggedToday = 0;
@@ -1936,7 +1969,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              if (recProject != null)
+                              if (rec['isRestDay'] == true)
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 60,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.tertiary.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.beach_access,
+                                        size: 32,
+                                        color: theme.colorScheme.tertiary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Rest & Recharge',
+                                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            rec['reason'] as String,
+                                            style: theme.textTheme.bodyMedium?.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          OutlinedButton.icon(
+                                            onPressed: () => context.go('/projects'),
+                                            icon: const Icon(Icons.book_outlined, size: 16),
+                                            label: const Text('View All Books'),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: theme.colorScheme.tertiary,
+                                              side: BorderSide(color: theme.colorScheme.tertiary.withOpacity(0.5)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else if (recProject != null)
                                 Row(
                                   children: [
                                     BookCoverWidget(
@@ -2067,30 +2147,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                           ),
                         )
                       else if (uncompletedTasks.isEmpty)
-                        Card(
-                          color: theme.colorScheme.primaryContainer.withOpacity(0.2),
-                          shape: RoundedRectangleBorder(
-                            side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.3)),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Padding(
-                            padding: EdgeInsets.all(24.0),
-                            child: Column(
-                              children: [
-                                Text(
-                                  '🎉',
-                                  style: TextStyle(fontSize: 32),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Everything for today is complete.',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                        if (completedTasks.isNotEmpty)
+                          Card(
+                            color: theme.colorScheme.primaryContainer.withOpacity(0.2),
+                            shape: RoundedRectangleBorder(
+                              side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.3)),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                          ),
-                        )
+                            child: const Padding(
+                              padding: EdgeInsets.all(24.0),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    '🎉',
+                                    style: TextStyle(fontSize: 32),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Everything for today is complete.',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          Card(
+                            color: theme.colorScheme.secondaryContainer.withOpacity(0.2),
+                            shape: RoundedRectangleBorder(
+                              side: BorderSide(color: theme.colorScheme.secondary.withOpacity(0.3)),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.all(24.0),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    '🏝',
+                                    style: TextStyle(fontSize: 32),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Rest Day',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'No writing missions scheduled for today. Enjoy your well-deserved break!',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
                       else ...[
                         if (completedTasks.isNotEmpty)
                           Padding(
