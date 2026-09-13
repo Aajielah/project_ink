@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/services/database_providers.dart';
 import '../../../core/utils/category_utils.dart';
+import '../../../shared/models/project.dart';
 
 final statsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final db = ref.watch(databaseServiceProvider);
   final projects = await db.getAllProjects();
 
   int totalGoals = projects.length;
-  int activeCount = projects.where((p) => p.status == 'active').toList().length;
-  int completedCount = projects.where((p) => p.status == 'completed').toList().length;
-  int pausedCount = projects.where((p) => p.status == 'paused').toList().length;
+  int activeCount = projects.where((p) => p.status == 'active').length;
+  int completedCount = projects.where((p) => p.status == 'completed').length;
+  int pausedCount = projects.where((p) => p.status == 'paused').length;
 
   int totalCompletedCheckIns = 0;
   int totalMissedCheckIns = 0;
   final Set<String> activeCalendarDates = {};
-  final Map<String, int> categoryCounts = {};
+  final Map<String, List<Project>> categoryProjects = {};
 
   for (var p in projects) {
-    categoryCounts[p.category] = (categoryCounts[p.category] ?? 0) + 1;
+    categoryProjects.putIfAbsent(p.category, () => []).add(p);
     final records = await db.getRecordsForProject(p.id);
     for (var r in records) {
       if (r.status == 'completed') {
@@ -40,11 +42,9 @@ final statsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) asy
     'active': activeCount,
     'completed': completedCount,
     'paused': pausedCount,
-    'completedCheckIns': totalCompletedCheckIns,
-    'missedCheckIns': totalMissedCheckIns,
     'daysActive': activeCalendarDates.length,
     'consistencyScore': consistencyScore,
-    'categoryCounts': categoryCounts,
+    'categoryProjects': categoryProjects,
   };
 });
 
@@ -82,10 +82,10 @@ class _StatsPageState extends ConsumerState<StatsPage> {
           final theme = Theme.of(context);
           final consistency = stats['consistencyScore'] as int;
           final daysActive = stats['daysActive'] as int;
-          final categoryMap = stats['categoryCounts'] as Map<String, int>;
+          final categoryProjectsMap = stats['categoryProjects'] as Map<String, List<Project>>;
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 96),
             children: [
               // Hero Consistency Score Card
               Card(
@@ -143,7 +143,7 @@ class _StatsPageState extends ConsumerState<StatsPage> {
               ),
               const SizedBox(height: 20),
 
-              // Metrics Grid
+              // Summary Metrics Grid (Cleaned - Check-Ins Done/Missed removed)
               Text('Summary Metrics', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Row(
@@ -161,50 +161,45 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                   Expanded(child: _buildMetricCard('On Hold / Paused', '${stats['paused']}', Icons.pause_circle_rounded, Colors.amber)),
                 ],
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildMetricCard(
-                      'Check-Ins Done',
-                      '${stats['completedCheckIns']}',
-                      Icons.check_circle_rounded,
-                      Colors.teal,
-                      subtitle: 'Across all goals',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildMetricCard(
-                      'Check-Ins Missed',
-                      '${stats['missedCheckIns']}',
-                      Icons.close_rounded,
-                      Colors.red,
-                      subtitle: 'Strict auto-misses',
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 24),
 
-              // Category Distribution
-              if (categoryMap.isNotEmpty) ...[
-                Text('Category Breakdown', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              // Category Breakdown with Expandable Task View
+              if (categoryProjectsMap.isNotEmpty) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Category Breakdown', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    const Text('Tap to view tasks', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
                 const SizedBox(height: 10),
-                Card(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: categoryMap.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1),
-                    itemBuilder: (ctx, index) {
-                      final category = categoryMap.keys.elementAt(index);
-                      final count = categoryMap[category]!;
-                      final color = CategoryUtils.getColor(category, context);
+                ...categoryProjectsMap.entries.map((entry) {
+                  final category = entry.key;
+                  final projectList = entry.value;
+                  final color = CategoryUtils.getColor(category, context);
 
-                      return ListTile(
-                        leading: Icon(CategoryUtils.getIcon(category), color: color),
-                        title: Text(category, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(color: color.withValues(alpha: 0.2)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Theme(
+                      data: theme.copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(CategoryUtils.getIcon(category), color: color, size: 20),
+                        ),
+                        title: Text(
+                          category,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
                         trailing: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -212,14 +207,66 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '$count ${count == 1 ? 'goal' : 'goals'}',
+                            '${projectList.length} ${projectList.length == 1 ? 'goal' : 'goals'}',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: color),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                        children: [
+                          const Divider(height: 1),
+                          ...projectList.map((p) {
+                            final progress = (p.targetDays > 0)
+                                ? (p.completedDays / p.targetDays).clamp(0.0, 1.0)
+                                : 0.0;
+
+                            return InkWell(
+                              onTap: () => context.push('/overview/${p.id}'),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            p.title,
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Day ${p.completedDays} / ${p.targetDays} (${(progress * 100).toInt()}%)',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: color,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: LinearProgressIndicator(
+                                        value: progress,
+                                        backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                                        valueColor: AlwaysStoppedAnimation(color),
+                                        minHeight: 5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 4),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
               ],
             ],
           );
@@ -234,9 +281,8 @@ class _StatsPageState extends ConsumerState<StatsPage> {
     String title,
     String value,
     IconData icon,
-    Color color, {
-    String? subtitle,
-  }) {
+    Color color,
+  ) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -272,13 +318,6 @@ class _StatsPageState extends ConsumerState<StatsPage> {
                     title,
                     style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
                   ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 1),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 9, color: Colors.grey.withValues(alpha: 0.8)),
-                    ),
-                  ],
                 ],
               ),
             ),
