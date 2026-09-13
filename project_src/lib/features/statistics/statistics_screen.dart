@@ -374,32 +374,6 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          label: 'Automatic Rest Days',
-                          value: '${dynamicStats['autoRestDays']} days',
-                          icon: Icons.hotel_class_outlined,
-                          backgroundColor: Colors.indigo.withOpacity(0.08),
-                          borderColor: Colors.indigo.withOpacity(0.2),
-                          iconColor: Colors.indigo,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          label: 'Manual Rest Days',
-                          value: '${stats.restDaysUsed} days',
-                          icon: Icons.beach_access,
-                          backgroundColor: Colors.cyan.withOpacity(0.08),
-                          borderColor: Colors.cyan.withOpacity(0.2),
-                          iconColor: Colors.cyan,
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 24),
 
                   // 7-day activity chart
