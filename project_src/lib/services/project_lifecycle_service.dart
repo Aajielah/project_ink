@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/project.dart';
 import '../repositories/project_repository.dart';
 import '../repositories/daily_log_repository.dart';
@@ -19,6 +20,15 @@ class ProjectLifecycleService {
     for (final p in projects) {
       if (p.status != ProjectStatus.active) continue;
 
+      DateTime? resumedAt;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final resumedAtStr = prefs.getString('project_resumed_at_${p.id}');
+        if (resumedAtStr != null) {
+          resumedAt = DateTime.tryParse(resumedAtStr);
+        }
+      } catch (_) {}
+
       final logs = await _dailyLogRepo.getLogsForProject(p.id);
       final successfulLogs = logs.where((l) => l.actualWords > 0).toList();
 
@@ -30,9 +40,18 @@ class ProjectLifecycleService {
         lastActivity = p.startDate.isAfter(createdAt) ? p.startDate : createdAt;
       }
 
+      if (resumedAt != null && resumedAt.isAfter(lastActivity)) {
+        lastActivity = resumedAt;
+      }
+
       final inactivityDays = getDaysDifference(lastActivity, cleanToday);
 
       if (inactivityDays >= 7) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('project_resumed_at_${p.id}');
+        } catch (_) {}
+
         final updatedProject = p.copyWith(
           status: ProjectStatus.paused,
           updatedAt: DateTime.now(),

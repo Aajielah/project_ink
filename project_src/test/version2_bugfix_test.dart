@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../lib/database/database.dart';
@@ -126,6 +127,44 @@ void main() {
       final updatedProject = await projectRepo.getProjectById(projectId);
       expect(updatedProject, isNotNull);
       expect(updatedProject!.status, equals(ProjectStatus.paused));
+    });
+
+    test('Project Lifecycle Service respects resumed timestamp and allows resumed projects to stay active', () async {
+      SharedPreferences.setMockInitialValues({
+        'project_resumed_at_p_lifecycle_resumed': cleanToday.toIso8601String(),
+      });
+
+      final projectId = 'p_lifecycle_resumed';
+      final project = ProjectModel(
+        id: projectId,
+        name: 'Resumed Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 10000,
+        writtenWords: 0,
+        remainingWords: 10000,
+        dailyWordTarget: 500,
+        backlogWords: 0,
+        startDate: cleanToday.subtract(const Duration(days: 10)),
+        expectedFinishDate: cleanToday.add(const Duration(days: 10)),
+        restMode: RestMode.flexible,
+        allowedRestDays: 7,
+        remainingRestDays: 7,
+        projectStreak: 0,
+        longestProjectStreak: 0,
+        currentWeek: 1,
+        createdAt: cleanToday.subtract(const Duration(days: 10)),
+        updatedAt: cleanToday,
+      );
+      await projectRepo.insertProject(project);
+
+      // Check and run automatic pause detection
+      await lifecycleService.checkAndPauseInactiveProjects([project]);
+
+      final updatedProject = await projectRepo.getProjectById(projectId);
+      expect(updatedProject, isNotNull);
+      // Because it was resumed today, it must NOT be paused!
+      expect(updatedProject!.status, equals(ProjectStatus.active));
     });
 
     test('Statistics Repository rest days and streaks recalculate using unique calendar dates', () async {

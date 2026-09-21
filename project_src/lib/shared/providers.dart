@@ -471,6 +471,10 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         await _scheduleRepo.deleteSchedulesForProject(id);
         await _dailyLogRepo.deleteLogsForProject(id);
       });
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('project_resumed_at_$id');
+      } catch (_) {}
       await _statsRepo.recalculateStatistics();
       _invalidateAllDependentProviders();
       await loadProjects(silent: true);
@@ -505,6 +509,11 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
 
       final project = await _projectRepo.getProjectById(id);
       if (project != null && project.status == ProjectStatus.active) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('project_resumed_at_$id');
+        } catch (_) {}
+
         final updated = project.copyWith(
           status: ProjectStatus.paused,
           updatedAt: DateTime.now(),
@@ -528,6 +537,11 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
 
       final project = await _projectRepo.getProjectById(id);
       if (project != null && project.status == ProjectStatus.paused) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('project_resumed_at_$id', DateTime.now().toIso8601String());
+        } catch (_) {}
+
         final updated = project.copyWith(
           status: ProjectStatus.active,
           updatedAt: DateTime.now(),
