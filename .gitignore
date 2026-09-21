@@ -6,3 +6,12 @@ Screenshot_*.png
 # Miscellaneous
 .DS_Store
 Thumbs.db
+
+# Flutter & Build Artifacts
+**/build/
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+*.iml
+

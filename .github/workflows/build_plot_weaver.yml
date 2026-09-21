@@ -1,0 +1,185 @@
+name: Build & Release PlotWeaver
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'plot_weaver/**'
+      - '.github/workflows/build_plot_weaver.yml'
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Publish as a downloadable GitHub Release'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  build-windows:
+    name: Build Windows Application (x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Verify Flutter Environment
+        run: flutter doctor -v
+
+      - name: Install Dependencies
+        working-directory: plot_weaver
+        run: flutter pub get
+
+      - name: Run Tests
+        working-directory: plot_weaver
+        run: flutter test
+
+      - name: Build Windows Release
+        working-directory: plot_weaver
+        run: flutter build windows --release
+
+      - name: Package Windows Binary
+        shell: pwsh
+        run: |
+          Compress-Archive -Path plot_weaver/build/windows/x64/runner/Release/* -DestinationPath PlotWeaver-Windows-x64.zip
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlotWeaver-Windows-x64
+          path: PlotWeaver-Windows-x64.zip
+          retention-days: 14
+
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        working-directory: plot_weaver
+        run: flutter pub get
+
+      - name: Build APK Release
+        working-directory: plot_weaver
+        run: flutter build apk --release
+
+      - name: Prepare APK Asset
+        run: cp plot_weaver/build/app/outputs/flutter-apk/app-release.apk PlotWeaver-Android.apk
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlotWeaver-Android-APK
+          path: PlotWeaver-Android.apk
+          retention-days: 14
+
+  build-web:
+    name: Build Web App
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        working-directory: plot_weaver
+        run: flutter pub get
+
+      - name: Build Web Release
+        working-directory: plot_weaver
+        run: flutter build web --release
+
+      - name: Package Web Files
+        run: |
+          cd plot_weaver/build/web
+          zip -r ../../../PlotWeaver-Web.zip .
+          cd ../../..
+
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlotWeaver-Web
+          path: PlotWeaver-Web.zip
+          retention-days: 14
+
+  publish-release:
+    name: Create GitHub Release with Downloads
+    needs: [build-windows, build-android, build-web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PlotWeaver-Windows-x64
+          path: release-assets
+
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PlotWeaver-Android-APK
+          path: release-assets
+
+      - name: Download Web Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PlotWeaver-Web
+          path: release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: plotweaver-v1.0.0-build${{ github.run_number }}
+          name: "PlotWeaver v1.0.0 (Build ${{ github.run_number }})"
+          body: |
+            ### 🚀 PlotWeaver Build ${{ github.run_number }}
+
+            **PlotWeaver: Story & Lore Bible** companion app.
+
+            #### 📥 Downloads:
+            - 🖥️ **Windows (x64)**: `PlotWeaver-Windows-x64.zip` (Extract and run `plot_weaver.exe`)
+            - 📱 **Android**: `PlotWeaver-Android.apk` (Install directly on Android)
+            - 🌐 **Web**: `PlotWeaver-Web.zip` (Static web build)
+
+            #### 🌟 Included Features:
+            - **Story Universes & Overview Dashboard**
+            - **Chapter & Scene Outliner** with 1-10 Dramatic Tension Meters and Beat Templates (*Save the Cat!* & *3-Act Structure*)
+            - **Character Dossiers & Relationship Network** (Archetypes, Psychological Depth, Flaws, Motivations, Arc Stages)
+            - **World Lore Codex** (Factions, Locations, Magic/Tech, History, Culture, Artifacts, Religion)
+            - **Idea Sparks & Scratchpad** with 1-Click Weave into Scene/Character/Lore
+            - **Project Ink Bridge** with live word counts & streaks
+            - **Markdown Story Bible Exporter** for Obsidian and Scrivener
+          files: |
+            release-assets/PlotWeaver-Windows-x64.zip
+            release-assets/PlotWeaver-Android.apk
+            release-assets/PlotWeaver-Web.zip
+          draft: false
+          prerelease: false
