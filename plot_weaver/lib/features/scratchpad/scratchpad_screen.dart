@@ -187,7 +187,17 @@ class _ScratchpadScreenState extends ConsumerState<ScratchpadScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Idea Sparks & Scratchpad'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Idea Sparks & Scratchpad'),
+            const SizedBox(width: 8),
+            Tooltip(
+              message: 'Idea Scratchpad: Rapidly capture sudden ideas, dialogue snippets, twists, or quirks, then weave them directly into story elements with 1-click.',
+              child: Icon(Icons.info_outline, size: 18, color: Theme.of(context).hintColor),
+            ),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -282,19 +292,22 @@ class _ScratchpadScreenState extends ConsumerState<ScratchpadScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    FilledButton.icon(
-                      onPressed: _isSubmitting ? null : _captureSpark,
-                      icon: _isSubmitting
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.bolt, size: 16),
-                      label: const Text('Capture Spark'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.violetLore,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    Tooltip(
+                      message: 'Save this idea note to your universe scratchpad',
+                      child: FilledButton.icon(
+                        onPressed: _isSubmitting ? null : _captureSpark,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.bolt, size: 16),
+                        label: const Text('Capture Spark'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.violetLore,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
                       ),
                     ),
                   ],
@@ -495,13 +508,16 @@ class _ScratchpadScreenState extends ConsumerState<ScratchpadScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                OutlinedButton.icon(
-                  onPressed: () => _showConvertDialog(spark),
-                  icon: const Icon(Icons.auto_awesome, size: 15, color: AppColors.violetLore),
-                  label: const Text('Weave into Story'),
-                  style: OutlinedButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    side: BorderSide(color: AppColors.violetLore.withOpacity(0.4)),
+                Tooltip(
+                  message: 'Convert this spark into a Scene, Character, or Lore entry with 1-click',
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showConvertDialog(spark),
+                    icon: const Icon(Icons.auto_awesome, size: 15, color: AppColors.violetLore),
+                    label: const Text('Weave into Story'),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      side: BorderSide(color: AppColors.violetLore.withOpacity(0.4)),
+                    ),
                   ),
                 ),
               ],

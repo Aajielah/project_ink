@@ -71,7 +71,17 @@ class _LoreScreenState extends ConsumerState<LoreScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('World Lore Codex'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('World Lore Codex'),
+            const SizedBox(width: 8),
+            Tooltip(
+              message: 'World Lore Codex: Document factions, locations, magic or technology systems, historical events, cultural traditions, and relics.',
+              child: Icon(Icons.info_outline, size: 18, color: Theme.of(context).hintColor),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -111,6 +121,7 @@ class _LoreScreenState extends ConsumerState<LoreScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
+                    tooltip: cat == 'All' ? 'Show all lore entries' : 'Filter by $cat entries',
                     selected: isSelected,
                     label: Text(cat),
                     avatar: cat != 'All'
@@ -203,6 +214,7 @@ class _LoreScreenState extends ConsumerState<LoreScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openCreateDialog(_selectedCategory),
+        tooltip: 'Create a new world lore entry',
         icon: const Icon(Icons.add),
         label: const Text('New Lore'),
         backgroundColor: AppColors.deepTeal,

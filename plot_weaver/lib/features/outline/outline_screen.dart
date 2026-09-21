@@ -262,6 +262,13 @@ class _OutlineScreenState extends ConsumerState<OutlineScreen> {
                       _buildBadge('${chapters.length} Chapters', AppColors.amberGold),
                       _buildBadge('$sceneCount Scenes', AppColors.royalBlue),
                       _buildBadge('$totalWords Est. Words', AppColors.deepTeal),
+                      Tooltip(
+                        message: 'Story Outline: Structure your narrative into Acts, Chapters, and Scenes with pacing tension ratings.',
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Icon(Icons.info_outline, size: 16, color: Theme.of(context).hintColor),
+                        ),
+                      ),
                     ],
                   );
                 },
@@ -272,40 +279,52 @@ class _OutlineScreenState extends ConsumerState<OutlineScreen> {
                 children: [
                   if (isNarrow)
                     Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      child: Tooltip(
+                        message: 'Apply narrative beat templates: Hero\'s Journey, Save the Cat!, or 3-Act Structure',
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                          icon: const Icon(Icons.auto_awesome, size: 15),
+                          label: const Text('Templates'),
+                          onPressed: _showTemplatePicker,
                         ),
-                        icon: const Icon(Icons.auto_awesome, size: 15),
-                        label: const Text('Templates'),
-                        onPressed: _showTemplatePicker,
                       ),
                     )
                   else
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.auto_awesome, size: 16),
-                      label: const Text('Templates'),
-                      onPressed: _showTemplatePicker,
+                    Tooltip(
+                      message: 'Apply narrative beat templates: Hero\'s Journey, Save the Cat!, or 3-Act Structure',
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.auto_awesome, size: 16),
+                        label: const Text('Templates'),
+                        onPressed: _showTemplatePicker,
+                      ),
                     ),
                   const SizedBox(width: 8),
                   if (isNarrow)
                     Expanded(
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      child: Tooltip(
+                        message: 'Create a new chapter in your outline',
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Chapter'),
+                          onPressed: () => _showAddChapterDialog(_selectedActFilter),
                         ),
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Chapter'),
-                        onPressed: () => _showAddChapterDialog(_selectedActFilter),
                       ),
                     )
                   else
-                    FilledButton.icon(
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('New Chapter'),
-                      onPressed: () => _showAddChapterDialog(_selectedActFilter),
+                    Tooltip(
+                      message: 'Create a new chapter in your outline',
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('New Chapter'),
+                        onPressed: () => _showAddChapterDialog(_selectedActFilter),
+                      ),
                     ),
                 ],
               );
@@ -740,26 +759,29 @@ class _OutlineScreenState extends ConsumerState<OutlineScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Scene indicator & tension
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: tensionColor.withOpacity(0.18),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.flash_on, size: 12, color: tensionColor),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${scene.tensionLevel}/10',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: tensionColor,
+                        Tooltip(
+                          message: 'Tension Level: ${scene.tensionLevel}/10 (Pacing & Stakes)',
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: tensionColor.withOpacity(0.18),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.flash_on, size: 12, color: tensionColor),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${scene.tensionLevel}/10',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: tensionColor,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),

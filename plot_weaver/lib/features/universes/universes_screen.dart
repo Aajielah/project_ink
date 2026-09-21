@@ -63,19 +63,22 @@ class UniversesScreen extends ConsumerWidget {
             const Text('PlotWeaver'),
             if (MediaQuery.of(context).size.width >= 500) ...[
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.amberGold.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'STORY BIBLE',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.amberGold,
-                    letterSpacing: 1,
+              Tooltip(
+                message: 'PlotWeaver Story Bible: Dedicated creative workspace for worldbuilding, character webs, chapter plotting, and spark capture.',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.amberGold.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'STORY BIBLE',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.amberGold,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
               ),
@@ -91,10 +94,13 @@ class UniversesScreen extends ConsumerWidget {
                     tooltip: 'New Universe',
                     onPressed: () => _showFormDialog(context),
                   )
-                : FilledButton.icon(
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('New Universe'),
-                    onPressed: () => _showFormDialog(context),
+                : Tooltip(
+                    message: 'Create a new story universe / book project',
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('New Universe'),
+                      onPressed: () => _showFormDialog(context),
+                    ),
                   ),
           ),
         ],
@@ -271,29 +277,32 @@ class UniversesScreen extends ConsumerWidget {
                                 Row(
                                   children: [
                                     if (u.linkedProjectInkName != null) ...[
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.emerald.withOpacity(0.12),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.link, size: 12, color: AppColors.emerald),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              u.linkedProjectInkName!,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.emerald,
+                                      Tooltip(
+                                        message: 'Linked Project Ink Manuscript: ${u.linkedProjectInkName}',
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.emerald.withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.link, size: 12, color: AppColors.emerald),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                u.linkedProjectInkName!,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.emerald,
+                                                ),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ],

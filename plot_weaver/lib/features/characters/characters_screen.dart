@@ -149,14 +149,17 @@ class _CharactersScreenState extends ConsumerState<CharactersScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      Tooltip(
+                        message: 'Create a new character dossier',
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                          icon: const Icon(Icons.person_add, size: 16),
+                          label: const Text('Add'),
+                          onPressed: _showAddCharacter,
                         ),
-                        icon: const Icon(Icons.person_add, size: 16),
-                        label: const Text('Add'),
-                        onPressed: _showAddCharacter,
                       ),
                     ],
                   ),
@@ -196,11 +199,22 @@ class _CharactersScreenState extends ConsumerState<CharactersScreen> {
                         onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Cast & Characters: Deep dossiers tracking character arcs, motivations, flaws, voice quirks, and relationship webs.',
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Icon(Icons.info_outline, size: 18, color: Theme.of(context).hintColor),
+                      ),
+                    ),
                     const Spacer(),
-                    FilledButton.icon(
-                      icon: const Icon(Icons.person_add, size: 18),
-                      label: const Text('New Character'),
-                      onPressed: _showAddCharacter,
+                    Tooltip(
+                      message: 'Create a new character dossier',
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.person_add, size: 18),
+                        label: const Text('New Character'),
+                        onPressed: _showAddCharacter,
+                      ),
                     ),
                   ],
                 ),
@@ -221,6 +235,7 @@ class _CharactersScreenState extends ConsumerState<CharactersScreen> {
                 final role = _roleFilters[index];
                 final isSelected = _selectedRoleFilter == role;
                 return ChoiceChip(
+                  tooltip: role == 'All' ? 'Show all characters' : 'Filter by $role',
                   label: Text(role),
                   selected: isSelected,
                   onSelected: (selected) {

@@ -95,28 +95,58 @@ class ResponsiveUniverseShell extends ConsumerWidget {
                   labelType: NavigationRailLabelType.all,
                   destinations: const [
                     NavigationRailDestination(
-                      icon: Icon(Icons.dashboard_outlined),
-                      selectedIcon: Icon(Icons.dashboard),
+                      icon: Tooltip(
+                        message: 'Overview: Universe dashboard, stats & story modules',
+                        child: Icon(Icons.dashboard_outlined),
+                      ),
+                      selectedIcon: Tooltip(
+                        message: 'Overview: Universe dashboard, stats & story modules',
+                        child: Icon(Icons.dashboard),
+                      ),
                       label: Text('Overview'),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.auto_stories_outlined),
-                      selectedIcon: Icon(Icons.auto_stories),
+                      icon: Tooltip(
+                        message: 'Outline: Acts, chapters, scene beats & tension meter',
+                        child: Icon(Icons.auto_stories_outlined),
+                      ),
+                      selectedIcon: Tooltip(
+                        message: 'Outline: Acts, chapters, scene beats & tension meter',
+                        child: Icon(Icons.auto_stories),
+                      ),
                       label: Text('Outline'),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.people_alt_outlined),
-                      selectedIcon: Icon(Icons.people_alt),
+                      icon: Tooltip(
+                        message: 'Characters: Psychological dossiers, motivations & relationship web',
+                        child: Icon(Icons.people_alt_outlined),
+                      ),
+                      selectedIcon: Tooltip(
+                        message: 'Characters: Psychological dossiers, motivations & relationship web',
+                        child: Icon(Icons.people_alt),
+                      ),
                       label: Text('Characters'),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.public_outlined),
-                      selectedIcon: Icon(Icons.public),
+                      icon: Tooltip(
+                        message: 'Lore: World Codex for factions, locations & magic rules',
+                        child: Icon(Icons.public_outlined),
+                      ),
+                      selectedIcon: Tooltip(
+                        message: 'Lore: World Codex for factions, locations & magic rules',
+                        child: Icon(Icons.public),
+                      ),
                       label: Text('Lore'),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.lightbulb_outline),
-                      selectedIcon: Icon(Icons.lightbulb),
+                      icon: Tooltip(
+                        message: 'Sparks: Frictionless idea capture scratchpad with 1-click weaving',
+                        child: Icon(Icons.lightbulb_outline),
+                      ),
+                      selectedIcon: Tooltip(
+                        message: 'Sparks: Frictionless idea capture scratchpad with 1-click weaving',
+                        child: Icon(Icons.lightbulb),
+                      ),
                       label: Text('Sparks'),
                     ),
                   ],
@@ -146,49 +176,76 @@ class ResponsiveUniverseShell extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: coverColor.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                genre.toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: coverColor,
+                            Tooltip(
+                              message: 'Genre: ${genre.toUpperCase()}',
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: coverColor.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  genre.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: coverColor,
+                                  ),
                                 ),
                               ),
                             ),
                             if (universe?.linkedProjectInkName != null) ...[
-                              const SizedBox(width: 10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.emerald.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.link, size: 12, color: AppColors.emerald),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Ink: ${universe!.linkedProjectInkName}',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.emerald,
+                              Builder(
+                                builder: (context) {
+                                  final inkName = universe!.linkedProjectInkName!;
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const SizedBox(width: 10),
+                                      Tooltip(
+                                        message: 'Synced with Project Ink manuscript: "$inkName"',
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.emerald.withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.link, size: 12, color: AppColors.emerald),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Ink: $inkName',
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: AppColors.emerald,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
+                                    ],
+                                  );
+                                },
                               ),
                             ],
                             const Spacer(),
+                            Tooltip(
+                              message: 'Use sidebar tabs to navigate Overview, Outline, Cast, Lore, and Sparks',
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Icon(
+                                  Icons.help_outline,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
                             IconButton(
-                              tooltip: 'Universes Gallery',
+                              tooltip: 'Switch Story Universe (Gallery)',
                               icon: const Icon(Icons.grid_view_rounded),
                               onPressed: () => context.go('/'),
                             ),
@@ -209,6 +266,7 @@ class ResponsiveUniverseShell extends ConsumerWidget {
           appBar: AppBar(
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
+              tooltip: 'Switch Story Universe',
               onPressed: () => context.go('/'),
             ),
             title: Column(
@@ -224,6 +282,13 @@ class ResponsiveUniverseShell extends ConsumerWidget {
                 ),
               ],
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.help_outline, size: 20),
+                tooltip: 'Story Bible: Tap bottom tabs to switch between Overview, Outline, Cast, Lore, and Sparks.',
+                onPressed: () {},
+              ),
+            ],
           ),
           body: child,
           bottomNavigationBar: NavigationBar(
@@ -234,26 +299,31 @@ class ResponsiveUniverseShell extends ConsumerWidget {
                 icon: Icon(Icons.dashboard_outlined),
                 selectedIcon: Icon(Icons.dashboard),
                 label: 'Overview',
+                tooltip: 'Overview: Universe dashboard, stats & story modules',
               ),
               NavigationDestination(
                 icon: Icon(Icons.auto_stories_outlined),
                 selectedIcon: Icon(Icons.auto_stories),
                 label: 'Outline',
+                tooltip: 'Outline: Acts, chapters, scene beats & tension pacing',
               ),
               NavigationDestination(
                 icon: Icon(Icons.people_alt_outlined),
                 selectedIcon: Icon(Icons.people_alt),
                 label: 'Cast',
+                tooltip: 'Cast: Character dossiers, flaws & relationships',
               ),
               NavigationDestination(
                 icon: Icon(Icons.public_outlined),
                 selectedIcon: Icon(Icons.public),
                 label: 'Lore',
+                tooltip: 'Lore: World codex, factions & magic rules',
               ),
               NavigationDestination(
                 icon: Icon(Icons.lightbulb_outline),
                 selectedIcon: Icon(Icons.lightbulb),
                 label: 'Sparks',
+                tooltip: 'Sparks: Idea scratchpad with 1-click conversion',
               ),
             ],
           ),

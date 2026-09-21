@@ -65,28 +65,34 @@ class UniverseDashboardScreen extends ConsumerWidget {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.download, size: 16),
-                                label: const Text('Export Bible'),
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (ctx) => ExportDialog(
-                                      universeId: universe.id,
-                                      universeTitle: universe.title,
-                                    ),
-                                  );
-                                },
+                              Tooltip(
+                                message: 'Export complete Story Bible as formatted Markdown (for Obsidian, Scrivener, Notion)',
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.download, size: 16),
+                                  label: const Text('Export Bible'),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => ExportDialog(
+                                        universeId: universe.id,
+                                        universeTitle: universe.title,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.edit_outlined, size: 16),
-                                label: const Text('Edit Details'),
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
-                                  );
-                                },
+                              Tooltip(
+                                message: 'Edit universe title, genre, logline, synopsis, or cover color',
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.edit_outlined, size: 16),
+                                  label: const Text('Edit Details'),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
+                                    );
+                                  },
+                                ),
                               ),
                             ],
                           ),
@@ -153,6 +159,7 @@ class UniverseDashboardScreen extends ConsumerWidget {
                               sub: '${stats.totalEstimatedWords} est. words',
                               icon: Icons.auto_stories,
                               color: AppColors.amberGold,
+                              tooltip: 'Chapters & scene beats organized across acts',
                             ),
                             _buildStatCard(
                               context,
@@ -161,6 +168,7 @@ class UniverseDashboardScreen extends ConsumerWidget {
                               sub: 'Cast members',
                               icon: Icons.people_alt,
                               color: AppColors.royalBlue,
+                              tooltip: 'Cast members with psychological dossiers & relations',
                             ),
                             _buildStatCard(
                               context,
@@ -169,6 +177,7 @@ class UniverseDashboardScreen extends ConsumerWidget {
                               sub: 'Codex entries',
                               icon: Icons.public,
                               color: AppColors.deepTeal,
+                              tooltip: 'Codex entries for factions, magic, tech & locations',
                             ),
                             _buildStatCard(
                               context,
@@ -177,6 +186,7 @@ class UniverseDashboardScreen extends ConsumerWidget {
                               sub: 'Captured ideas',
                               icon: Icons.lightbulb,
                               color: AppColors.violetLore,
+                              tooltip: 'Raw ideas & dialogue waiting to be woven into story',
                             ),
                           ],
                         );
@@ -192,6 +202,7 @@ class UniverseDashboardScreen extends ConsumerWidget {
                               sub: '${stats.totalEstimatedWords} est. words',
                               icon: Icons.auto_stories,
                               color: AppColors.amberGold,
+                              tooltip: 'Chapters & scene beats organized across acts',
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -203,6 +214,7 @@ class UniverseDashboardScreen extends ConsumerWidget {
                               sub: 'Cast members',
                               icon: Icons.people_alt,
                               color: AppColors.royalBlue,
+                              tooltip: 'Cast members with psychological dossiers & relations',
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -214,6 +226,7 @@ class UniverseDashboardScreen extends ConsumerWidget {
                               sub: 'Codex entries',
                               icon: Icons.public,
                               color: AppColors.deepTeal,
+                              tooltip: 'Codex entries for factions, magic, tech & locations',
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -225,6 +238,7 @@ class UniverseDashboardScreen extends ConsumerWidget {
                               sub: 'Captured ideas',
                               icon: Icons.lightbulb,
                               color: AppColors.violetLore,
+                              tooltip: 'Raw ideas & dialogue waiting to be woven into story',
                             ),
                           ),
                         ],
@@ -245,9 +259,22 @@ class UniverseDashboardScreen extends ConsumerWidget {
               ],
 
               // Story Bible Pillars Navigation Grid
-              const Text(
-                'Story Bible Modules',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  const Text(
+                    'Story Bible Modules',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: 'The four core pillars: Outline (plot), Cast (characters), Lore (worldbuilding), and Sparks (ideas).',
+                    child: Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               LayoutBuilder(
@@ -311,8 +338,9 @@ class UniverseDashboardScreen extends ConsumerWidget {
     required String sub,
     required IconData icon,
     required Color color,
+    String? tooltip,
   }) {
-    return Card(
+    final card = Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
@@ -351,6 +379,11 @@ class UniverseDashboardScreen extends ConsumerWidget {
         ),
       ),
     );
+
+    if (tooltip != null) {
+      return Tooltip(message: tooltip, child: card);
+    }
+    return card;
   }
 
   Widget _buildInkBridgeCard(
