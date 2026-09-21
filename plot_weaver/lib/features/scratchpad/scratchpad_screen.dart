@@ -224,11 +224,15 @@ class _ScratchpadScreenState extends ConsumerState<ScratchpadScreen> {
                       child: const Icon(Icons.flash_on, color: AppColors.violetLore, size: 18),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      'Quick Capture Spark',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    const Expanded(
+                      child: Text(
+                        'Quick Capture Spark',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     // Category dropdown for new spark
                     Container(
                       height: 32,
@@ -400,71 +404,84 @@ class _ScratchpadScreenState extends ConsumerState<ScratchpadScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Top row: category badge + pin + actions
-            Row(
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: catColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(catIcon, size: 12, color: catColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        spark.category,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: catColor),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: catColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                    ],
-                  ),
-                ),
-                if (spark.isConverted) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.emeraldGreen.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(catIcon, size: 12, color: catColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            spark.category,
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: catColor),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check, size: 11, color: AppColors.emeraldGreen),
-                        SizedBox(width: 3),
-                        Text(
-                          'Weaved',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.emeraldGreen),
+                    if (spark.isConverted)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.emeraldGreen.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                      ],
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check, size: 11, color: AppColors.emeraldGreen),
+                            SizedBox(width: 3),
+                            Text(
+                              'Weaved',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.emeraldGreen),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        spark.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                        size: 18,
+                        color: spark.isPinned ? AppColors.goldenHour : null,
+                      ),
+                      tooltip: spark.isPinned ? 'Unpin' : 'Pin to top',
+                      onPressed: () {
+                        ref.read(sparkRepositoryProvider).togglePin(spark.id, !spark.isPinned);
+                      },
+                      visualDensity: VisualDensity.compact,
                     ),
-                  ),
-                ],
-                const Spacer(),
-                IconButton(
-                  icon: Icon(
-                    spark.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                    size: 18,
-                    color: spark.isPinned ? AppColors.goldenHour : null,
-                  ),
-                  tooltip: spark.isPinned ? 'Unpin' : 'Pin to top',
-                  onPressed: () {
-                    ref.read(sparkRepositoryProvider).togglePin(spark.id, !spark.isPinned);
-                  },
-                  visualDensity: VisualDensity.compact,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  tooltip: 'Edit',
-                  onPressed: () => _editSpark(spark),
-                  visualDensity: VisualDensity.compact,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  tooltip: 'Delete',
-                  onPressed: () => _deleteSpark(spark),
-                  visualDensity: VisualDensity.compact,
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      tooltip: 'Edit',
+                      onPressed: () => _editSpark(spark),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      tooltip: 'Delete',
+                      onPressed: () => _deleteSpark(spark),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                 ),
               ],
             ),

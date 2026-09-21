@@ -49,6 +49,7 @@ class UniversesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(6),
@@ -60,33 +61,41 @@ class UniversesScreen extends ConsumerWidget {
             ),
             const SizedBox(width: 10),
             const Text('PlotWeaver'),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.amberGold.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text(
-                'STORY BIBLE',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.amberGold,
-                  letterSpacing: 1,
+            if (MediaQuery.of(context).size.width >= 500) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.amberGold.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'STORY BIBLE',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.amberGold,
+                    letterSpacing: 1,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: FilledButton.icon(
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('New Universe'),
-              onPressed: () => _showFormDialog(context),
-            ),
+            padding: const EdgeInsets.only(right: 12),
+            child: MediaQuery.of(context).size.width < 500
+                ? IconButton.filled(
+                    icon: const Icon(Icons.add, size: 20),
+                    tooltip: 'New Universe',
+                    onPressed: () => _showFormDialog(context),
+                  )
+                : FilledButton.icon(
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('New Universe'),
+                    onPressed: () => _showFormDialog(context),
+                  ),
           ),
         ],
       ),
@@ -151,13 +160,15 @@ class UniversesScreen extends ConsumerWidget {
                       ? 2
                       : 1;
 
+              final isNarrow = constraints.maxWidth < 600;
+
               return GridView.builder(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(isNarrow ? 16 : 24),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 18,
                   mainAxisSpacing: 18,
-                  mainAxisExtent: 220,
+                  mainAxisExtent: 225,
                 ),
                 itemCount: universes.length,
                 itemBuilder: (context, index) {

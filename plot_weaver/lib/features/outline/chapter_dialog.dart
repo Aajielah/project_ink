@@ -115,37 +115,44 @@ class _ChapterDialogState extends ConsumerState<ChapterDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 540),
-        child: Padding(
-          padding: const EdgeInsets.all(26.0),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 460;
+            return Padding(
+              padding: EdgeInsets.all(isNarrow ? 18.0 : 26.0),
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.amberGold.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.auto_stories, color: AppColors.amberGold, size: 22),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.amberGold.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.auto_stories, color: AppColors.amberGold, size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              isEditing ? 'Edit Chapter' : 'New Chapter',
+                              style: TextStyle(
+                                fontSize: isNarrow ? 18 : 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 14),
-                      Text(
-                        isEditing ? 'Edit Chapter' : 'New Chapter',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
+                      const SizedBox(height: 20),
+                      if (isNarrow) ...[
+                        DropdownButtonFormField<String>(
                           initialValue: _selectedAct,
                           decoration: const InputDecoration(labelText: 'Act / Part'),
                           items: _acts.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
@@ -153,10 +160,8 @@ class _ChapterDialogState extends ConsumerState<ChapterDialog> {
                             if (val != null) setState(() => _selectedAct = val);
                           },
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
                           initialValue: _selectedStatus,
                           decoration: const InputDecoration(labelText: 'Status'),
                           items: _statuses.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
@@ -164,83 +169,102 @@ class _ChapterDialogState extends ConsumerState<ChapterDialog> {
                             if (val != null) setState(() => _selectedStatus = val);
                           },
                         ),
+                      ] else
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _selectedAct,
+                                decoration: const InputDecoration(labelText: 'Act / Part'),
+                                items: _acts.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedAct = val);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _selectedStatus,
+                                decoration: const InputDecoration(labelText: 'Status'),
+                                items: _statuses.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedStatus = val);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Chapter Title *',
+                          hintText: 'e.g. The Midnight Pursuit',
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Please enter a chapter title';
+                          }
+                          return null;
+                        },
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Chapter Title *',
-                      hintText: 'e.g. The Midnight Pursuit',
-                    ),
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Please enter a chapter title';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _objectiveController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Chapter Objective / Story Goal',
-                      hintText: 'What fundamentally shifts or changes for the protagonist in this chapter?',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _wordsController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Est. Word Count',
-                            hintText: '2500',
-                            suffixText: 'words',
-                          ),
-                          validator: (val) {
-                            if (val != null && val.isNotEmpty && int.tryParse(val) == null) {
-                              return 'Enter valid number';
-                            }
-                            return null;
-                          },
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _objectiveController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Chapter Objective / Story Goal',
+                          hintText: 'What fundamentally shifts or changes for the protagonist in this chapter?',
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _wordsController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Est. Word Count',
+                          hintText: '2500',
+                          suffixText: 'words',
+                        ),
+                        validator: (val) {
+                          if (val != null && val.isNotEmpty && int.tryParse(val) == null) {
+                            return 'Enter valid number';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _notesController,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Writer Notes',
+                          hintText: 'Subtle clues to plant, thematic motifs, or continuity reminders...',
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 12),
+                          FilledButton.icon(
+                            icon: const Icon(Icons.check),
+                            label: Text(isEditing ? 'Save Changes' : 'Add Chapter'),
+                            onPressed: _save,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _notesController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Writer Notes',
-                      hintText: 'Subtle clues to plant, thematic motifs, or continuity reminders...',
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 12),
-                      FilledButton.icon(
-                        icon: const Icon(Icons.check),
-                        label: Text(isEditing ? 'Save Changes' : 'Add Chapter'),
-                        onPressed: _save,
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

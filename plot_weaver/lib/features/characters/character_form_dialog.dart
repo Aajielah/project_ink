@@ -162,46 +162,52 @@ class _CharacterFormDialogState extends ConsumerState<CharacterFormDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 620, maxHeight: 750),
-        child: Padding(
-          padding: const EdgeInsets.all(26.0),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 480;
+            return Padding(
+              padding: EdgeInsets.all(isNarrow ? 18.0 : 26.0),
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: color.withOpacity(0.2),
-                        child: Text(
-                          _nameController.text.isNotEmpty
-                              ? _nameController.text[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: color.withOpacity(0.2),
+                            child: Text(
+                              _nameController.text.isNotEmpty
+                                  ? _nameController.text[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                color: color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              isEditing ? 'Edit Character Dossier' : 'New Character Dossier',
+                              style: TextStyle(
+                                fontSize: isNarrow ? 18 : 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 14),
-                      Text(
-                        isEditing ? 'Edit Character Dossier' : 'New Character Dossier',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
+                      const SizedBox(height: 20),
 
-                  // Name and Alias
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: TextFormField(
+                      // Name and Alias
+                      if (isNarrow) ...[
+                        TextFormField(
                           controller: _nameController,
                           decoration: const InputDecoration(
                             labelText: 'Full Character Name *',
@@ -215,26 +221,51 @@ class _CharacterFormDialogState extends ConsumerState<CharacterFormDialog> {
                             return null;
                           },
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: TextFormField(
+                        const SizedBox(height: 14),
+                        TextFormField(
                           controller: _aliasController,
                           decoration: const InputDecoration(
                             labelText: 'Alias / Moniker',
                             hintText: 'e.g. The Silver Ghost',
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                      ] else
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: TextFormField(
+                                controller: _nameController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Full Character Name *',
+                                  hintText: 'e.g. Kaelen Vance',
+                                ),
+                                onChanged: (v) => setState(() {}),
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'Please enter a character name';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _aliasController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Alias / Moniker',
+                                  hintText: 'e.g. The Silver Ghost',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 16),
 
-                  // Role, Archetype, Color
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
+                      // Role and Archetype
+                      if (isNarrow) ...[
+                        DropdownButtonFormField<String>(
                           initialValue: _selectedRole,
                           decoration: const InputDecoration(labelText: 'Story Role'),
                           items: _roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
@@ -242,10 +273,8 @@ class _CharacterFormDialogState extends ConsumerState<CharacterFormDialog> {
                             if (val != null) setState(() => _selectedRole = val);
                           },
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
                           initialValue: _selectedArchetype,
                           decoration: const InputDecoration(labelText: 'Archetype'),
                           items: _archetypes.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
@@ -253,36 +282,76 @@ class _CharacterFormDialogState extends ConsumerState<CharacterFormDialog> {
                             if (val != null) setState(() => _selectedArchetype = val);
                           },
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                      ] else
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _selectedRole,
+                                decoration: const InputDecoration(labelText: 'Story Role'),
+                                items: _roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedRole = val);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _selectedArchetype,
+                                decoration: const InputDecoration(labelText: 'Archetype'),
+                                items: _archetypes.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedArchetype = val);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 16),
 
-                  // Age & Occupation
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
+                      // Age & Occupation
+                      if (isNarrow) ...[
+                        TextFormField(
                           controller: _ageController,
                           decoration: const InputDecoration(
                             labelText: 'Age / Appearance',
                             hintText: 'e.g. 28, weathered',
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: TextFormField(
+                        const SizedBox(height: 14),
+                        TextFormField(
                           controller: _occupationController,
                           decoration: const InputDecoration(
                             labelText: 'Occupation / Status',
                             hintText: 'e.g. High Archivist',
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                      ] else
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _ageController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Age / Appearance',
+                                  hintText: 'e.g. 28, weathered',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _occupationController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Occupation / Status',
+                                  hintText: 'e.g. High Archivist',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 16),
 
                   // Psychology & Flaws
                   TextFormField(
@@ -387,8 +456,10 @@ class _CharacterFormDialogState extends ConsumerState<CharacterFormDialog> {
               ),
             ),
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  ),
+);
   }
 }

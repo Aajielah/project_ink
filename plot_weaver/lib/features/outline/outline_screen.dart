@@ -144,66 +144,93 @@ class _OutlineScreenState extends ConsumerState<OutlineScreen> {
   }
 
   void _showTemplatePicker() {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final isDesktop = MediaQuery.of(context).size.width >= 720;
+
+    final content = Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
               const Text(
-                'Apply Story Structure Template',
+                'Story Structure Templates',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Generate a proven outline structure with chapters, acts, and core narrative beats.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              const Spacer(),
+              if (isDesktop)
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-              ),
-              const SizedBox(height: 18),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.amberGold.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.flash_on, color: AppColors.amberGold),
-                ),
-                title: const Text('Save the Cat! (15 Narrative Beats)'),
-                subtitle: const Text('Opening Image, Catalyst, Debate, Midpoint, All Hope is Lost, Finale...'),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await ref.read(outlineRepositoryProvider).applyTemplate(widget.universeId, 'save_the_cat');
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.royalBlue.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.auto_stories, color: AppColors.royalBlue),
-                ),
-                title: const Text('Classic Three-Act Structure (8 Milestones)'),
-                subtitle: const Text('The Hook, Inciting Incident, Plot Points 1 & 2, Midpoint Reversal, Climax...'),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  await ref.read(outlineRepositoryProvider).applyTemplate(widget.universeId, 'three_act');
-                },
-              ),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            'Generate a proven outline structure with chapters, acts, and core narrative beats.',
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 18),
+          ListTile(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.amberGold.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.flash_on, color: AppColors.amberGold),
+            ),
+            title: const Text('Save the Cat! (15 Narrative Beats)'),
+            subtitle: const Text('Opening Image, Catalyst, Debate, Midpoint, All Hope is Lost, Finale...'),
+            onTap: () async {
+              Navigator.of(context).pop();
+              await ref.read(outlineRepositoryProvider).applyTemplate(widget.universeId, 'save_the_cat');
+            },
+          ),
+          const Divider(),
+          ListTile(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.royalBlue.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.auto_stories, color: AppColors.royalBlue),
+            ),
+            title: const Text('Classic Three-Act Structure (8 Milestones)'),
+            subtitle: const Text('The Hook, Inciting Incident, Plot Points 1 & 2, Midpoint Reversal, Climax...'),
+            onTap: () async {
+              Navigator.of(context).pop();
+              await ref.read(outlineRepositoryProvider).applyTemplate(widget.universeId, 'three_act');
+            },
+          ),
+        ],
       ),
     );
+
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 540),
+            child: content,
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        builder: (ctx) => SafeArea(child: content),
+      );
+    }
   }
 
   @override
@@ -215,53 +242,115 @@ class _OutlineScreenState extends ConsumerState<OutlineScreen> {
       body: Column(
         children: [
           // Header / Stats Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withOpacity(0.2),
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                chaptersAsync.when(
-                  loading: () => const SizedBox(),
-                  error: (e, s) => const SizedBox(),
-                  data: (chapters) {
-                    final totalWords = chapters.fold<int>(
-                      0,
-                      (sum, c) => sum + c.estimatedWordCount,
-                    );
-                    final sceneCount = allScenesAsync.value?.length ?? 0;
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 650;
+              final badgesWidget = chaptersAsync.when(
+                loading: () => const SizedBox(),
+                error: (e, s) => const SizedBox(),
+                data: (chapters) {
+                  final totalWords = chapters.fold<int>(
+                    0,
+                    (sum, c) => sum + c.estimatedWordCount,
+                  );
+                  final sceneCount = allScenesAsync.value?.length ?? 0;
 
-                    return Row(
-                      children: [
-                        _buildBadge('${chapters.length} Chapters', AppColors.amberGold),
-                        const SizedBox(width: 8),
-                        _buildBadge('$sceneCount Scenes', AppColors.royalBlue),
-                        const SizedBox(width: 8),
-                        _buildBadge('$totalWords Est. Words', AppColors.deepTeal),
-                      ],
-                    );
-                  },
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      _buildBadge('${chapters.length} Chapters', AppColors.amberGold),
+                      _buildBadge('$sceneCount Scenes', AppColors.royalBlue),
+                      _buildBadge('$totalWords Est. Words', AppColors.deepTeal),
+                    ],
+                  );
+                },
+              );
+
+              final actionButtons = Row(
+                mainAxisSize: isNarrow ? MainAxisSize.max : MainAxisSize.min,
+                children: [
+                  if (isNarrow)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        icon: const Icon(Icons.auto_awesome, size: 15),
+                        label: const Text('Templates'),
+                        onPressed: _showTemplatePicker,
+                      ),
+                    )
+                  else
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.auto_awesome, size: 16),
+                      label: const Text('Templates'),
+                      onPressed: _showTemplatePicker,
+                    ),
+                  const SizedBox(width: 8),
+                  if (isNarrow)
+                    Expanded(
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Chapter'),
+                        onPressed: () => _showAddChapterDialog(_selectedActFilter),
+                      ),
+                    )
+                  else
+                    FilledButton.icon(
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('New Chapter'),
+                      onPressed: () => _showAddChapterDialog(_selectedActFilter),
+                    ),
+                ],
+              );
+
+              if (isNarrow) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).dividerColor.withOpacity(0.2),
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      badgesWidget,
+                      const SizedBox(height: 10),
+                      actionButtons,
+                    ],
+                  ),
+                );
+              }
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).dividerColor.withOpacity(0.2),
+                    ),
+                  ),
                 ),
-                const Spacer(),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('Templates'),
-                  onPressed: _showTemplatePicker,
+                child: Row(
+                  children: [
+                    badgesWidget,
+                    const Spacer(),
+                    actionButtons,
+                  ],
                 ),
-                const SizedBox(width: 10),
-                FilledButton.icon(
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('New Chapter'),
-                  onPressed: () => _showAddChapterDialog(_selectedActFilter),
-                ),
-              ],
-            ),
+              );
+            },
           ),
 
           // Act Filter Chips
@@ -436,7 +525,10 @@ class _OutlineScreenState extends ConsumerState<OutlineScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -453,7 +545,6 @@ class _OutlineScreenState extends ConsumerState<OutlineScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
@@ -469,7 +560,6 @@ class _OutlineScreenState extends ConsumerState<OutlineScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
                           Text(
                             '~${chapter.estimatedWordCount} words',
                             style: TextStyle(

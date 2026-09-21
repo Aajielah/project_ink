@@ -53,14 +53,28 @@ class _CharactersScreenState extends ConsumerState<CharactersScreen> {
   }
 
   void _showCharacterDetail(Character character) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => CharacterDetailSheet(
-        universeId: widget.universeId,
-        character: character,
-      ),
-    );
+    final isDesktop = MediaQuery.of(context).size.width >= 720;
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (ctx) => CharacterDetailSheet(
+          universeId: widget.universeId,
+          character: character,
+          isDialog: true,
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => CharacterDetailSheet(
+          universeId: widget.universeId,
+          character: character,
+          isDialog: false,
+        ),
+      );
+    }
   }
 
   void _confirmDeleteCharacter(Character character) {
@@ -97,49 +111,101 @@ class _CharactersScreenState extends ConsumerState<CharactersScreen> {
       body: Column(
         children: [
           // Header / Search Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withOpacity(0.2),
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 380),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search cast, archetype, or flaw...',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                              )
-                            : null,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 600;
+              if (isNarrow) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).dividerColor.withOpacity(0.2),
                       ),
-                      onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search cast...',
+                            prefixIcon: const Icon(Icons.search, size: 18),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 16),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                  )
+                                : null,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            isDense: true,
+                          ),
+                          onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        icon: const Icon(Icons.person_add, size: 16),
+                        label: const Text('Add'),
+                        onPressed: _showAddCharacter,
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).dividerColor.withOpacity(0.2),
                     ),
                   ),
                 ),
-                const Spacer(),
-                FilledButton.icon(
-                  icon: const Icon(Icons.person_add, size: 18),
-                  label: const Text('New Character'),
-                  onPressed: _showAddCharacter,
+                child: Row(
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 380),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search cast, archetype, or flaw...',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        ),
+                        onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                      ),
+                    ),
+                    const Spacer(),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.person_add, size: 18),
+                      label: const Text('New Character'),
+                      onPressed: _showAddCharacter,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
 
           // Role Filter Chips
@@ -370,7 +436,9 @@ class _CharactersScreenState extends ConsumerState<CharactersScreen> {
               ),
               const SizedBox(height: 12),
               // Role & Archetype Badges
-              Row(
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -387,8 +455,7 @@ class _CharactersScreenState extends ConsumerState<CharactersScreen> {
                       ),
                     ),
                   ),
-                  if (character.archetype != null) ...[
-                    const SizedBox(width: 6),
+                  if (character.archetype != null)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
@@ -400,7 +467,6 @@ class _CharactersScreenState extends ConsumerState<CharactersScreen> {
                         style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
                       ),
                     ),
-                  ],
                 ],
               ),
               const SizedBox(height: 10),

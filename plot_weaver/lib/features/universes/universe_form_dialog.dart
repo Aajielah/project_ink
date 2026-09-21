@@ -121,55 +121,61 @@ class _UniverseFormDialogState extends ConsumerState<UniverseFormDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 580),
-        child: Padding(
-          padding: const EdgeInsets.all(28.0),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 460;
+            return Padding(
+              padding: EdgeInsets.all(isNarrow ? 18.0 : 28.0),
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.getCoverAccent(_selectedColor).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.auto_stories,
-                          color: AppColors.getCoverAccent(_selectedColor),
-                          size: 24,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.getCoverAccent(_selectedColor).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.auto_stories,
+                              color: AppColors.getCoverAccent(_selectedColor),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              isEditing ? 'Edit Story Universe' : 'New Story Universe',
+                              style: TextStyle(
+                                fontSize: isNarrow ? 18 : 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 14),
-                      Text(
-                        isEditing ? 'Edit Story Universe' : 'New Story Universe',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Universe / Book Title *',
+                          hintText: 'e.g. Chronicles of Eldoria',
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Please enter a title';
+                          }
+                          return null;
+                        },
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Universe / Book Title *',
-                      hintText: 'e.g. Chronicles of Eldoria',
-                    ),
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Please enter a title';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
+                      const SizedBox(height: 16),
+                      if (isNarrow) ...[
+                        DropdownButtonFormField<String>(
                           initialValue: _selectedGenre,
                           decoration: const InputDecoration(labelText: 'Genre'),
                           items: _genres.map((g) {
@@ -179,10 +185,8 @@ class _UniverseFormDialogState extends ConsumerState<UniverseFormDialog> {
                             if (val != null) setState(() => _selectedGenre = val);
                           },
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
+                        const SizedBox(height: 16),
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
@@ -192,6 +196,7 @@ class _UniverseFormDialogState extends ConsumerState<UniverseFormDialog> {
                             const SizedBox(height: 8),
                             Wrap(
                               spacing: 8,
+                              runSpacing: 8,
                               children: _colors.map((c) {
                                 final isSelected = _selectedColor == c;
                                 final color = AppColors.getCoverAccent(c);
@@ -222,17 +227,76 @@ class _UniverseFormDialogState extends ConsumerState<UniverseFormDialog> {
                             ),
                           ],
                         ),
+                      ] else ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _selectedGenre,
+                                decoration: const InputDecoration(labelText: 'Genre'),
+                                items: _genres.map((g) {
+                                  return DropdownMenuItem(value: g, child: Text(g));
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedGenre = val);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Cover Accent',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: _colors.map((c) {
+                                      final isSelected = _selectedColor == c;
+                                      final color = AppColors.getCoverAccent(c);
+                                      return GestureDetector(
+                                        onTap: () => setState(() => _selectedColor = c),
+                                        child: Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            color: color,
+                                            shape: BoxShape.circle,
+                                            border: isSelected
+                                                ? Border.all(color: Colors.white, width: 2.5)
+                                                : null,
+                                            boxShadow: isSelected
+                                                ? [
+                                                    BoxShadow(
+                                                      color: color.withOpacity(0.5),
+                                                      blurRadius: 6,
+                                                      spreadRadius: 1,
+                                                    )
+                                                  ]
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _loglineController,
+                        decoration: const InputDecoration(
+                          labelText: 'Logline / Pitch',
+                          hintText: 'A one-sentence hook capturing the core conflict...',
+                        ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _loglineController,
-                    decoration: const InputDecoration(
-                      labelText: 'Logline / Pitch',
-                      hintText: 'A one-sentence hook capturing the core conflict...',
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _synopsisController,
@@ -331,8 +395,10 @@ class _UniverseFormDialogState extends ConsumerState<UniverseFormDialog> {
               ),
             ),
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  ),
+);
   }
 }

@@ -8,10 +8,12 @@ import 'lore_form_dialog.dart';
 class LoreDetailSheet extends ConsumerWidget {
   final LoreEntry entry;
   final String universeId;
+  final bool isDialog;
 
   const LoreDetailSheet({
     required this.entry,
     required this.universeId,
+    this.isDialog = false,
     super.key,
   });
 
@@ -107,184 +109,194 @@ class LoreDetailSheet extends ConsumerWidget {
     final catIcon = getCategoryIcon(entry.category);
     final tagList = entry.tags?.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList() ?? [];
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Drag handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+    final sheetContent = Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: isDialog
+            ? BorderRadius.circular(20)
+            : const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isDialog)
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
+            ),
 
-              // Header bar
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: catColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
+          // Header bar
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: catColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(catIcon, color: catColor, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: catColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        entry.category.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: catColor,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
-                    child: Icon(catIcon, color: catColor, size: 28),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
+                    const SizedBox(height: 6),
+                    Text(
+                      entry.title,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Edit Lore',
+                onPressed: () => _edit(context),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: AppColors.crimsonArc),
+                tooltip: 'Delete Lore',
+                onPressed: () => _confirmDelete(context, ref),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'Close',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+
+          // Scrollable Body
+          Expanded(
+            child: ListView(
+              children: [
+                // Summary callout if present
+                if (entry.summary != null && entry.summary!.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: catColor.withOpacity(0.25),
+                      ),
+                    ),
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: catColor.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
+                        Icon(Icons.info_outline, color: catColor, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: Text(
-                            entry.category.toUpperCase(),
+                            entry.summary!,
                             style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: catColor,
-                              letterSpacing: 0.5,
+                              fontSize: 14,
+                              fontStyle: FontStyle.italic,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          entry.title,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    tooltip: 'Edit Lore',
-                    onPressed: () => _edit(context),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppColors.crimsonArc),
-                    tooltip: 'Delete Lore',
-                    onPressed: () => _confirmDelete(context, ref),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
+                  const SizedBox(height: 16),
                 ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
 
-              // Scrollable Body
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  children: [
-                    // Summary callout if present
-                    if (entry.summary != null && entry.summary!.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardTheme.color ?? Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: catColor.withOpacity(0.25),
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.info_outline, color: catColor, size: 20),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                entry.summary!,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontStyle: FontStyle.italic,
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                // Tags chips
+                if (tagList.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: tagList.map((tag) {
+                      return Chip(
+                        label: Text(tag),
+                        labelStyle: const TextStyle(fontSize: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        visualDensity: VisualDensity.compact,
+                        side: BorderSide(color: Theme.of(context).dividerColor),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
 
-                    // Tags chips
-                    if (tagList.isNotEmpty) ...[
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: tagList.map((tag) {
-                          return Chip(
-                            label: Text(tag),
-                            labelStyle: const TextStyle(fontSize: 12),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            visualDensity: VisualDensity.compact,
-                            side: BorderSide(color: Theme.of(context).dividerColor),
-                          );
-                        }).toList(),
+                // Content text
+                Text(
+                  'Codex Details',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
                       ),
-                      const SizedBox(height: 20),
-                    ],
-
-                    // Content text
-                    Text(
-                      'Codex Details',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.3,
-                          ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (entry.content != null && entry.content!.isNotEmpty)
-                      SelectableText(
-                        entry.content!,
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1.6,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
-                        ),
-                      )
-                    else
-                      Text(
-                        'No detailed notes recorded yet for this entry.',
-                        style: TextStyle(
-                          fontStyle: FontStyle.italic,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                        ),
-                      ),
-                    const SizedBox(height: 32),
-                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                if (entry.content != null && entry.content!.isNotEmpty)
+                  SelectableText(
+                    entry.content!,
+                    style: TextStyle(
+                      fontSize: 15,
+                      height: 1.6,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
+                    ),
+                  )
+                else
+                  Text(
+                    'No detailed notes recorded yet for this entry.',
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                  ),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
+    );
+
+    if (isDialog) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700, maxHeight: 720),
+          child: sheetContent,
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.85,
+      child: sheetContent,
     );
   }
 }

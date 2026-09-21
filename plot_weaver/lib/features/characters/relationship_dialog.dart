@@ -81,105 +81,115 @@ class _RelationshipDialogState extends ConsumerState<RelationshipDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
-        child: Padding(
-          padding: const EdgeInsets.all(26.0),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 450;
+            return Padding(
+              padding: EdgeInsets.all(isNarrow ? 18.0 : 26.0),
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.royalBlue.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.hub_outlined, color: AppColors.royalBlue, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Establish Relationship',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.royalBlue.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            Text(
-                              'Connecting ${widget.sourceCharacter.name}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-
-                  // Target Character Dropdown
-                  charactersAsync.when(
-                    loading: () => const LinearProgressIndicator(),
-                    error: (e, s) => Text('Error: $e'),
-                    data: (characters) {
-                      final eligibleTargets = characters
-                          .where((c) => c.id != widget.sourceCharacter.id)
-                          .toList();
-
-                      if (eligibleTargets.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Text(
-                            'No other characters exist in this universe yet. Create more cast members first.',
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                            child: const Icon(Icons.hub_outlined, color: AppColors.royalBlue, size: 22),
                           ),
-                        );
-                      }
-
-                      return DropdownButtonFormField<String>(
-                        hint: const Text('Select Character to Connect With *'),
-                        decoration: const InputDecoration(labelText: 'Target Character'),
-                        items: eligibleTargets.map((c) {
-                          return DropdownMenuItem(
-                            value: c.id,
-                            child: Row(
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
-                                  radius: 10,
-                                  backgroundColor:
-                                      AppColors.getCoverAccent(c.avatarColor).withOpacity(0.2),
-                                  child: Text(
-                                    c.name[0],
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.getCoverAccent(c.avatarColor),
-                                    ),
+                                const Text(
+                                  'Establish Relationship',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  'Connecting ${widget.sourceCharacter.name}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Text('${c.name} (${c.role})'),
                               ],
                             ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Target Character Dropdown
+                      charactersAsync.when(
+                        loading: () => const LinearProgressIndicator(),
+                        error: (e, s) => Text('Error: $e'),
+                        data: (characters) {
+                          final eligibleTargets = characters
+                              .where((c) => c.id != widget.sourceCharacter.id)
+                              .toList();
+
+                          if (eligibleTargets.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Text(
+                                'No other characters exist in this universe yet. Create more cast members first.',
+                                style: TextStyle(color: Colors.grey, fontSize: 13),
+                              ),
+                            );
+                          }
+
+                          return DropdownButtonFormField<String>(
+                            hint: const Text('Select Character to Connect With *'),
+                            decoration: const InputDecoration(labelText: 'Target Character'),
+                            isExpanded: true,
+                            items: eligibleTargets.map((c) {
+                              return DropdownMenuItem(
+                                value: c.id,
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 10,
+                                      backgroundColor:
+                                          AppColors.getCoverAccent(c.avatarColor).withOpacity(0.2),
+                                      child: Text(
+                                        c.name[0],
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.getCoverAccent(c.avatarColor),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '${c.name} (${c.role})',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => _selectedTargetId = val);
+                            },
                           );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setState(() => _selectedTargetId = val);
                         },
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
+                      ),
+                      const SizedBox(height: 16),
 
                   // Relation Type Dropdown
                   DropdownButtonFormField<String>(
                     initialValue: _selectedRelationType,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Dynamic / Relationship Type'),
                     items: _relationTypes.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
                     onChanged: (val) {
@@ -219,8 +229,10 @@ class _RelationshipDialogState extends ConsumerState<RelationshipDialog> {
               ),
             ),
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  ),
+);
   }
 }

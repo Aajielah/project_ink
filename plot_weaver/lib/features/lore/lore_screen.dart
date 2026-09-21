@@ -41,15 +41,28 @@ class _LoreScreenState extends ConsumerState<LoreScreen> {
   }
 
   void _openDetail(LoreEntry entry) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => LoreDetailSheet(
-        entry: entry,
-        universeId: widget.universeId,
-      ),
-    );
+    final isDesktop = MediaQuery.of(context).size.width >= 720;
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (context) => LoreDetailSheet(
+          entry: entry,
+          universeId: widget.universeId,
+          isDialog: true,
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => LoreDetailSheet(
+          entry: entry,
+          universeId: widget.universeId,
+          isDialog: false,
+        ),
+      );
+    }
   }
 
   @override

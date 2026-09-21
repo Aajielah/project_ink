@@ -141,103 +141,127 @@ class _ConvertSparkDialogState extends ConsumerState<ConvertSparkDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560, maxHeight: 680),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 460;
+            return Padding(
+              padding: EdgeInsets.all(isNarrow ? 16.0 : 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.goldenHour.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.auto_awesome, color: AppColors.goldenHour, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Convert Idea Spark',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Original spark preview
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ORIGINAL NOTE (${widget.spark.category.toUpperCase()}):',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.goldenHour.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.auto_awesome, color: AppColors.goldenHour, size: 20),
                       ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Convert Idea Spark',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Original spark preview
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Theme.of(context).dividerColor),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.spark.content,
-                      style: const TextStyle(fontSize: 13),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'ORIGINAL NOTE (${widget.spark.category.toUpperCase()}):',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.spark.content,
+                          style: const TextStyle(fontSize: 13),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              const Text(
-                'What do you want to transform this into?',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-
-              // Segmented target picker
-              SegmentedButton<ConvertTarget>(
-                segments: const [
-                  ButtonSegment(
-                    value: ConvertTarget.scene,
-                    icon: Icon(Icons.movie_creation_outlined, size: 18),
-                    label: Text('Scene'),
                   ),
-                  ButtonSegment(
-                    value: ConvertTarget.character,
-                    icon: Icon(Icons.person_outline, size: 18),
-                    label: Text('Character'),
-                  ),
-                  ButtonSegment(
-                    value: ConvertTarget.lore,
-                    icon: Icon(Icons.public, size: 18),
-                    label: Text('World Lore'),
-                  ),
-                ],
-                selected: {_target},
-                onSelectionChanged: (selected) {
-                  setState(() => _target = selected.first);
-                },
-              ),
-              const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-              // Form fields depending on target
-              Expanded(
-                child: SingleChildScrollView(
+                  const Text(
+                    'What do you want to transform this into?',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Segmented target picker
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<ConvertTarget>(
+                      segments: isNarrow
+                          ? const [
+                              ButtonSegment(
+                                value: ConvertTarget.scene,
+                                label: Text('Scene'),
+                              ),
+                              ButtonSegment(
+                                value: ConvertTarget.character,
+                                label: Text('Cast'),
+                              ),
+                              ButtonSegment(
+                                value: ConvertTarget.lore,
+                                label: Text('Lore'),
+                              ),
+                            ]
+                          : const [
+                              ButtonSegment(
+                                value: ConvertTarget.scene,
+                                icon: Icon(Icons.movie_creation_outlined, size: 18),
+                                label: Text('Scene'),
+                              ),
+                              ButtonSegment(
+                                value: ConvertTarget.character,
+                                icon: Icon(Icons.person_outline, size: 18),
+                                label: Text('Character'),
+                              ),
+                              ButtonSegment(
+                                value: ConvertTarget.lore,
+                                icon: Icon(Icons.public, size: 18),
+                                label: Text('World Lore'),
+                              ),
+                            ],
+                      selected: {_target},
+                      onSelectionChanged: (selected) {
+                        setState(() => _target = selected.first);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Form fields depending on target
+                  Expanded(
+                    child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -257,6 +281,7 @@ class _ConvertSparkDialogState extends ConsumerState<ConvertSparkDialog> {
 
                             return DropdownButtonFormField<String>(
                               initialValue: _selectedChapterId,
+                              isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Target Chapter *',
                                 prefixIcon: Icon(Icons.book_outlined),
@@ -264,7 +289,7 @@ class _ConvertSparkDialogState extends ConsumerState<ConvertSparkDialog> {
                               items: chapters.map((c) {
                                 return DropdownMenuItem(
                                   value: c.id,
-                                  child: Text('Ch. ${c.chapterNumber}: ${c.title}'),
+                                  child: Text('Ch. ${c.chapterNumber}: ${c.title}', overflow: TextOverflow.ellipsis),
                                 );
                               }).toList(),
                               onChanged: (val) {
@@ -317,6 +342,7 @@ class _ConvertSparkDialogState extends ConsumerState<ConvertSparkDialog> {
                         const SizedBox(height: 14),
                         DropdownButtonFormField<String>(
                           initialValue: _characterRole,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Role',
                             prefixIcon: Icon(Icons.badge_outlined),
@@ -337,6 +363,7 @@ class _ConvertSparkDialogState extends ConsumerState<ConvertSparkDialog> {
                         const SizedBox(height: 14),
                         DropdownButtonFormField<String>(
                           initialValue: _characterArchetype,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Archetype',
                             prefixIcon: Icon(Icons.psychology_outlined),
@@ -365,6 +392,7 @@ class _ConvertSparkDialogState extends ConsumerState<ConvertSparkDialog> {
                         const SizedBox(height: 14),
                         DropdownButtonFormField<String>(
                           initialValue: _loreCategory,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Category',
                             prefixIcon: Icon(Icons.category_outlined),
@@ -389,32 +417,39 @@ class _ConvertSparkDialogState extends ConsumerState<ConvertSparkDialog> {
               ),
 
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _isConverting ? null : () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    onPressed: _isConverting ? null : _convert,
-                    icon: _isConverting
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.check),
-                    label: Text(_isConverting ? 'Converting...' : 'Convert & Create'),
-                    style: FilledButton.styleFrom(backgroundColor: AppColors.goldenHour),
-                  ),
-                ],
+              Align(
+                alignment: Alignment.centerRight,
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: _isConverting ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton.icon(
+                      onPressed: _isConverting ? null : _convert,
+                      icon: _isConverting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.check),
+                      label: Text(_isConverting ? 'Converting...' : 'Convert & Create'),
+                      style: FilledButton.styleFrom(backgroundColor: AppColors.goldenHour),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  ),
+);
   }
 }

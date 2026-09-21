@@ -39,7 +39,11 @@ class UniverseDashboardScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -57,30 +61,34 @@ class UniverseDashboardScreen extends ConsumerWidget {
                               ),
                             ),
                           ),
-                          const Spacer(),
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.download, size: 16),
-                            label: const Text('Export Bible'),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => ExportDialog(
-                                  universeId: universe.id,
-                                  universeTitle: universe.title,
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.edit_outlined, size: 16),
-                            label: const Text('Edit Details'),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
-                              );
-                            },
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.download, size: 16),
+                                label: const Text('Export Bible'),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => ExportDialog(
+                                      universeId: universe.id,
+                                      universeTitle: universe.title,
+                                    ),
+                                  );
+                                },
+                              ),
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.edit_outlined, size: 16),
+                                label: const Text('Edit Details'),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -121,49 +129,107 @@ class UniverseDashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
 
-              // Quick Stats Row
+              // Quick Stats Row / Grid
               statsAsync.when(
                 loading: () => const LinearProgressIndicator(),
                 error: (e, s) => const SizedBox(),
                 data: (stats) {
-                  return Row(
-                    children: [
-                      _buildStatCard(
-                        context,
-                        title: 'Chapters',
-                        value: '${stats.chapterCount}',
-                        sub: '${stats.totalEstimatedWords} est. words',
-                        icon: Icons.auto_stories,
-                        color: AppColors.amberGold,
-                      ),
-                      const SizedBox(width: 14),
-                      _buildStatCard(
-                        context,
-                        title: 'Characters',
-                        value: '${stats.characterCount}',
-                        sub: 'Cast members',
-                        icon: Icons.people_alt,
-                        color: AppColors.royalBlue,
-                      ),
-                      const SizedBox(width: 14),
-                      _buildStatCard(
-                        context,
-                        title: 'World Lore',
-                        value: '${stats.loreCount}',
-                        sub: 'Codex entries',
-                        icon: Icons.public,
-                        color: AppColors.deepTeal,
-                      ),
-                      const SizedBox(width: 14),
-                      _buildStatCard(
-                        context,
-                        title: 'Idea Sparks',
-                        value: '${stats.sparkCount}',
-                        sub: 'Captured ideas',
-                        icon: Icons.lightbulb,
-                        color: AppColors.violetLore,
-                      ),
-                    ],
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 650;
+                      if (isNarrow) {
+                        return GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: 1.6,
+                          children: [
+                            _buildStatCard(
+                              context,
+                              title: 'Chapters',
+                              value: '${stats.chapterCount}',
+                              sub: '${stats.totalEstimatedWords} est. words',
+                              icon: Icons.auto_stories,
+                              color: AppColors.amberGold,
+                            ),
+                            _buildStatCard(
+                              context,
+                              title: 'Characters',
+                              value: '${stats.characterCount}',
+                              sub: 'Cast members',
+                              icon: Icons.people_alt,
+                              color: AppColors.royalBlue,
+                            ),
+                            _buildStatCard(
+                              context,
+                              title: 'World Lore',
+                              value: '${stats.loreCount}',
+                              sub: 'Codex entries',
+                              icon: Icons.public,
+                              color: AppColors.deepTeal,
+                            ),
+                            _buildStatCard(
+                              context,
+                              title: 'Idea Sparks',
+                              value: '${stats.sparkCount}',
+                              sub: 'Captured ideas',
+                              icon: Icons.lightbulb,
+                              color: AppColors.violetLore,
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              title: 'Chapters',
+                              value: '${stats.chapterCount}',
+                              sub: '${stats.totalEstimatedWords} est. words',
+                              icon: Icons.auto_stories,
+                              color: AppColors.amberGold,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              title: 'Characters',
+                              value: '${stats.characterCount}',
+                              sub: 'Cast members',
+                              icon: Icons.people_alt,
+                              color: AppColors.royalBlue,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              title: 'World Lore',
+                              value: '${stats.loreCount}',
+                              sub: 'Codex entries',
+                              icon: Icons.public,
+                              color: AppColors.deepTeal,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              title: 'Idea Sparks',
+                              value: '${stats.sparkCount}',
+                              sub: 'Captured ideas',
+                              icon: Icons.lightbulb,
+                              color: AppColors.violetLore,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   );
                 },
               ),
@@ -184,47 +250,52 @@ class UniverseDashboardScreen extends ConsumerWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: MediaQuery.of(context).size.width > 900 ? 2 : 1,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 2.8,
-                children: [
-                  _buildModuleCard(
-                    context,
-                    title: 'Chapter & Scene Outliner',
-                    description: 'Structure acts, chapter goals, word counts, and drag-and-drop scene cards.',
-                    icon: Icons.auto_stories_outlined,
-                    color: AppColors.amberGold,
-                    onTap: () => context.go('/universes/$universeId/outline'),
-                  ),
-                  _buildModuleCard(
-                    context,
-                    title: 'Character Dossiers & Relations',
-                    description: 'Profiles with archetypes, internal conflicts, flaws, arcs, and relationship matrix.',
-                    icon: Icons.people_alt_outlined,
-                    color: AppColors.royalBlue,
-                    onTap: () => context.go('/universes/$universeId/characters'),
-                  ),
-                  _buildModuleCard(
-                    context,
-                    title: 'World Lore Codex',
-                    description: 'Factions, magic systems, technology, locations, history, and artifacts.',
-                    icon: Icons.public_outlined,
-                    color: AppColors.deepTeal,
-                    onTap: () => context.go('/universes/$universeId/lore'),
-                  ),
-                  _buildModuleCard(
-                    context,
-                    title: 'Idea Sparks & Scratchpad',
-                    description: 'Instant brain-dump for sudden dialogue sparks, twists, and 1-tap conversion.',
-                    icon: Icons.lightbulb_outline,
-                    color: AppColors.violetLore,
-                    onTap: () => context.go('/universes/$universeId/scratchpad'),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 650;
+                  return GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: constraints.maxWidth > 900 ? 2 : 1,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: isNarrow ? 2.4 : 2.8,
+                    children: [
+                      _buildModuleCard(
+                        context,
+                        title: 'Chapter & Scene Outliner',
+                        description: 'Structure acts, chapter goals, word counts, and drag-and-drop scene cards.',
+                        icon: Icons.auto_stories_outlined,
+                        color: AppColors.amberGold,
+                        onTap: () => context.go('/universes/$universeId/outline'),
+                      ),
+                      _buildModuleCard(
+                        context,
+                        title: 'Character Dossiers & Relations',
+                        description: 'Profiles with archetypes, internal conflicts, flaws, arcs, and relationship matrix.',
+                        icon: Icons.people_alt_outlined,
+                        color: AppColors.royalBlue,
+                        onTap: () => context.go('/universes/$universeId/characters'),
+                      ),
+                      _buildModuleCard(
+                        context,
+                        title: 'World Lore Codex',
+                        description: 'Factions, magic systems, technology, locations, history, and artifacts.',
+                        icon: Icons.public_outlined,
+                        color: AppColors.deepTeal,
+                        onTap: () => context.go('/universes/$universeId/lore'),
+                      ),
+                      _buildModuleCard(
+                        context,
+                        title: 'Idea Sparks & Scratchpad',
+                        description: 'Instant brain-dump for sudden dialogue sparks, twists, and 1-tap conversion.',
+                        icon: Icons.lightbulb_outline,
+                        color: AppColors.violetLore,
+                        onTap: () => context.go('/universes/$universeId/scratchpad'),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -241,41 +312,42 @@ class UniverseDashboardScreen extends ConsumerWidget {
     required IconData icon,
     required Color color,
   }) {
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, size: 18, color: color),
-                  const Spacer(),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: color),
+                const Spacer(),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                sub,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              sub,
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
-            ],
-          ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
@@ -350,28 +422,31 @@ class UniverseDashboardScreen extends ConsumerWidget {
 
             final pct = (book.progressPercentage * 100).toInt();
 
-            return Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.emerald.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.menu_book, color: AppColors.emerald, size: 22),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final isNarrow = constraints.maxWidth < 550;
+                if (isNarrow) {
+                  return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            book.name,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.emerald.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.menu_book, color: AppColors.emerald, size: 20),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              book.name,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
@@ -389,27 +464,93 @@ class UniverseDashboardScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
-                        '${book.writtenWords} / ${book.targetWords} words ($pct% completed) • ${book.streak} day streak',
+                        '${book.writtenWords} / ${book.targetWords} words ($pct%) • ${book.streak} day streak',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
+                            );
+                          },
+                          child: const Text('Manage Link'),
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
-                    );
-                  },
-                  child: const Text('Manage Link'),
-                ),
-              ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.menu_book, color: AppColors.emerald, size: 22),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                book.name,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.emerald.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'PROJECT INK',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.emerald.withOpacity(0.9),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${book.writtenWords} / ${book.targetWords} words ($pct% completed) • ${book.streak} day streak',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
+                        );
+                      },
+                      child: const Text('Manage Link'),
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),
@@ -425,26 +566,31 @@ class UniverseDashboardScreen extends ConsumerWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.emerald.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.link, color: AppColors.emerald, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 550;
+            if (isNarrow) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Connect with Project Ink',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.link, color: AppColors.emerald, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Connect with Project Ink',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 6),
                   Text(
                     'Link this universe to your Project Ink manuscript to view word counts and streak stats.',
                     style: TextStyle(
@@ -452,25 +598,77 @@ class UniverseDashboardScreen extends ConsumerWidget {
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.add_link, size: 16),
+                      label: const Text('Link Book'),
+                      style: OutlinedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        foregroundColor: AppColors.emerald,
+                        side: BorderSide(color: AppColors.emerald.withOpacity(0.5)),
+                      ),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
+                        );
+                      },
+                    ),
+                  ),
                 ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.add_link, size: 16),
-              label: const Text('Link Book'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.emerald,
-                side: BorderSide(color: AppColors.emerald.withOpacity(0.5)),
-              ),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
-                );
-              },
-            ),
-          ],
+              );
+            }
+
+            return Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.link, color: AppColors.emerald, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Connect with Project Ink',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Link this universe to your Project Ink manuscript to view word counts and streak stats.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.add_link, size: 16),
+                  label: const Text('Link Book'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.emerald,
+                    side: BorderSide(color: AppColors.emerald.withOpacity(0.5)),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => UniverseFormDialog(existingUniverse: universe),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

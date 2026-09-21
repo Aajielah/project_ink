@@ -108,36 +108,45 @@ class _LoreFormDialogState extends ConsumerState<LoreFormDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640, maxHeight: 750),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 450;
+            return Padding(
+              padding: EdgeInsets.all(isNarrow ? 16.0 : 24.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircleAvatar(
-                      backgroundColor: AppColors.deepTeal.withOpacity(0.15),
-                      child: const Icon(Icons.public, color: AppColors.deepTeal, size: 20),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: AppColors.deepTeal.withOpacity(0.15),
+                          child: const Icon(Icons.public, color: AppColors.deepTeal, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            isEditing ? 'Edit Lore Entry' : 'New World Lore Entry',
+                            style: (isNarrow
+                                    ? Theme.of(context).textTheme.titleMedium
+                                    : Theme.of(context).textTheme.titleLarge)
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      isEditing ? 'Edit Lore Entry' : 'New World Lore Entry',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: SingleChildScrollView(
+                    const SizedBox(height: 20),
+                    Expanded(
+                      child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -162,6 +171,7 @@ class _LoreFormDialogState extends ConsumerState<LoreFormDialog> {
                         // Category Selector
                         DropdownButtonFormField<String>(
                           initialValue: _selectedCategory,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Category',
                             prefixIcon: Icon(Icons.category_outlined),
@@ -250,8 +260,10 @@ class _LoreFormDialogState extends ConsumerState<LoreFormDialog> {
               ],
             ),
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  ),
+);
   }
 }

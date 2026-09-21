@@ -9,10 +9,12 @@ import 'character_form_dialog.dart';
 class CharacterDetailSheet extends ConsumerStatefulWidget {
   final String universeId;
   final Character character;
+  final bool isDialog;
 
   const CharacterDetailSheet({
     required this.universeId,
     required this.character,
+    this.isDialog = false,
     super.key,
   });
 
@@ -64,17 +66,30 @@ class _CharacterDetailSheetState extends ConsumerState<CharacterDetailSheet>
     final roleColor = AppColors.getRoleColor(c.role);
     final relationshipsAsync = ref.watch(characterRelationshipsDetailProvider(c.id));
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+    final sheetContent = Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: widget.isDialog
+            ? BorderRadius.circular(20)
+            : const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
+          if (!widget.isDialog)
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12, bottom: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
           // Header Bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+            padding: const EdgeInsets.fromLTRB(24, 16, 20, 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -170,6 +185,12 @@ class _CharacterDetailSheetState extends ConsumerState<CharacterDetailSheet>
                   icon: const Icon(Icons.edit_outlined, size: 16),
                   label: const Text('Edit'),
                   onPressed: _showEditCharacter,
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
@@ -473,6 +494,22 @@ class _CharacterDetailSheetState extends ConsumerState<CharacterDetailSheet>
           ),
         ],
       ),
+    );
+
+    if (widget.isDialog) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720, maxHeight: 750),
+          child: sheetContent,
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.88,
+      child: sheetContent,
     );
   }
 
