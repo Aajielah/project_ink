@@ -145,4 +145,32 @@ class OverseerChannel {
     }
     return [];
   }
+
+  static Future<bool> setAllowedPackages(List<String> packages) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('setAllowedPackages', {
+        'packages': packages,
+      });
+      return res ?? false;
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('Error setting allowed packages: $e');
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<List<String>> getAllowedPackages() async {
+    try {
+      final res = await _channel.invokeMethod<List<dynamic>>('getAllowedPackages');
+      if (res != null) {
+        return res.cast<String>();
+      }
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('Error getting allowed packages: $e');
+    } catch (_) {}
+    return [];
+  }
 }

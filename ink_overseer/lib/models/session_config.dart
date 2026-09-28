@@ -96,4 +96,27 @@ class SessionConfig {
       return KioskSlot.defaultSlots();
     }
   }
+
+  static const String keyAllowedApps = 'strict_allowed_apps_json';
+
+  static Future<void> saveAllowedApps(List<Map<String, String>> apps) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyAllowedApps, jsonEncode(apps));
+    final pkgList = apps.map((a) => a['packageName'] ?? '').where((p) => p.isNotEmpty).toList();
+    await OverseerChannel.setAllowedPackages(pkgList);
+  }
+
+  static Future<List<Map<String, String>>> getAllowedApps() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyAllowedApps);
+    if (raw != null) {
+      try {
+        final decoded = jsonDecode(raw) as List<dynamic>;
+        return decoded
+            .map((item) => Map<String, String>.from(item as Map<dynamic, dynamic>))
+            .toList();
+      } catch (_) {}
+    }
+    return [];
+  }
 }

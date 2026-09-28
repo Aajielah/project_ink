@@ -6,7 +6,7 @@ import '../models/session_config.dart';
 import '../services/notification_helper.dart';
 import '../services/overseer_channel.dart';
 import 'kiosk_sanctum_screen.dart';
-import 'slot_configuration_screen.dart';
+import 'allowed_apps_screen.dart';
 
 class HomeSchedulerScreen extends StatefulWidget {
   const HomeSchedulerScreen({super.key});
@@ -18,6 +18,7 @@ class HomeSchedulerScreen extends StatefulWidget {
 class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
   DateTime? _cooldownExpiry;
   Timer? _cooldownTimer;
+  int _allowedAppsCount = 0;
 
   // Scheduling State
   TimeOfDay _selectedTime = TimeOfDay.now();
@@ -61,12 +62,14 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
       return;
     }
 
-    // 2. Check cooldown
+    // 2. Check cooldown & allowed apps
     final expiry = await SessionConfig.getCooldownExpiry();
     final schedule = await SessionConfig.getSchedule();
+    final allowed = await SessionConfig.getAllowedApps();
 
     if (mounted) {
       setState(() {
+        _allowedAppsCount = allowed.length;
         _cooldownExpiry = expiry;
         _existingSchedule = schedule;
         if (schedule != null) {
@@ -160,6 +163,27 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
   }
 
   Future<void> _startInstantSession() async {
+    final allowed = await SessionConfig.getAllowedApps();
+    if (allowed.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select at least 1 writing app (e.g. Pure Writer) first!'),
+            backgroundColor: SanctumTheme.amberWarning,
+          ),
+        );
+        final updated = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => const AllowedAppsScreen()),
+        );
+        if (updated == true) {
+          final refreshed = await SessionConfig.getAllowedApps();
+          setState(() => _allowedAppsCount = refreshed.length);
+        }
+      }
+      return;
+    }
+
     await SessionConfig.clearSchedule();
     final started = await OverseerChannel.startSession(
       durationMinutes: _isTestMode ? 5 : _selectedDuration,
@@ -626,25 +650,27 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
               color: SanctumTheme.goldAccent.withAlpha(25),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.dashboard_customize, color: SanctumTheme.goldAccent, size: 24),
+            child: const Icon(Icons.shield_outlined, color: SanctumTheme.goldAccent, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'The 6 Sacred Slots',
+              children: [
+                const Text(
+                  'Strict Mode: Allowed Apps',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: SanctumTheme.textPrimary,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
-                  'Pure Writer + 5 permitted apps locked during session.',
-                  style: TextStyle(
+                  _allowedAppsCount > 0
+                      ? '$_allowedAppsCount apps chosen (home screen & all others locked)'
+                      : 'Choose your writing apps (Pure Writer, WhatsApp, etc.)',
+                  style: const TextStyle(
                     fontSize: 12,
                     color: SanctumTheme.textSecondary,
                   ),
@@ -653,11 +679,15 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
             ),
           ),
           OutlinedButton(
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final updated = await Navigator.push<bool>(
                 context,
-                MaterialPageRoute(builder: (_) => const SlotConfigurationScreen()),
+                MaterialPageRoute(builder: (_) => const AllowedAppsScreen()),
               );
+              if (updated == true) {
+                final refreshed = await SessionConfig.getAllowedApps();
+                setState(() => _allowedAppsCount = refreshed.length);
+              }
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: SanctumTheme.goldAccent,
@@ -667,7 +697,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            child: const Text('Configure', style: TextStyle(fontSize: 12)),
+            child: const Text('Choose Apps', style: TextStyle(fontSize: 12)),
           ),
         ],
       ),

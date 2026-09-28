@@ -178,6 +178,21 @@ class MainActivity : FlutterActivity() {
                     result.success(list)
                 }
 
+                "setAllowedPackages" -> {
+                    val packages = call.argument<List<String>>("packages") ?: emptyList()
+                    SessionStateHolder.allowedPackages.clear()
+                    SessionStateHolder.allowedPackages.add(packageName)
+                    SessionStateHolder.allowedPackages.add("com.android.systemui")
+                    SessionStateHolder.allowedPackages.addAll(packages)
+                    SessionStateHolder.saveToPrefs(this)
+                    result.success(true)
+                }
+
+                "getAllowedPackages" -> {
+                    SessionStateHolder.loadFromPrefs(this)
+                    result.success(SessionStateHolder.allowedPackages.toList())
+                }
+
                 else -> result.notImplemented()
             }
         }

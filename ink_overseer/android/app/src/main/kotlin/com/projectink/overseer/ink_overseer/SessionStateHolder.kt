@@ -24,12 +24,11 @@ object SessionStateHolder {
     // Packages
     const val PKG_OVERSEER = "com.projectink.overseer.ink_overseer"
     const val PKG_PURE_WRITER = "com.raincat.purewriter"
-    val WHATSAPP_PACKAGES = setOf("com.whatsapp", "com.whatsapp.w4b")
-    val AI_PACKAGES = setOf("com.google.android.apps.bard", "com.openai.chatgpt", "com.anthropic.claude")
-    val UTILITY_PACKAGES = setOf(
-        "com.android.chrome", "com.brave.browser", "com.android.email",
-        "com.google.android.gm", "com.android.settings", "com.meganovel",
-        "com.webnovel", "com.clone.master"
+
+    // Whitelisted apps selected by the user for strict focus
+    val allowedPackages: MutableSet<String> = mutableSetOf(
+        PKG_OVERSEER,
+        "com.android.systemui"
     )
 
     fun loadFromPrefs(context: Context) {
@@ -43,6 +42,14 @@ object SessionStateHolder {
         whatsappAllowanceRemainingSec = prefs.getInt("whatsapp_allowance_remaining_sec", 0)
         utilityAllowanceRemainingSec = prefs.getInt("utility_allowance_remaining_sec", 0)
         currentCycleIndex = prefs.getInt("current_cycle_index", 0)
+
+        val savedAllowed = prefs.getStringSet("allowed_packages_set", null)
+        allowedPackages.clear()
+        allowedPackages.add(PKG_OVERSEER)
+        allowedPackages.add("com.android.systemui")
+        if (savedAllowed != null) {
+            allowedPackages.addAll(savedAllowed)
+        }
     }
 
     fun saveToPrefs(context: Context) {
@@ -57,6 +64,7 @@ object SessionStateHolder {
             putInt("whatsapp_allowance_remaining_sec", whatsappAllowanceRemainingSec)
             putInt("utility_allowance_remaining_sec", utilityAllowanceRemainingSec)
             putInt("current_cycle_index", currentCycleIndex)
+            putStringSet("allowed_packages_set", allowedPackages)
             apply()
         }
     }

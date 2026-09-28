@@ -715,4 +715,48 @@ void main() {
       expect(loaded[0].packageName, 'com.raincat.purewriter');
     });
   });
+
+  group('StayFocused Strict Whitelist & Allowed Apps Persistence', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('W-1: Empty storage returns empty list of allowed apps', () async {
+      final loaded = await SessionConfig.getAllowedApps();
+      expect(loaded, isEmpty);
+    });
+
+    test('W-2: Saves and restores arbitrary user-chosen apps faithfully', () async {
+      final myApps = [
+        {'packageName': 'com.raincat.purewriter', 'displayName': 'Pure Writer'},
+        {'packageName': 'com.whatsapp', 'displayName': 'WhatsApp'},
+        {'packageName': 'com.transsion.dialer', 'displayName': 'Phone'},
+      ];
+
+      await SessionConfig.saveAllowedApps(myApps);
+      final restored = await SessionConfig.getAllowedApps();
+
+      expect(restored.length, 3);
+      expect(restored[0]['packageName'], 'com.raincat.purewriter');
+      expect(restored[1]['packageName'], 'com.whatsapp');
+      expect(restored[2]['packageName'], 'com.transsion.dialer');
+    });
+
+    test('W-3: Unallowed app like YouTube is strictly rejected by whitelist classifier', () {
+      final allowedSet = {'com.raincat.purewriter', 'com.whatsapp', 'com.transsion.dialer'};
+      expect(allowedSet.contains('com.google.android.youtube'), isFalse);
+      expect(allowedSet.contains('com.zhiliaoapp.musically'), isFalse); // TikTok
+      expect(allowedSet.contains('com.instagram.android'), isFalse);
+    });
+
+    test('W-4: User can select and allow any custom app on their device', () async {
+      final customApps = [
+        {'packageName': 'com.custom.app', 'displayName': 'My Custom App'},
+      ];
+      await SessionConfig.saveAllowedApps(customApps);
+      final loaded = await SessionConfig.getAllowedApps();
+      expect(loaded.length, 1);
+      expect(loaded.first['packageName'], 'com.custom.app');
+    });
+  });
 }

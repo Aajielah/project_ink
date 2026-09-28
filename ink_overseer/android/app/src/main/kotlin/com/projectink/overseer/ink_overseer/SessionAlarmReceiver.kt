@@ -49,13 +49,10 @@ class SessionAlarmReceiver : BroadcastReceiver() {
             context.startService(serviceIntent)
         }
 
-        // Forcefully launch Pure Writer to the foreground over any active distraction
-        val pm = context.packageManager
-        val pureWriterIntent = pm.getLaunchIntentForPackage("com.raincat.purewriter")
-            ?: Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-        pureWriterIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        context.startActivity(pureWriterIntent)
+        // Launch Overseer Sanctum directly to foreground over any active distraction
+        val sanctumIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        context.startActivity(sanctumIntent)
     }
 }

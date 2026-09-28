@@ -73,148 +73,47 @@ class OverseerAccessibilityService : AccessibilityService() {
             return
         }
 
-        val sessionRemainingSec = ((SessionStateHolder.sessionEndTimeMs - now) / 1000).coerceAtLeast(0).toInt()
-        val sessionRemainingStr = formatTime(sessionRemainingSec)
-
-        // 1. Unconditional Whitelist (Essential services, writing sanctuary, launchers)
-        if (isUnconditionallyAllowed(packageName)) {
-            mainHandler.post {
-                lockWindowManager.hideLock()
-                floatingHudManager.showHud(sessionRemainingStr, null)
-            }
+        // If the foreground app is permitted, let the user interact freely!
+        if (isAppAllowed(packageName)) {
             return
         }
 
-        // 2. AI Apps Pool (ChatGPT, Gemini, Claude)
-        if (SessionStateHolder.AI_PACKAGES.contains(packageName)) {
-            val aiSec = SessionStateHolder.aiAllowanceRemainingSec
-            if (aiSec > 0) {
-                mainHandler.post {
-                    lockWindowManager.hideLock()
-                    floatingHudManager.showHud(sessionRemainingStr, "🤖 ${formatTime(aiSec)}")
-                }
-            } else {
-                mainHandler.post {
-                    floatingHudManager.hideHud()
-                    lockWindowManager.showLock(
-                        "AI Writing Assistant",
-                        "Your 5-minute AI brainstorming allowance for this block has been used up.",
-                        "Refreshes in next 30m block • Session: $sessionRemainingStr"
-                    )
-                }
-            }
-            return
-        }
-
-        // 3. WhatsApp Metered Leash
-        if (SessionStateHolder.WHATSAPP_PACKAGES.contains(packageName)) {
-            if (SessionStateHolder.currentCycleIndex == 0) {
-                // First 30 minutes: 100% Locked
-                mainHandler.post {
-                    floatingHudManager.hideHud()
-                    lockWindowManager.showLock(
-                        "WhatsApp",
-                        "WhatsApp is strictly locked during your first 30 minutes of deep writing.",
-                        "Unlocks in min 31 • Session: $sessionRemainingStr"
-                    )
-                }
-            } else {
-                val waSec = SessionStateHolder.whatsappAllowanceRemainingSec
-                if (waSec > 0) {
-                    mainHandler.post {
-                        lockWindowManager.hideLock()
-                        floatingHudManager.showHud(sessionRemainingStr, "💬 ${formatTime(waSec)}")
-                    }
-                } else {
-                    mainHandler.post {
-                        floatingHudManager.hideHud()
-                        lockWindowManager.showLock(
-                            "WhatsApp",
-                            "WhatsApp allowance exhausted for this 30-minute block.",
-                            "Refreshes in next block • Session: $sessionRemainingStr"
-                        )
-                    }
-                }
-            }
-            return
-        }
-
-        // 4. Utility / Browsers / Novel Apps Pool
-        if (SessionStateHolder.UTILITY_PACKAGES.contains(packageName)) {
-            if (SessionStateHolder.currentCycleIndex == 0) {
-                mainHandler.post {
-                    floatingHudManager.hideHud()
-                    lockWindowManager.showLock(
-                        "Browser & Utility Apps",
-                        "Web and secondary apps are locked during the first 30 minutes of deep focus.",
-                        "Unlocks in min 31 • Session: $sessionRemainingStr"
-                    )
-                }
-            } else {
-                val utilSec = SessionStateHolder.utilityAllowanceRemainingSec
-                if (utilSec > 0) {
-                    mainHandler.post {
-                        lockWindowManager.hideLock()
-                        floatingHudManager.showHud(sessionRemainingStr, "🌐 ${formatTime(utilSec)}")
-                    }
-                } else {
-                    mainHandler.post {
-                        floatingHudManager.hideHud()
-                        lockWindowManager.showLock(
-                            "Browser & Utility Apps",
-                            "Your 5-minute research pool is exhausted for this block.",
-                            "Refreshes in next block • Session: $sessionRemainingStr"
-                        )
-                    }
-                }
-            }
-            return
-        }
-
-        // 5. Default: Any unauthorized app or blacklisted social/video apps (YouTube, Reels, Games, etc.)
+        // Unauthorized app, blacklisted social media, or Home Launcher!
+        // Immediately redirect to Overseer Sanctum with zero flashing
         mainHandler.post {
-            floatingHudManager.hideHud()
-            lockWindowManager.showLock(
-                packageName,
-                "This app is not permitted during your writing lock. Distractions are forbidden.",
-                "Session remaining: $sessionRemainingStr"
-            )
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("from_lockout", true)
+                putExtra("blocked_pkg", packageName)
+            }
+            startActivity(intent)
         }
     }
 
-    private fun isUnconditionallyAllowed(pkg: String): Boolean {
+    private fun isAppAllowed(pkg: String): Boolean {
         // Our app
         if (pkg == SessionStateHolder.PKG_OVERSEER) return true
-        // Pure Writer (Sanctuary)
-        if (pkg == SessionStateHolder.PKG_PURE_WRITER) return true
-        // Android System UI
+
+        // Android System UI (Status bar, notifications, keyboard, volume panel)
         if (pkg == "com.android.systemui") return true
-        // Google Docs
-        if (pkg == "com.google.android.apps.docs.editors.docs") return true
 
-        // Quran apps (common package patterns)
-        if (pkg.contains("quran", ignoreCase = true)) return true
+        // User's chosen allowed apps
+        if (SessionStateHolder.allowedPackages.contains(pkg)) return true
 
-        // Phone / Dialer / Call in progress
-        if (pkg.contains("dialer", ignoreCase = true) ||
-            pkg.contains("telecom", ignoreCase = true) ||
-            pkg.contains("telephony", ignoreCase = true) ||
-            pkg.contains("phone", ignoreCase = true) ||
-            pkg.contains("incall", ignoreCase = true)) {
-            return true
-        }
-
-        // SMS / Messaging
-        if (pkg.contains("mms", ignoreCase = true) ||
-            pkg == "com.google.android.apps.messaging" ||
-            pkg == "com.samsung.android.messaging") {
-            return true
-        }
-
-        // Check if package is the device's default launcher (Home Screen)
-        val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        val defaultLauncher = packageManager.resolveActivity(homeIntent, 0)?.activityInfo?.packageName
-        if (pkg == defaultLauncher) return true
+        // Emergency phone call in progress
+        try {
+            val tm = getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            if (tm != null && tm.callState != TelephonyManager.CALL_STATE_IDLE) {
+                val lower = pkg.toLowerCase()
+                if (lower.contains("dialer") || lower.contains("telecom") ||
+                    lower.contains("phone") || lower.contains("incall")) {
+                    return true
+                }
+            }
+        } catch (_: Exception) {}
 
         return false
     }
