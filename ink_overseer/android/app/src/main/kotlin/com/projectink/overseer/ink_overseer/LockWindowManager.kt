@@ -37,7 +37,7 @@ class LockWindowManager(private val context: Context) {
             return
         }
 
-        val layoutParams = WindowManager.LayoutParams().apply {
+        val windowLayoutParams = WindowManager.LayoutParams().apply {
             width = WindowManager.LayoutParams.MATCH_PARENT
             height = WindowManager.LayoutParams.MATCH_PARENT
             type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -145,12 +145,11 @@ class LockWindowManager(private val context: Context) {
         rootLayout.addView(quoteContainer)
 
         // Spacing
-        val spacer = View(context).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 48
-            )
-        }
-        rootLayout.addView(spacer)
+        val spacer = View(context)
+        val spacerParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 48
+        )
+        rootLayout.addView(spacer, spacerParams)
 
         // Primary Hero Button: Return to Pure Writer
         val returnButton = Button(context).apply {
@@ -172,7 +171,7 @@ class LockWindowManager(private val context: Context) {
         rootLayout.addView(returnButton)
 
         try {
-            windowManager.addView(rootLayout, layoutParams)
+            windowManager.addView(rootLayout, windowLayoutParams)
             overlayView = rootLayout
             isShowing = true
         } catch (e: Exception) {

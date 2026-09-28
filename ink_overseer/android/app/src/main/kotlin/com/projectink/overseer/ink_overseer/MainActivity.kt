@@ -1,6 +1,8 @@
 package com.projectink.overseer.ink_overseer
 
+import android.app.AlarmManager
 import android.app.AppOpsManager
+import android.app.PendingIntent
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -154,6 +156,17 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
 
+                "scheduleSessionAlarm" -> {
+                    val triggerAtMs = call.argument<Long>("triggerAtMs") ?: 0L
+                    scheduleAlarm(triggerAtMs)
+                    result.success(true)
+                }
+
+                "cancelSessionAlarm" -> {
+                    cancelAlarm()
+                    result.success(true)
+                }
+
                 else -> result.notImplemented()
             }
         }
@@ -217,6 +230,37 @@ class MainActivity : FlutterActivity() {
         if (intent != null) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             startActivity(intent)
+        }
+    }
+
+    private fun scheduleAlarm(triggerAtMs: Long) {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(this, SessionAlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            2001,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent)
+        } else {
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent)
+        }
+    }
+
+    private fun cancelAlarm() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(this, SessionAlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            2001,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (pendingIntent != null) {
+            alarmManager.cancel(pendingIntent)
+            pendingIntent.cancel()
         }
     }
 }

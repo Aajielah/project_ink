@@ -198,6 +198,7 @@ class OverseerAccessibilityService : AccessibilityService() {
         // Phone / Dialer / Call in progress
         if (pkg.contains("dialer", ignoreCase = true) ||
             pkg.contains("telecom", ignoreCase = true) ||
+            pkg.contains("telephony", ignoreCase = true) ||
             pkg.contains("phone", ignoreCase = true) ||
             pkg.contains("incall", ignoreCase = true)) {
             return true

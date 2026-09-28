@@ -139,6 +139,11 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
       isTestMode: _isTestMode,
     );
 
+    // Schedule exact hardware-backed Android AlarmManager wakeup at T=0
+    await OverseerChannel.scheduleSessionAlarm(
+      scheduledDateTime.millisecondsSinceEpoch,
+    );
+
     await _checkActiveOrCooldown();
 
     if (mounted) {
@@ -503,6 +508,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
                 onPressed: () async {
                   await SessionConfig.clearSchedule();
                   await NotificationHelper.cancelAllNotifications();
+                  await OverseerChannel.cancelSessionAlarm();
                   await _checkActiveOrCooldown();
                 },
               ),

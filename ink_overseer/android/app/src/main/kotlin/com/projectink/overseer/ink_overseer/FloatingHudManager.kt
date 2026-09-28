@@ -31,7 +31,7 @@ class FloatingHudManager(private val context: Context) {
             return
         }
 
-        val layoutParams = WindowManager.LayoutParams().apply {
+        val hudLayoutParams = WindowManager.LayoutParams().apply {
             width = WindowManager.LayoutParams.WRAP_CONTENT
             height = WindowManager.LayoutParams.WRAP_CONTENT
             type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -85,17 +85,17 @@ class FloatingHudManager(private val context: Context) {
         pillLayout.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    initialX = layoutParams.x
-                    initialY = layoutParams.y
+                    initialX = hudLayoutParams.x
+                    initialY = hudLayoutParams.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    layoutParams.x = initialX - (event.rawX - initialTouchX).toInt()
-                    layoutParams.y = initialY + (event.rawY - initialTouchY).toInt()
+                    hudLayoutParams.x = initialX - (event.rawX - initialTouchX).toInt()
+                    hudLayoutParams.y = initialY + (event.rawY - initialTouchY).toInt()
                     try {
-                        windowManager.updateViewLayout(pillLayout, layoutParams)
+                        windowManager.updateViewLayout(pillLayout, hudLayoutParams)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -106,7 +106,7 @@ class FloatingHudManager(private val context: Context) {
         }
 
         try {
-            windowManager.addView(pillLayout, layoutParams)
+            windowManager.addView(pillLayout, hudLayoutParams)
             hudView = pillLayout
             isShowing = true
         } catch (e: Exception) {

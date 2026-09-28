@@ -97,4 +97,24 @@ class OverseerChannel {
   static Future<void> openPureWriter() async {
     await _channel.invokeMethod('openPureWriter');
   }
+
+  static Future<void> scheduleSessionAlarm(int triggerAtMs) async {
+    try {
+      await _channel.invokeMethod('scheduleSessionAlarm', {
+        'triggerAtMs': triggerAtMs,
+      });
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('Error scheduling alarm: $e');
+    }
+  }
+
+  static Future<void> cancelSessionAlarm() async {
+    try {
+      await _channel.invokeMethod('cancelSessionAlarm');
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('Error cancelling alarm: $e');
+    }
+  }
 }
