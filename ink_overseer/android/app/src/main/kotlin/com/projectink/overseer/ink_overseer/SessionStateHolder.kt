@@ -24,6 +24,13 @@ object SessionStateHolder {
     // Packages
     const val PKG_OVERSEER = "com.projectink.overseer.ink_overseer"
     const val PKG_PURE_WRITER = "com.raincat.purewriter"
+    val WHATSAPP_PACKAGES = setOf("com.whatsapp", "com.whatsapp.w4b")
+    val AI_PACKAGES = setOf("com.google.android.apps.bard", "com.openai.chatgpt", "com.anthropic.claude")
+    val UTILITY_PACKAGES = setOf(
+        "com.android.chrome", "com.brave.browser", "com.android.email",
+        "com.google.android.gm", "com.android.settings", "com.meganovel",
+        "com.webnovel", "com.clone.master"
+    )
 
     // Whitelisted apps selected by the user for strict focus
     val allowedPackages: MutableSet<String> = mutableSetOf(

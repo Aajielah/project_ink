@@ -100,20 +100,37 @@ class OverseerAccessibilityService : AccessibilityService() {
         // Android System UI (Status bar, notifications, keyboard, volume panel)
         if (pkg == "com.android.systemui") return true
 
-        // User's chosen allowed apps
-        if (SessionStateHolder.allowedPackages.contains(pkg)) return true
-
         // Emergency phone call in progress
         try {
             val tm = getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
             if (tm != null && tm.callState != TelephonyManager.CALL_STATE_IDLE) {
-                val lower = pkg.toLowerCase()
+                val lower = pkg.lowercase()
                 if (lower.contains("dialer") || lower.contains("telecom") ||
                     lower.contains("phone") || lower.contains("incall")) {
                     return true
                 }
             }
         } catch (_: Exception) {}
+
+        // User's chosen allowed apps
+        if (SessionStateHolder.allowedPackages.contains(pkg)) {
+            val lower = pkg.lowercase()
+            val isWhatsApp = SessionStateHolder.WHATSAPP_PACKAGES.contains(pkg) || lower.contains("whatsapp")
+            if (isWhatsApp) {
+                // Phase 1 iron-clad rule: strictly locked during first 30 minutes
+                if (SessionStateHolder.currentCycleIndex == 0) {
+                    return false
+                }
+                return SessionStateHolder.whatsappAllowanceRemainingSec > 0
+            }
+
+            val isAi = SessionStateHolder.AI_PACKAGES.contains(pkg) || lower.contains("chatgpt") || lower.contains("bard")
+            if (isAi) {
+                return SessionStateHolder.aiAllowanceRemainingSec > 0
+            }
+
+            return true
+        }
 
         return false
     }

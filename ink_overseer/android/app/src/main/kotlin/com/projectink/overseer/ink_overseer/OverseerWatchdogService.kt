@@ -61,7 +61,8 @@ class OverseerWatchdogService : Service() {
 
             // Meter active app usage
             val currentPkg = SessionStateHolder.currentForegroundPackage
-            if (SessionStateHolder.AI_PACKAGES.contains(currentPkg)) {
+            val lowerPkg = currentPkg.lowercase()
+            if (SessionStateHolder.AI_PACKAGES.contains(currentPkg) || lowerPkg.contains("chatgpt") || lowerPkg.contains("bard") || lowerPkg.contains("claude")) {
                 if (SessionStateHolder.aiAllowanceRemainingSec > 0) {
                     SessionStateHolder.aiAllowanceRemainingSec--
                     if (SessionStateHolder.aiAllowanceRemainingSec == 60) {
@@ -71,7 +72,7 @@ class OverseerWatchdogService : Service() {
                         OverseerAccessibilityService.instance?.evaluateForegroundApp(currentPkg)
                     }
                 }
-            } else if (SessionStateHolder.WHATSAPP_PACKAGES.contains(currentPkg)) {
+            } else if (SessionStateHolder.WHATSAPP_PACKAGES.contains(currentPkg) || lowerPkg.contains("whatsapp")) {
                 if (SessionStateHolder.whatsappAllowanceRemainingSec > 0) {
                     SessionStateHolder.whatsappAllowanceRemainingSec--
                     if (SessionStateHolder.whatsappAllowanceRemainingSec == 60) {
@@ -81,7 +82,7 @@ class OverseerWatchdogService : Service() {
                         OverseerAccessibilityService.instance?.evaluateForegroundApp(currentPkg)
                     }
                 }
-            } else if (SessionStateHolder.UTILITY_PACKAGES.contains(currentPkg)) {
+            } else if (SessionStateHolder.UTILITY_PACKAGES.contains(currentPkg) || lowerPkg.contains("chrome") || lowerPkg.contains("browser")) {
                 if (SessionStateHolder.utilityAllowanceRemainingSec > 0) {
                     SessionStateHolder.utilityAllowanceRemainingSec--
                     if (SessionStateHolder.utilityAllowanceRemainingSec == 60) {
