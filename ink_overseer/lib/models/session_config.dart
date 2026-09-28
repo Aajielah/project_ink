@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'kiosk_slot.dart';
+import '../services/overseer_channel.dart';
 
 class SessionConfig {
   static const String keyScheduledStart = 'scheduled_start_epoch';
