@@ -13,7 +13,7 @@ class SessionAlarmReceiver : BroadcastReceiver() {
         val prefs = context.getSharedPreferences("OverseerPrefs", Context.MODE_PRIVATE)
 
         val durationMinutes = prefs.getInt("scheduled_duration_minutes", 120)
-        val isTestMode = prefs.getBool("test_mode_enabled", false)
+        val isTestMode = prefs.getBoolean("test_mode_enabled", false)
 
         val now = System.currentTimeMillis()
         val durationMs = durationMinutes * 60 * 1000L
