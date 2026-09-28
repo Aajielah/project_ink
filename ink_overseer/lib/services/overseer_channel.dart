@@ -173,4 +173,27 @@ class OverseerChannel {
     } catch (_) {}
     return [];
   }
+
+  static Future<bool> setTieredPackages({
+    required List<String> tier1,
+    required List<String> tier2,
+    required List<String> tier3,
+    required List<String> tier4,
+  }) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('setTieredPackages', {
+        'tier1': tier1,
+        'tier2': tier2,
+        'tier3': tier3,
+        'tier4': tier4,
+      });
+      return res ?? false;
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('Error setting tiered packages: $e');
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
 }

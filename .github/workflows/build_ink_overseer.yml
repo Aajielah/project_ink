@@ -47,13 +47,17 @@ jobs:
         run: flutter build apk --release
 
       - name: Prepare APK Asset
-        run: cp ink_overseer/build/app/outputs/flutter-apk/app-release.apk ProjectInk-Overseer.apk
+        run: |
+          cp ink_overseer/build/app/outputs/flutter-apk/app-release.apk FocusSanctum.apk
+          cp ink_overseer/build/app/outputs/flutter-apk/app-release.apk ProjectInk-Overseer.apk
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ProjectInk-Overseer-APK
-          path: ProjectInk-Overseer.apk
+          name: FocusSanctum-APK
+          path: |
+            FocusSanctum.apk
+            ProjectInk-Overseer.apk
           retention-days: 14
 
   publish-release:
@@ -70,16 +74,16 @@ jobs:
       - name: Download Android Artifact
         uses: actions/download-artifact@v4
         with:
-          name: ProjectInk-Overseer-APK
+          name: FocusSanctum-APK
           path: release-assets
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: overseer-v1.0.0-build${{ github.run_number }}
-          name: "Project Ink: Overseer v1.0.0 (Build ${{ github.run_number }})"
+          tag_name: focus-sanctum-v1.0.0-build${{ github.run_number }}
+          name: "Focus Sanctum v1.0.0 (Build ${{ github.run_number }})"
           body: |
-            ### 🛡️ Project Ink: Overseer (Anti-Procrastination Focus Sanctum)
+            ### 🛡️ Focus Sanctum (Anti-Procrastination Writing Environment)
 
             **Build #${{ github.run_number }}** is ready for installation on your Android device!
 
@@ -106,6 +110,7 @@ jobs:
             - Try opening WhatsApp during the 1st minute $\rightarrow$ It will be locked. In the 2nd minute, it will unlock for 30s!
             - Tap **"End Test Session"** anytime to exit the test.
           files: |
+            release-assets/FocusSanctum.apk
             release-assets/ProjectInk-Overseer.apk
           draft: false
           prerelease: false

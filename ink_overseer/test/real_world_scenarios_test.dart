@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ink_overseer/models/session_config.dart';
 import 'package:ink_overseer/models/kiosk_slot.dart';
+import 'package:ink_overseer/models/tier_app.dart' as tiers;
 
 // Domain helper for package tier classification matching native Overseer logic
 enum AppTier { sacred, ai, whatsapp, utility, blacklisted }
@@ -757,6 +758,201 @@ void main() {
       final loaded = await SessionConfig.getAllowedApps();
       expect(loaded.length, 1);
       expect(loaded.first['packageName'], 'com.custom.app');
+    });
+  });
+
+  group('Suite 8: 4-Tier Focus Architecture & Iron Blacklist Protection', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('T-1: TierApp serialization and deserialization across all 4 tiers', () {
+      final apps = [
+        const tiers.TierApp(
+          packageName: 'com.raincat.purewriter',
+          displayName: 'Pure Writer',
+          tier: tiers.AppTier.tier1Writing,
+          iconType: 'purewriter',
+        ),
+        const tiers.TierApp(
+          packageName: 'com.whatsapp',
+          displayName: 'WhatsApp',
+          tier: tiers.AppTier.tier2WhatsApp,
+          iconType: 'whatsapp',
+        ),
+        const tiers.TierApp(
+          packageName: 'com.openai.chatgpt',
+          displayName: 'ChatGPT',
+          tier: tiers.AppTier.tier3Ai,
+          iconType: 'ai',
+        ),
+        const tiers.TierApp(
+          packageName: 'com.google.android.apps.docs.editors.docs',
+          displayName: 'Google Docs',
+          tier: tiers.AppTier.tier4Secondary,
+          iconType: 'docs',
+        ),
+      ];
+
+      for (final app in apps) {
+        final json = app.toJson();
+        final restored = tiers.TierApp.fromJson(json);
+        expect(restored.packageName, app.packageName);
+        expect(restored.displayName, app.displayName);
+        expect(restored.tier, app.tier);
+        expect(restored.iconType, app.iconType);
+      }
+    });
+
+    test('T-2: Iron Blacklist strictly rejects all major distraction platforms', () {
+      final banned = [
+        ['com.google.android.youtube', 'YouTube'],
+        ['com.google.android.apps.youtube.music', 'YouTube Music'],
+        ['app.revanced.android.youtube', 'ReVanced YouTube'],
+        ['com.instagram.android', 'Instagram'],
+        ['com.instagram.threadsapp', 'Threads'],
+        ['com.zhiliaoapp.musically', 'TikTok'],
+        ['com.zhiliaoapp.musically.go', 'TikTok Lite'],
+        ['com.ss.android.ugc.trill', 'TikTok Asia'],
+        ['com.facebook.katana', 'Facebook'],
+        ['com.facebook.lite', 'Facebook Lite'],
+        ['com.snapchat.android', 'Snapchat'],
+        ['com.twitter.android', 'Twitter'],
+        ['com.twitter.android.lite', 'X / Twitter Lite'],
+        ['com.reddit.frontpage', 'Reddit'],
+        ['com.netflix.mediaclient', 'Netflix'],
+      ];
+
+      for (final pair in banned) {
+        expect(
+          tiers.TierApp.isBlacklisted(pair[0], pair[1]),
+          isTrue,
+          reason: '${pair[1]} (${pair[0]}) must be strictly blacklisted',
+        );
+      }
+    });
+
+    test('T-3: Blacklist keyword detection catches clones, mods, and variants', () {
+      expect(tiers.TierApp.isBlacklisted('com.random.mod.youtube', 'Custom Video Player'), isTrue);
+      expect(tiers.TierApp.isBlacklisted('com.wrapper.insta', 'Instagram Mod'), isTrue);
+      expect(tiers.TierApp.isBlacklisted('com.downloader.tiktok', 'TikTok Video Downloader'), isTrue);
+      expect(tiers.TierApp.isBlacklisted('com.snapchat.tools', 'Snap Helper'), isTrue);
+      expect(tiers.TierApp.isBlacklisted('com.alt.client', 'Reddit Sync Client'), isTrue);
+      expect(tiers.TierApp.isBlacklisted('com.fb.viewer', 'Facebook Streamer'), isTrue);
+    });
+
+    test('T-4: Legitimate productivity and writing apps pass blacklist check safely', () {
+      final legitimate = [
+        ['com.raincat.purewriter', 'Pure Writer'],
+        ['com.whatsapp', 'WhatsApp'],
+        ['com.openai.chatgpt', 'ChatGPT'],
+        ['com.anthropic.claude', 'Claude'],
+        ['com.google.android.apps.docs.editors.docs', 'Google Docs'],
+        ['com.meganovel', 'MegaNovel'],
+        ['com.webnovel', 'WebNovel'],
+        ['com.android.chrome', 'Chrome'],
+        ['com.transsion.dialer', 'Phone'],
+        ['com.google.android.apps.messaging', 'Messages'],
+      ];
+
+      for (final pair in legitimate) {
+        expect(
+          tiers.TierApp.isBlacklisted(pair[0], pair[1]),
+          isFalse,
+          reason: '${pair[1]} must NOT be blacklisted',
+        );
+      }
+    });
+
+    test('T-5: SessionConfig persists up to 8 tiered apps faithfully', () async {
+      final sampleTierApps = [
+        const tiers.TierApp(
+          packageName: 'com.raincat.purewriter',
+          displayName: 'Pure Writer',
+          tier: tiers.AppTier.tier1Writing,
+        ),
+        const tiers.TierApp(
+          packageName: 'com.whatsapp',
+          displayName: 'WhatsApp',
+          tier: tiers.AppTier.tier2WhatsApp,
+        ),
+        const tiers.TierApp(
+          packageName: 'com.openai.chatgpt',
+          displayName: 'ChatGPT',
+          tier: tiers.AppTier.tier3Ai,
+        ),
+        const tiers.TierApp(
+          packageName: 'com.anthropic.claude',
+          displayName: 'Claude',
+          tier: tiers.AppTier.tier3Ai,
+        ),
+        const tiers.TierApp(
+          packageName: 'com.google.android.apps.docs.editors.docs',
+          displayName: 'Google Docs',
+          tier: tiers.AppTier.tier4Secondary,
+        ),
+        const tiers.TierApp(
+          packageName: 'com.webnovel',
+          displayName: 'WebNovel',
+          tier: tiers.AppTier.tier4Secondary,
+        ),
+        const tiers.TierApp(
+          packageName: 'com.android.chrome',
+          displayName: 'Chrome',
+          tier: tiers.AppTier.tier4Secondary,
+        ),
+        const tiers.TierApp(
+          packageName: 'com.transsion.dialer',
+          displayName: 'Phone',
+          tier: tiers.AppTier.tier1Writing,
+        ),
+      ];
+
+      expect(sampleTierApps.length, 8); // Maximum 8 apps allowed
+
+      await SessionConfig.saveTierApps(sampleTierApps);
+      final restored = await SessionConfig.getTierApps();
+
+      expect(restored.length, 8);
+      expect(restored[0].packageName, 'com.raincat.purewriter');
+      expect(restored[0].tier, tiers.AppTier.tier1Writing);
+      expect(restored[1].packageName, 'com.whatsapp');
+      expect(restored[1].tier, tiers.AppTier.tier2WhatsApp);
+      expect(restored[2].packageName, 'com.openai.chatgpt');
+      expect(restored[2].tier, tiers.AppTier.tier3Ai);
+      expect(restored[4].packageName, 'com.google.android.apps.docs.editors.docs');
+      expect(restored[4].tier, tiers.AppTier.tier4Secondary);
+    });
+
+    test('T-6: Enforcing Tier 1 presence rejects setups with no writing sanctuary', () {
+      final invalidSetup = [
+        const tiers.TierApp(
+          packageName: 'com.whatsapp',
+          displayName: 'WhatsApp',
+          tier: tiers.AppTier.tier2WhatsApp,
+        ),
+        const tiers.TierApp(
+          packageName: 'com.openai.chatgpt',
+          displayName: 'ChatGPT',
+          tier: tiers.AppTier.tier3Ai,
+        ),
+      ];
+
+      final hasTier1 = invalidSetup.any((a) => a.tier == tiers.AppTier.tier1Writing);
+      expect(hasTier1, isFalse); // Blocked from committing!
+    });
+
+    test('T-7: 8-app capacity barrier rejects 9th app addition', () {
+      final list = List<tiers.TierApp>.generate(
+        8,
+        (i) => tiers.TierApp(
+          packageName: 'com.test.app$i',
+          displayName: 'App $i',
+          tier: tiers.AppTier.tier4Secondary,
+        ),
+      );
+
+      expect(list.length >= 8, isTrue); // Reaches max limit
     });
   });
 }

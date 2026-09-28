@@ -94,6 +94,11 @@ class OverseerAccessibilityService : AccessibilityService() {
     }
 
     private fun isAppAllowed(pkg: String): Boolean {
+        // 0. Hardcoded Blacklist of Banned Distractions (NEVER ALLOWED)
+        if (SessionStateHolder.isBlacklisted(pkg)) {
+            return false
+        }
+
         // Our app
         if (pkg == SessionStateHolder.PKG_OVERSEER) return true
 
@@ -112,23 +117,42 @@ class OverseerAccessibilityService : AccessibilityService() {
             }
         } catch (_: Exception) {}
 
-        // User's chosen allowed apps
+        // Tier 1: Writing Sanctuary (Unlimited 24/7)
+        if (SessionStateHolder.tier1Packages.contains(pkg)) {
+            return true
+        }
+
+        // Tier 2: The Social Leash (The WhatsApp Rule)
+        val isTier2 = SessionStateHolder.tier2Packages.contains(pkg) ||
+                (SessionStateHolder.allowedPackages.contains(pkg) && pkg.lowercase().contains("whatsapp"))
+        if (isTier2) {
+            // Phase 1 (First 30 minutes in normal mode, or minute 1 in test mode): 100% LOCKED!
+            if (SessionStateHolder.currentCycleIndex == 0) {
+                return false
+            }
+            return SessionStateHolder.whatsappAllowanceRemainingSec > 0
+        }
+
+        // Tier 3: AI Assistant Pool (5-Minute Pool Throughout)
+        val isTier3 = SessionStateHolder.tier3Packages.contains(pkg) ||
+                (SessionStateHolder.allowedPackages.contains(pkg) && (pkg.lowercase().contains("chatgpt") || pkg.lowercase().contains("bard") || pkg.lowercase().contains("claude")))
+        if (isTier3) {
+            return SessionStateHolder.aiAllowanceRemainingSec > 0
+        }
+
+        // Tier 4: Secondary Tools (Phase 1 Locked 100%, Phase 2 Unlocks)
+        val isTier4 = SessionStateHolder.tier4Packages.contains(pkg)
+        if (isTier4) {
+            // Phase 1 (First 30 minutes in normal mode, or minute 1 in test mode): 100% LOCKED!
+            if (SessionStateHolder.currentCycleIndex == 0) {
+                return false
+            }
+            // Phase 2: Fully unlocked for writing secondary tools/docs
+            return true
+        }
+
+        // Fallback for general allowed apps
         if (SessionStateHolder.allowedPackages.contains(pkg)) {
-            val lower = pkg.lowercase()
-            val isWhatsApp = SessionStateHolder.WHATSAPP_PACKAGES.contains(pkg) || lower.contains("whatsapp")
-            if (isWhatsApp) {
-                // Phase 1 iron-clad rule: strictly locked during first 30 minutes
-                if (SessionStateHolder.currentCycleIndex == 0) {
-                    return false
-                }
-                return SessionStateHolder.whatsappAllowanceRemainingSec > 0
-            }
-
-            val isAi = SessionStateHolder.AI_PACKAGES.contains(pkg) || lower.contains("chatgpt") || lower.contains("bard")
-            if (isAi) {
-                return SessionStateHolder.aiAllowanceRemainingSec > 0
-            }
-
             return true
         }
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'kiosk_slot.dart';
+import 'tier_app.dart';
 import '../services/overseer_channel.dart';
 
 class SessionConfig {
@@ -116,6 +117,45 @@ class SessionConfig {
         return decoded
             .map((item) => Map<String, String>.from(item as Map<dynamic, dynamic>))
             .toList();
+      } catch (_) {}
+    }
+    return [];
+  }
+
+  static const String keyTierApps = 'strict_tier_apps_json';
+
+  static Future<void> saveTierApps(List<TierApp> apps) async {
+    final prefs = await SharedPreferences.getInstance();
+    final listJson = apps.map((a) => a.toJson()).toList();
+    await prefs.setString(keyTierApps, jsonEncode(listJson));
+
+    // Also populate keyAllowedApps for backward compatibility
+    final simpleList = apps.map((a) => {
+      'packageName': a.packageName,
+      'displayName': a.displayName,
+    }).toList();
+    await prefs.setString(keyAllowedApps, jsonEncode(simpleList));
+
+    final tier1 = apps.where((a) => a.tier == AppTier.tier1Writing).map((a) => a.packageName).toList();
+    final tier2 = apps.where((a) => a.tier == AppTier.tier2WhatsApp).map((a) => a.packageName).toList();
+    final tier3 = apps.where((a) => a.tier == AppTier.tier3Ai).map((a) => a.packageName).toList();
+    final tier4 = apps.where((a) => a.tier == AppTier.tier4Secondary).map((a) => a.packageName).toList();
+
+    await OverseerChannel.setTieredPackages(
+      tier1: tier1,
+      tier2: tier2,
+      tier3: tier3,
+      tier4: tier4,
+    );
+  }
+
+  static Future<List<TierApp>> getTierApps() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyTierApps);
+    if (raw != null) {
+      try {
+        final decoded = jsonDecode(raw) as List<dynamic>;
+        return decoded.map((item) => TierApp.fromJson(item as Map<String, dynamic>)).toList();
       } catch (_) {}
     }
     return [];

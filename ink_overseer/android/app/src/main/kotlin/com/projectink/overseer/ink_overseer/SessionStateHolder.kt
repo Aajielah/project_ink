@@ -32,7 +32,59 @@ object SessionStateHolder {
         "com.webnovel", "com.clone.master"
     )
 
-    // Whitelisted apps selected by the user for strict focus
+    // Hardcoded Iron Blacklist of Banned Distractions
+    val BLACKLIST_PACKAGES = setOf(
+        "com.google.android.youtube",
+        "com.google.android.apps.youtube.music",
+        "app.revanced.android.youtube",
+        "com.instagram.android",
+        "com.instagram.threadsapp",
+        "com.zhiliaoapp.musically",
+        "com.zhiliaoapp.musically.go",
+        "com.ss.android.ugc.trill",
+        "com.facebook.katana",
+        "com.facebook.lite",
+        "com.facebook.orca",
+        "com.snapchat.android",
+        "com.twitter.android",
+        "com.twitter.android.lite",
+        "com.reddit.frontpage",
+        "com.netflix.mediaclient",
+        "com.amazon.avod.thirdpartyclient"
+    )
+
+    fun isBlacklisted(pkg: String): Boolean {
+        val lower = pkg.lowercase()
+        if (BLACKLIST_PACKAGES.contains(lower)) return true
+        if (lower.contains("youtube") ||
+            lower.contains("instagram") ||
+            lower.contains("tiktok") ||
+            lower.contains("snapchat") ||
+            lower.contains("facebook") ||
+            lower.contains("reddit") ||
+            lower.contains("netflix") ||
+            lower.contains("twitter")) {
+            return true
+        }
+        return false
+    }
+
+    // Tier 1: Writing Sanctuary (Unlimited 24/7)
+    val tier1Packages: MutableSet<String> = mutableSetOf(
+        PKG_OVERSEER,
+        "com.android.systemui"
+    )
+
+    // Tier 2: The Social Leash (Phase 1 Locked 100%, Phase 2 Metered)
+    val tier2Packages: MutableSet<String> = mutableSetOf()
+
+    // Tier 3: AI Assistant Pool (5-Minute Pool Throughout)
+    val tier3Packages: MutableSet<String> = mutableSetOf()
+
+    // Tier 4: Secondary Tools (Phase 1 Locked 100%, Phase 2 Unlocks)
+    val tier4Packages: MutableSet<String> = mutableSetOf()
+
+    // Combined allowed packages
     val allowedPackages: MutableSet<String> = mutableSetOf(
         PKG_OVERSEER,
         "com.android.systemui"
@@ -50,13 +102,29 @@ object SessionStateHolder {
         utilityAllowanceRemainingSec = prefs.getInt("utility_allowance_remaining_sec", 0)
         currentCycleIndex = prefs.getInt("current_cycle_index", 0)
 
-        val savedAllowed = prefs.getStringSet("allowed_packages_set", null)
+        tier1Packages.clear()
+        tier1Packages.add(PKG_OVERSEER)
+        tier1Packages.add("com.android.systemui")
+        val savedT1 = prefs.getStringSet("tier1_packages_set", null)
+        if (savedT1 != null) tier1Packages.addAll(savedT1)
+
+        tier2Packages.clear()
+        val savedT2 = prefs.getStringSet("tier2_packages_set", null)
+        if (savedT2 != null) tier2Packages.addAll(savedT2)
+
+        tier3Packages.clear()
+        val savedT3 = prefs.getStringSet("tier3_packages_set", null)
+        if (savedT3 != null) tier3Packages.addAll(savedT3)
+
+        tier4Packages.clear()
+        val savedT4 = prefs.getStringSet("tier4_packages_set", null)
+        if (savedT4 != null) tier4Packages.addAll(savedT4)
+
         allowedPackages.clear()
-        allowedPackages.add(PKG_OVERSEER)
-        allowedPackages.add("com.android.systemui")
-        if (savedAllowed != null) {
-            allowedPackages.addAll(savedAllowed)
-        }
+        allowedPackages.addAll(tier1Packages)
+        allowedPackages.addAll(tier2Packages)
+        allowedPackages.addAll(tier3Packages)
+        allowedPackages.addAll(tier4Packages)
     }
 
     fun saveToPrefs(context: Context) {
@@ -71,6 +139,10 @@ object SessionStateHolder {
             putInt("whatsapp_allowance_remaining_sec", whatsappAllowanceRemainingSec)
             putInt("utility_allowance_remaining_sec", utilityAllowanceRemainingSec)
             putInt("current_cycle_index", currentCycleIndex)
+            putStringSet("tier1_packages_set", tier1Packages)
+            putStringSet("tier2_packages_set", tier2Packages)
+            putStringSet("tier3_packages_set", tier3Packages)
+            putStringSet("tier4_packages_set", tier4Packages)
             putStringSet("allowed_packages_set", allowedPackages)
             apply()
         }

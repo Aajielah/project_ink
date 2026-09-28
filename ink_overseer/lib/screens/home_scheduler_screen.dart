@@ -6,7 +6,8 @@ import '../models/session_config.dart';
 import '../services/notification_helper.dart';
 import '../services/overseer_channel.dart';
 import 'kiosk_sanctum_screen.dart';
-import 'allowed_apps_screen.dart';
+import 'tier_setup_screen.dart';
+import '../models/tier_app.dart';
 
 class HomeSchedulerScreen extends StatefulWidget {
   const HomeSchedulerScreen({super.key});
@@ -18,7 +19,7 @@ class HomeSchedulerScreen extends StatefulWidget {
 class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
   DateTime? _cooldownExpiry;
   Timer? _cooldownTimer;
-  int _allowedAppsCount = 0;
+  int _tierAppsCount = 0;
 
   // Scheduling State
   TimeOfDay _selectedTime = TimeOfDay.now();
@@ -62,14 +63,14 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
       return;
     }
 
-    // 2. Check cooldown & allowed apps
+    // 2. Check cooldown & tier apps
     final expiry = await SessionConfig.getCooldownExpiry();
     final schedule = await SessionConfig.getSchedule();
-    final allowed = await SessionConfig.getAllowedApps();
+    final tierApps = await SessionConfig.getTierApps();
 
     if (mounted) {
       setState(() {
-        _allowedAppsCount = allowed.length;
+        _tierAppsCount = tierApps.length;
         _cooldownExpiry = expiry;
         _existingSchedule = schedule;
         if (schedule != null) {
@@ -117,6 +118,28 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
   }
 
   Future<void> _commitSchedule() async {
+    final tierApps = await SessionConfig.getTierApps();
+    final hasTier1 = tierApps.any((t) => t.tier == AppTier.tier1Writing);
+    if (!hasTier1) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please assign at least 1 writing app (Pure Writer) to Tier 1 first!'),
+            backgroundColor: SanctumTheme.amberWarning,
+          ),
+        );
+        final updated = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => const TierSetupScreen()),
+        );
+        if (updated == true) {
+          final refreshed = await SessionConfig.getTierApps();
+          setState(() => _tierAppsCount = refreshed.length);
+        }
+      }
+      return;
+    }
+
     final now = DateTime.now();
     var scheduledDateTime = DateTime(
       now.year,
@@ -129,6 +152,11 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
     // If selected time today has already passed, schedule for tomorrow
     if (scheduledDateTime.isBefore(now)) {
       scheduledDateTime = scheduledDateTime.add(const Duration(days: 1));
+    }
+
+    // Enforce minimum 1-minute buffer for scheduled sessions
+    if (scheduledDateTime.difference(now).inSeconds < 60) {
+      scheduledDateTime = now.add(const Duration(minutes: 1));
     }
 
     await SessionConfig.saveSchedule(
@@ -163,22 +191,23 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
   }
 
   Future<void> _startInstantSession() async {
-    final allowed = await SessionConfig.getAllowedApps();
-    if (allowed.isEmpty) {
+    final tierApps = await SessionConfig.getTierApps();
+    final hasTier1 = tierApps.any((t) => t.tier == AppTier.tier1Writing);
+    if (!hasTier1) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please select at least 1 writing app (e.g. Pure Writer) first!'),
+            content: Text('Please assign at least 1 writing app (Pure Writer) to Tier 1 first!'),
             backgroundColor: SanctumTheme.amberWarning,
           ),
         );
         final updated = await Navigator.push<bool>(
           context,
-          MaterialPageRoute(builder: (_) => const AllowedAppsScreen()),
+          MaterialPageRoute(builder: (_) => const TierSetupScreen()),
         );
         if (updated == true) {
-          final refreshed = await SessionConfig.getAllowedApps();
-          setState(() => _allowedAppsCount = refreshed.length);
+          final refreshed = await SessionConfig.getTierApps();
+          setState(() => _tierAppsCount = refreshed.length);
         }
       }
       return;
@@ -510,6 +539,16 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
     final scheduledStart = _existingSchedule!['startTime'] as DateTime;
     final duration = _existingSchedule!['durationMinutes'] as int;
 
+    final now = DateTime.now();
+    final diff = scheduledStart.difference(now);
+    final remainingSec = diff.inSeconds > 0 ? diff.inSeconds : 0;
+    final h = remainingSec ~/ 3600;
+    final m = (remainingSec % 3600) ~/ 60;
+    final s = remainingSec % 60;
+    final countdownStr = h > 0
+        ? '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}'
+        : '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -555,6 +594,38 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
           Text(
             'Duration: $duration minutes • Overseer will take over on time',
             style: const TextStyle(color: SanctumTheme.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: SanctumTheme.goldAccent.withAlpha(25),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: SanctumTheme.goldAccent.withAlpha(120)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.timer_outlined, color: SanctumTheme.goldAccent, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Takeover in: $countdownStr',
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: SanctumTheme.goldAccent,
+                  ),
+                ),
+                const Spacer(),
+                const Text(
+                  'Prep Countdown',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: SanctumTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -650,7 +721,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
               color: SanctumTheme.goldAccent.withAlpha(25),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.shield_outlined, color: SanctumTheme.goldAccent, size: 24),
+            child: const Icon(Icons.layers_outlined, color: SanctumTheme.goldAccent, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -658,7 +729,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Strict Mode: Allowed Apps',
+                  '4-Tier Focus Environment',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -667,9 +738,9 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _allowedAppsCount > 0
-                      ? '$_allowedAppsCount apps chosen (home screen & all others locked)'
-                      : 'Choose your writing apps (Pure Writer, WhatsApp, etc.)',
+                  _tierAppsCount > 0
+                      ? '$_tierAppsCount / 8 apps configured across 4 tiers'
+                      : 'Configure Pure Writer, WhatsApp leash, AI & secondary tools',
                   style: const TextStyle(
                     fontSize: 12,
                     color: SanctumTheme.textSecondary,
@@ -682,11 +753,11 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
             onPressed: () async {
               final updated = await Navigator.push<bool>(
                 context,
-                MaterialPageRoute(builder: (_) => const AllowedAppsScreen()),
+                MaterialPageRoute(builder: (_) => const TierSetupScreen()),
               );
               if (updated == true) {
-                final refreshed = await SessionConfig.getAllowedApps();
-                setState(() => _allowedAppsCount = refreshed.length);
+                final refreshed = await SessionConfig.getTierApps();
+                setState(() => _tierAppsCount = refreshed.length);
               }
             },
             style: OutlinedButton.styleFrom(
@@ -697,7 +768,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            child: const Text('Choose Apps', style: TextStyle(fontSize: 12)),
+            child: const Text('Setup Tiers', style: TextStyle(fontSize: 12)),
           ),
         ],
       ),

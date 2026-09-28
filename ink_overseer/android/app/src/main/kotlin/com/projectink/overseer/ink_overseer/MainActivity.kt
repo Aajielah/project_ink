@@ -193,6 +193,40 @@ class MainActivity : FlutterActivity() {
                     result.success(SessionStateHolder.allowedPackages.toList())
                 }
 
+                "setTieredPackages" -> {
+                    val tier1 = (call.argument<List<String>>("tier1") ?: emptyList())
+                        .filter { !SessionStateHolder.isBlacklisted(it) }
+                    val tier2 = (call.argument<List<String>>("tier2") ?: emptyList())
+                        .filter { !SessionStateHolder.isBlacklisted(it) }
+                    val tier3 = (call.argument<List<String>>("tier3") ?: emptyList())
+                        .filter { !SessionStateHolder.isBlacklisted(it) }
+                    val tier4 = (call.argument<List<String>>("tier4") ?: emptyList())
+                        .filter { !SessionStateHolder.isBlacklisted(it) }
+
+                    SessionStateHolder.tier1Packages.clear()
+                    SessionStateHolder.tier1Packages.add(packageName)
+                    SessionStateHolder.tier1Packages.add("com.android.systemui")
+                    SessionStateHolder.tier1Packages.addAll(tier1)
+
+                    SessionStateHolder.tier2Packages.clear()
+                    SessionStateHolder.tier2Packages.addAll(tier2)
+
+                    SessionStateHolder.tier3Packages.clear()
+                    SessionStateHolder.tier3Packages.addAll(tier3)
+
+                    SessionStateHolder.tier4Packages.clear()
+                    SessionStateHolder.tier4Packages.addAll(tier4)
+
+                    SessionStateHolder.allowedPackages.clear()
+                    SessionStateHolder.allowedPackages.addAll(SessionStateHolder.tier1Packages)
+                    SessionStateHolder.allowedPackages.addAll(SessionStateHolder.tier2Packages)
+                    SessionStateHolder.allowedPackages.addAll(SessionStateHolder.tier3Packages)
+                    SessionStateHolder.allowedPackages.addAll(SessionStateHolder.tier4Packages)
+
+                    SessionStateHolder.saveToPrefs(this)
+                    result.success(true)
+                }
+
                 else -> result.notImplemented()
             }
         }
@@ -321,7 +355,7 @@ class MainActivity : FlutterActivity() {
         for (resolveInfo in resolveList) {
             val pkg = resolveInfo.activityInfo.packageName
             val label = resolveInfo.loadLabel(pm).toString()
-            if (pkg != packageName) {
+            if (pkg != packageName && !SessionStateHolder.isBlacklisted(pkg)) {
                 appList.add(mapOf("packageName" to pkg, "displayName" to label))
             }
         }

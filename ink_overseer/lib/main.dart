@@ -18,7 +18,7 @@ class InkOverseerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Project Ink: Overseer',
+      title: 'Focus Sanctum',
       debugShowCheckedModeBanner: false,
       theme: SanctumTheme.darkTheme,
       home: const RootGateScreen(),

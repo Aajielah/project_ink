@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/theme.dart';
 import '../models/session_config.dart';
+import '../models/tier_app.dart';
 import '../services/overseer_channel.dart';
 import 'home_scheduler_screen.dart';
 
@@ -15,10 +16,14 @@ class KioskSanctumScreen extends StatefulWidget {
 
 class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
   Timer? _ticker;
-  List<Map<String, String>> _allowedApps = [];
+  List<TierApp> _tierApps = [];
   bool _isTestMode = false;
   int _remainingSec = 0;
   int _totalSessionMinutes = 120;
+  int _currentCycleIndex = 0;
+  int _aiAllowanceRemainingSec = 300;
+  int _whatsappAllowanceRemainingSec = 0;
+  int _utilityAllowanceRemainingSec = 0;
 
   final List<String> _quotes = [
     "\"Start writing, no matter what. The water does not flow until the faucet is turned on.\" — Louis L'Amour",
@@ -33,7 +38,7 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
   void initState() {
     super.initState();
     _currentQuote = (_quotes..shuffle()).first;
-    _loadAllowedApps();
+    _loadTierApps();
     _refreshState();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _refreshState());
 
@@ -47,10 +52,24 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
     super.dispose();
   }
 
-  Future<void> _loadAllowedApps() async {
-    final loaded = await SessionConfig.getAllowedApps();
+  Future<void> _loadTierApps() async {
+    final loaded = await SessionConfig.getTierApps();
     if (mounted) {
-      setState(() => _allowedApps = loaded);
+      if (loaded.isNotEmpty) {
+        setState(() => _tierApps = loaded);
+      } else {
+        // Backward-compatibility fallback
+        final legacy = await SessionConfig.getAllowedApps();
+        setState(() {
+          _tierApps = legacy
+              .map((a) => TierApp(
+                    packageName: a['packageName'] ?? '',
+                    displayName: a['displayName'] ?? '',
+                    tier: AppTier.tier1Writing,
+                  ))
+              .toList();
+        });
+      }
     }
   }
 
@@ -79,6 +98,10 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
       _isTestMode = state['isTestMode'] as bool? ?? false;
       _remainingSec = remaining;
       _totalSessionMinutes = state['totalSessionMinutes'] as int? ?? 120;
+      _currentCycleIndex = state['currentCycleIndex'] as int? ?? 0;
+      _aiAllowanceRemainingSec = state['aiAllowanceRemainingSec'] as int? ?? 0;
+      _whatsappAllowanceRemainingSec = state['whatsappAllowanceRemainingSec'] as int? ?? 0;
+      _utilityAllowanceRemainingSec = state['utilityAllowanceRemainingSec'] as int? ?? 0;
     });
   }
 
@@ -92,21 +115,59 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  Future<void> _launch(String packageName) async {
+  Future<void> _handleAppTap(TierApp app) async {
+    final isPhase1 = _currentCycleIndex == 0;
+
+    // Check accessibility rules before attempting launch
+    if (app.tier == AppTier.tier2WhatsApp) {
+      if (isPhase1) {
+        _showLockedNotice('🔒 WhatsApp is locked in Phase 1 (first ${_isTestMode ? "1 min" : "30 mins"}). Unlocks in Phase 2!');
+        return;
+      }
+      if (_whatsappAllowanceRemainingSec <= 0) {
+        _showLockedNotice('⏳ WhatsApp allowance depleted for this 30-minute block.');
+        return;
+      }
+    } else if (app.tier == AppTier.tier3Ai) {
+      if (_aiAllowanceRemainingSec <= 0) {
+        _showLockedNotice('⏳ AI Brainstorming allowance depleted for this block.');
+        return;
+      }
+    } else if (app.tier == AppTier.tier4Secondary) {
+      if (isPhase1) {
+        _showLockedNotice('🔒 Secondary tools (Docs, Webnovel, etc.) unlock in Phase 2 to prevent distraction.');
+        return;
+      }
+    }
+
     HapticFeedback.lightImpact();
-    final ok = await OverseerChannel.launchPackage(packageName);
+    final ok = await OverseerChannel.launchPackage(app.packageName);
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not open $packageName. Make sure it is installed.'),
+          content: Text('Could not open ${app.displayName}. Make sure it is installed.'),
           backgroundColor: SanctumTheme.crimsonAlert,
         ),
       );
     }
   }
 
+  void _showLockedNotice(String message) {
+    HapticFeedback.heavyImpact();
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: SanctumTheme.crimsonAlert,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isPhase1 = _currentCycleIndex == 0;
+
     return PopScope(
       canPop: false, // Strict Mode: back button disabled
       child: Scaffold(
@@ -179,17 +240,56 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
                     color: SanctumTheme.textMuted,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-                // Subtitle
+                // Phase Indicator Banner
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isPhase1
+                        ? SanctumTheme.amberWarning.withAlpha(25)
+                        : SanctumTheme.emeraldReady.withAlpha(25),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isPhase1
+                          ? SanctumTheme.amberWarning.withAlpha(120)
+                          : SanctumTheme.emeraldReady.withAlpha(120),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isPhase1 ? Icons.lock_clock : Icons.check_circle_outline,
+                        color: isPhase1 ? SanctumTheme.amberWarning : SanctumTheme.emeraldReady,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isPhase1
+                              ? 'Phase 1: Monk Stage (${_isTestMode ? "1m" : "0–30m"}) • Pure Writer Only'
+                              : 'Phase 2: Execution & Tools • Secondary Apps & Social Leash Active',
+                          style: TextStyle(
+                            color: isPhase1 ? SanctumTheme.amberWarning : SanctumTheme.emeraldReady,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Permitted Apps Subtitle
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle, size: 16, color: SanctumTheme.emeraldReady),
+                      const Icon(Icons.apps, size: 16, color: SanctumTheme.goldAccent),
                       const SizedBox(width: 6),
                       Text(
-                        'PERMITTED APPS (${_allowedApps.length} CHOSEN)',
+                        'PERMITTED APPS (${_tierApps.length} CONFIGURED)',
                         style: const TextStyle(
                           fontSize: 11,
                           letterSpacing: 1.2,
@@ -200,14 +300,14 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
-                // Allowed Apps Grid
+                // 4-Tier Allowed Apps Grid
                 Expanded(
-                  child: _allowedApps.isEmpty
+                  child: _tierApps.isEmpty
                       ? const Center(
                           child: Text(
-                            'No apps selected.',
+                            'No apps configured.',
                             style: TextStyle(color: SanctumTheme.textMuted),
                           ),
                         )
@@ -217,10 +317,10 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: 1.4,
+                            childAspectRatio: 1.35,
                           ),
-                          itemCount: _allowedApps.length,
-                          itemBuilder: (ctx, i) => _buildAppTile(_allowedApps[i]),
+                          itemCount: _tierApps.length,
+                          itemBuilder: (ctx, i) => _buildTierAppTile(_tierApps[i], isPhase1),
                         ),
                 ),
 
@@ -233,13 +333,15 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
                     border: Border.all(color: SanctumTheme.border),
                   ),
                   child: Row(
-                    children: const [
-                      Icon(Icons.lock, color: SanctumTheme.goldAccent, size: 16),
-                      SizedBox(width: 8),
+                    children: [
+                      const Icon(Icons.lock, color: SanctumTheme.goldAccent, size: 16),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Your home screen and all other apps are blocked until timer ends.',
-                          style: TextStyle(fontSize: 11, color: SanctumTheme.textSecondary),
+                          isPhase1
+                              ? 'Phase 1: WhatsApp and Secondary Tools are locked.'
+                              : 'Phase 2: Secondary tools unlocked. WhatsApp metered.',
+                          style: const TextStyle(fontSize: 11, color: SanctumTheme.textSecondary),
                         ),
                       ),
                     ],
@@ -272,20 +374,74 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
     );
   }
 
-  Widget _buildAppTile(Map<String, String> app) {
-    final pkg = app['packageName'] ?? '';
-    final name = app['displayName'] ?? pkg;
+  Widget _buildTierAppTile(TierApp app, bool isPhase1) {
+    String badgeText;
+    Color badgeColor;
+    bool isAccessible;
+    String tierLabel;
+
+    switch (app.tier) {
+      case AppTier.tier1Writing:
+        tierLabel = 'Tier 1';
+        badgeText = 'Unlimited';
+        badgeColor = SanctumTheme.emeraldReady;
+        isAccessible = true;
+        break;
+
+      case AppTier.tier2WhatsApp:
+        tierLabel = 'Tier 2';
+        if (isPhase1) {
+          badgeText = 'Phase 1 Lock';
+          badgeColor = SanctumTheme.amberWarning;
+          isAccessible = false;
+        } else if (_whatsappAllowanceRemainingSec > 0) {
+          badgeText = '💬 ${_formatTime(_whatsappAllowanceRemainingSec)}';
+          badgeColor = SanctumTheme.goldAccent;
+          isAccessible = true;
+        } else {
+          badgeText = 'Depleted';
+          badgeColor = SanctumTheme.crimsonAlert;
+          isAccessible = false;
+        }
+        break;
+
+      case AppTier.tier3Ai:
+        tierLabel = 'Tier 3';
+        if (_aiAllowanceRemainingSec > 0) {
+          badgeText = '🤖 ${_formatTime(_aiAllowanceRemainingSec)}';
+          badgeColor = Colors.lightBlueAccent;
+          isAccessible = true;
+        } else {
+          badgeText = 'Depleted';
+          badgeColor = SanctumTheme.crimsonAlert;
+          isAccessible = false;
+        }
+        break;
+
+      case AppTier.tier4Secondary:
+        tierLabel = 'Tier 4';
+        if (isPhase1) {
+          badgeText = 'Phase 1 Lock';
+          badgeColor = Colors.purpleAccent;
+          isAccessible = false;
+        } else {
+          badgeText = 'Unlocked';
+          badgeColor = Colors.purpleAccent;
+          isAccessible = true;
+        }
+        break;
+    }
 
     return InkWell(
-      onTap: () => _launch(pkg),
+      onTap: () => _handleAppTap(app),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF12161E),
+          color: isAccessible ? const Color(0xFF12161E) : const Color(0xFF0F1218),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: SanctumTheme.border,
+            color: isAccessible ? SanctumTheme.border : Colors.white10,
             width: 1.5,
           ),
         ),
@@ -297,30 +453,30 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 CircleAvatar(
-                  radius: 16,
-                  backgroundColor: SanctumTheme.goldAccent.withAlpha(35),
+                  radius: 14,
+                  backgroundColor: badgeColor.withAlpha(35),
                   child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      color: SanctumTheme.goldAccent,
+                    tierLabel,
+                    style: TextStyle(
+                      color: badgeColor,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 9,
                     ),
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: SanctumTheme.emeraldReady.withAlpha(38),
+                    color: badgeColor.withAlpha(35),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: SanctumTheme.emeraldReady.withAlpha(128)),
+                    border: Border.all(color: badgeColor.withAlpha(128)),
                   ),
-                  child: const Text(
-                    'Allowed',
+                  child: Text(
+                    badgeText,
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: SanctumTheme.emeraldReady,
+                      color: badgeColor,
                     ),
                   ),
                 ),
@@ -330,17 +486,17 @@ class _KioskSanctumScreenState extends State<KioskSanctumScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  app.displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: isAccessible ? Colors.white : SanctumTheme.textMuted,
                   ),
                 ),
                 Text(
-                  pkg,
+                  app.packageName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
