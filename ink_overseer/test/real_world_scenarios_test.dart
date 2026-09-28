@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ink_overseer/models/session_config.dart';
+import 'package:ink_overseer/models/kiosk_slot.dart';
 
 // Domain helper for package tier classification matching native Overseer logic
 enum AppTier { sacred, ai, whatsapp, utility, blacklisted }
@@ -631,6 +632,87 @@ void main() {
         expect(sim.aiSec, 300);
         expect(sim.whatsappSec, cycle == 1 ? 600 : 300);
       }
+    });
+  });
+
+  group('Kiosk 6 Sacred Slots & Ultra Power Saver Persistence', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('K-1: Default slots contain exactly 6 slots', () {
+      final slots = KioskSlot.defaultSlots();
+      expect(slots.length, 6);
+    });
+
+    test('K-2: Slot 0 is permanently assigned to Pure Writer', () {
+      final slots = KioskSlot.defaultSlots();
+      expect(slots[0].packageName, 'com.raincat.purewriter');
+      expect(slots[0].tier, 'sacred');
+      expect(slots[0].iconType, 'purewriter');
+    });
+
+    test('K-3: Slots 1 and 2 are sacred calls and messaging', () {
+      final slots = KioskSlot.defaultSlots();
+      expect(slots[1].tier, 'sacred');
+      expect(slots[2].tier, 'sacred');
+      expect(slots[1].iconType, 'phone');
+      expect(slots[2].iconType, 'messages');
+    });
+
+    test('K-4: Slot 3 defaults to AI and Slot 4 defaults to WhatsApp', () {
+      final slots = KioskSlot.defaultSlots();
+      expect(slots[3].tier, 'ai');
+      expect(slots[4].tier, 'whatsapp');
+    });
+
+    test('K-5: Serialization and deserialization preserves all slot attributes', () {
+      const original = KioskSlot(
+        index: 5,
+        packageName: 'com.quran.labs.androidquran',
+        displayName: 'Holy Quran',
+        iconType: 'quran',
+        tier: 'sacred',
+      );
+      final json = original.toJson();
+      final restored = KioskSlot.fromJson(json);
+
+      expect(restored.index, original.index);
+      expect(restored.packageName, original.packageName);
+      expect(restored.displayName, original.displayName);
+      expect(restored.iconType, original.iconType);
+      expect(restored.tier, original.tier);
+    });
+
+    test('K-6: SessionConfig saves and loads 6 slots from storage', () async {
+      final defaults = await SessionConfig.getSlots();
+      expect(defaults.length, 6);
+
+      final customSlots = List<KioskSlot>.from(defaults);
+      customSlots[5] = const KioskSlot(
+        index: 5,
+        packageName: 'com.meganovel',
+        displayName: 'MegaNovel',
+        iconType: 'utility',
+        tier: 'utility',
+      );
+
+      await SessionConfig.saveSlots(customSlots);
+      final loaded = await SessionConfig.getSlots();
+
+      expect(loaded.length, 6);
+      expect(loaded[5].packageName, 'com.meganovel');
+      expect(loaded[5].displayName, 'MegaNovel');
+      expect(loaded[0].packageName, 'com.raincat.purewriter');
+    });
+
+    test('K-7: Corrupted or missing storage falls back safely to default 6 slots', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(SessionConfig.keyKioskSlots, 'invalid-json-string');
+
+      final loaded = await SessionConfig.getSlots();
+      expect(loaded.length, 6);
+      expect(loaded[0].packageName, 'com.raincat.purewriter');
     });
   });
 }

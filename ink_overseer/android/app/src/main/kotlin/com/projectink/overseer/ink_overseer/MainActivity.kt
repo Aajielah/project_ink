@@ -167,6 +167,17 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
 
+                "launchPackage" -> {
+                    val pkg = call.argument<String>("packageName") ?: ""
+                    val success = launchPackage(pkg)
+                    result.success(success)
+                }
+
+                "getInstalledApps" -> {
+                    val list = getInstalledAppList()
+                    result.success(list)
+                }
+
                 else -> result.notImplemented()
             }
         }
@@ -262,5 +273,43 @@ class MainActivity : FlutterActivity() {
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()
         }
+    }
+
+    private fun launchPackage(pkgName: String): Boolean {
+        val pm = packageManager
+        var intent = pm.getLaunchIntentForPackage(pkgName)
+        if (intent == null) {
+            if (pkgName.contains("dialer") || pkgName.contains("phone")) {
+                intent = Intent(Intent.ACTION_DIAL)
+            } else if (pkgName.contains("messaging") || pkgName.contains("mms")) {
+                intent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_APP_MESSAGING)
+                }
+            }
+        }
+        return if (intent != null) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            startActivity(intent)
+            true
+        } else {
+            false
+        }
+    }
+
+    private fun getInstalledAppList(): List<Map<String, String>> {
+        val pm = packageManager
+        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val resolveList = pm.queryIntentActivities(mainIntent, 0)
+        val appList = mutableListOf<Map<String, String>>()
+        for (resolveInfo in resolveList) {
+            val pkg = resolveInfo.activityInfo.packageName
+            val label = resolveInfo.loadLabel(pm).toString()
+            if (pkg != packageName) {
+                appList.add(mapOf("packageName" to pkg, "displayName" to label))
+            }
+        }
+        return appList.sortedBy { it["displayName"] }
     }
 }

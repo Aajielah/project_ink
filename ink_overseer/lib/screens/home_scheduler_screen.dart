@@ -5,7 +5,8 @@ import '../core/theme.dart';
 import '../models/session_config.dart';
 import '../services/notification_helper.dart';
 import '../services/overseer_channel.dart';
-import 'active_focus_screen.dart';
+import 'kiosk_sanctum_screen.dart';
+import 'slot_configuration_screen.dart';
 
 class HomeSchedulerScreen extends StatefulWidget {
   const HomeSchedulerScreen({super.key});
@@ -54,7 +55,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const ActiveFocusScreen()),
+          MaterialPageRoute(builder: (_) => const KioskSanctumScreen()),
         );
       }
       return;
@@ -107,7 +108,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
     if (started && mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const ActiveFocusScreen()),
+        MaterialPageRoute(builder: (_) => const KioskSanctumScreen()),
       );
     }
   }
@@ -168,7 +169,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
     if (started && mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const ActiveFocusScreen()),
+        MaterialPageRoute(builder: (_) => const KioskSanctumScreen()),
       );
     }
   }
@@ -225,6 +226,10 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
               _buildUpcomingScheduleCard(),
               const SizedBox(height: 24),
             ],
+
+            // Sacred 6 Slots Configuration Card
+            _buildSlotsConfigCard(),
+            const SizedBox(height: 24),
 
             // Schedule Setup Form (disabled during cooldown)
             Opacity(
@@ -599,6 +604,70 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
                 fontSize: 12,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlotsConfigCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SanctumTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SanctumTheme.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: SanctumTheme.goldAccent.withAlpha(25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.dashboard_customize, color: SanctumTheme.goldAccent, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'The 6 Sacred Slots',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: SanctumTheme.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Pure Writer + 5 permitted apps locked during session.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: SanctumTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          OutlinedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SlotConfigurationScreen()),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: SanctumTheme.goldAccent,
+              side: const BorderSide(color: SanctumTheme.goldAccent),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            child: const Text('Configure', style: TextStyle(fontSize: 12)),
           ),
         ],
       ),

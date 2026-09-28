@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'kiosk_slot.dart';
 
 class SessionConfig {
   static const String keyScheduledStart = 'scheduled_start_epoch';
@@ -6,6 +8,7 @@ class SessionConfig {
   static const String keyCooldownUntil = 'cooldown_until_epoch';
   static const String keyLastDuration = 'last_session_duration_minutes';
   static const String keyTestModeEnabled = 'test_mode_enabled';
+  static const String keyKioskSlots = 'kiosk_slots_json';
 
   static Future<void> saveSchedule({
     required DateTime startTime,
@@ -70,5 +73,27 @@ class SessionConfig {
       return expiry;
     }
     return null;
+  }
+
+  static Future<void> saveSlots(List<KioskSlot> slots) async {
+    final prefs = await SharedPreferences.getInstance();
+    final listJson = slots.map((s) => s.toJson()).toList();
+    await prefs.setString(keyKioskSlots, jsonEncode(listJson));
+  }
+
+  static Future<List<KioskSlot>> getSlots() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyKioskSlots);
+    if (raw == null) {
+      final defaults = KioskSlot.defaultSlots();
+      await saveSlots(defaults);
+      return defaults;
+    }
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded.map((item) => KioskSlot.fromJson(item as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return KioskSlot.defaultSlots();
+    }
   }
 }

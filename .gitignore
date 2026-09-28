@@ -1,6 +1,7 @@
 # Screenshots & Media
 Screenshot_*.jpg
 Screenshot_*.png
+IMG-*.jpg
 *.tmp
 
 # Miscellaneous

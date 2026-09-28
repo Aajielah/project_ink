@@ -117,4 +117,32 @@ class OverseerChannel {
       print('Error cancelling alarm: $e');
     }
   }
+
+  static Future<bool> launchPackage(String packageName) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('launchPackage', {
+        'packageName': packageName,
+      });
+      return res ?? false;
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('Error launching package $packageName: $e');
+      return false;
+    }
+  }
+
+  static Future<List<Map<String, String>>> getInstalledApps() async {
+    try {
+      final res = await _channel.invokeMethod<List<dynamic>>('getInstalledApps');
+      if (res != null) {
+        return res
+            .map((item) => Map<String, String>.from(item as Map<dynamic, dynamic>))
+            .toList();
+      }
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('Error getting installed apps: $e');
+    }
+    return [];
+  }
 }

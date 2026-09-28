@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/theme.dart';
-import 'screens/active_focus_screen.dart';
+import 'screens/kiosk_sanctum_screen.dart';
 import 'screens/home_scheduler_screen.dart';
 import 'screens/permission_guard_screen.dart';
 import 'services/notification_helper.dart';
@@ -41,13 +41,13 @@ class _RootGateScreenState extends State<RootGateScreen> {
   }
 
   Future<void> _checkInitialRoute() async {
-    // 1. If an active session is running, lock into ActiveFocusScreen immediately
+    // 1. If an active session is running, lock into KioskSanctumScreen immediately
     final sessionState = await OverseerChannel.getSessionState();
     if (sessionState['isSessionActive'] == true) {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const ActiveFocusScreen()),
+          MaterialPageRoute(builder: (_) => const KioskSanctumScreen()),
         );
       }
       return;
