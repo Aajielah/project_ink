@@ -1,0 +1,111 @@
+name: Build & Release Project Ink Overseer
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'ink_overseer/**'
+      - '.github/workflows/build_ink_overseer.yml'
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Publish as a downloadable GitHub Release'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  build-android:
+    name: Build Android Overseer APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        working-directory: ink_overseer
+        run: flutter pub get
+
+      - name: Run Automated Tests
+        working-directory: ink_overseer
+        run: flutter test
+
+      - name: Build Android Release APK
+        working-directory: ink_overseer
+        run: flutter build apk --release
+
+      - name: Prepare APK Asset
+        run: cp ink_overseer/build/app/outputs/flutter-apk/app-release.apk ProjectInk-Overseer.apk
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProjectInk-Overseer-APK
+          path: ProjectInk-Overseer.apk
+          retention-days: 14
+
+  publish-release:
+    name: Create GitHub Release with APK Download
+    needs: [build-android]
+    if: github.event_name == 'push' || github.event.inputs.create_release == 'true' || github.event.inputs.create_release == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ProjectInk-Overseer-APK
+          path: release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: overseer-v1.0.0-build${{ github.run_number }}
+          name: "Project Ink: Overseer v1.0.0 (Build ${{ github.run_number }})"
+          body: |
+            ### 🛡️ Project Ink: Overseer (Anti-Procrastination Focus Sanctum)
+
+            **Build #${{ github.run_number }}** is ready for installation on your Android device!
+
+            #### 📥 Download:
+            - 📱 **Android APK**: Download **`ProjectInk-Overseer.apk`** below directly to your phone.
+
+            ---
+
+            ### 🚀 First-Time Phone Setup:
+            1. Install `ProjectInk-Overseer.apk` on your Android phone.
+            2. Launch the app and grant the 4 system permissions:
+               - **Display Over Other Apps**: Enables the "Iron Gate" lockout overlay.
+               - **Accessibility Service**: Sub-100ms sentry that detects unapproved apps and redirects you to Pure Writer.
+               - **Device Administrator**: Anti-uninstall shield so you cannot delete the app during an active session.
+               - **Usage Access**: Tracks exact seconds spent in WhatsApp and AI apps.
+
+            ---
+
+            ### 🧪 Testing It Right Away (5-Minute Test Mode):
+            - On the Home screen, toggle **"🧪 Test Mode (5–10 Min Quick Cycles)"** ON.
+            - Tap **"Start Instant 5-Min Test Lock 🚀"**.
+            - The app will immediately launch Pure Writer.
+            - Try opening YouTube or Instagram $\rightarrow$ The **Iron Gate** overlay will slam shut!
+            - Try opening WhatsApp during the 1st minute $\rightarrow$ It will be locked. In the 2nd minute, it will unlock for 30s!
+            - Tap **"End Test Session"** anytime to exit the test.
+          files: |
+            release-assets/ProjectInk-Overseer.apk
+          draft: false
+          prerelease: false
