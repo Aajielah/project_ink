@@ -25,6 +25,8 @@ class ProjectWorkspaceScreen extends ConsumerStatefulWidget {
 class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen> {
   ActiveWorkspaceSection _activeSection = ActiveWorkspaceSection.generalIdea;
   String? _selectedItemId; // ID of the active Arc, Chapter, or CustomSection
+  bool _isSidebarVisible = true; // Zen mode toggle on desktop
+  int _chapterBeatIndex = 0; // 0: Start, 1: Middle, 2: End/Cliffhanger, 3: Full Chapter View
 
   // Text editing controllers
   final TextEditingController _generalIdeaController = TextEditingController();
@@ -48,6 +50,12 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
     _chapterEndController.dispose();
     _customContentController.dispose();
     super.dispose();
+  }
+
+  int _getWordCount(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    return trimmed.split(RegExp(r'\s+')).length;
   }
 
   // --- Actions ---
@@ -120,6 +128,7 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
     setState(() {
       _activeSection = ActiveWorkspaceSection.chapter;
       _selectedItemId = chapter.id;
+      _chapterBeatIndex = 0;
     });
   }
 
@@ -139,7 +148,7 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Chapter?'),
-        content: Text('Delete "${chapter.title}" and its 3-beat outline?'),
+        content: Text('Delete "${chapter.title}" and its chapter outline?'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
           FilledButton(
@@ -223,26 +232,32 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
 
   void _onGeneralIdeaChanged(String val) {
     ref.read(projectRepositoryProvider).updateGeneralIdea(widget.projectId, val);
+    setState(() {});
   }
 
   void _onArcContentChanged(String arcId, String val) {
     ref.read(arcRepositoryProvider).updateArcContent(arcId, val);
+    setState(() {});
   }
 
   void _onChapterStartChanged(String chapterId, String val) {
     ref.read(chapterRepositoryProvider).updateChapterBeats(id: chapterId, startBeat: val);
+    setState(() {});
   }
 
   void _onChapterMiddleChanged(String chapterId, String val) {
     ref.read(chapterRepositoryProvider).updateChapterBeats(id: chapterId, middleBeat: val);
+    setState(() {});
   }
 
   void _onChapterEndChanged(String chapterId, String val) {
     ref.read(chapterRepositoryProvider).updateChapterBeats(id: chapterId, endBeat: val);
+    setState(() {});
   }
 
   void _onCustomContentChanged(String sectionId, String val) {
     ref.read(customSectionRepositoryProvider).updateCustomSectionContent(sectionId, val);
+    setState(() {});
   }
 
   @override
@@ -284,24 +299,27 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
           isDrawer: !isWide,
         );
 
-        // Main Editor Pane Widget
-        final mainEditorWidget = _buildMainPane(
+        // Main Pure Writer Pane
+        final mainEditorWidget = _buildPureWriterPane(
           project: project,
           arcs: arcs,
           chapters: chapters,
           customSections: customSections,
+          showSidebarToggle: isWide,
         );
 
         if (isWide) {
-          // Desktop Split Layout
+          // Desktop Split / Zen Layout
           return Scaffold(
             body: Row(
               children: [
-                SizedBox(
-                  width: 300,
-                  child: sidebarWidget,
-                ),
-                const VerticalDivider(width: 1, thickness: 1),
+                if (_isSidebarVisible) ...[
+                  SizedBox(
+                    width: 290,
+                    child: sidebarWidget,
+                  ),
+                  const VerticalDivider(width: 1, thickness: 1),
+                ],
                 Expanded(
                   child: mainEditorWidget,
                 ),
@@ -334,7 +352,7 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
     );
   }
 
-  // --- Left Sidebar (Option B) ---
+  // --- Left Sidebar ---
 
   Widget _buildSidebar({
     required Project project,
@@ -418,7 +436,7 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
               children: [
                 // 1. General Idea
                 ListTile(
-                  leading: const Icon(Icons.description_outlined, size: 20),
+                  leading: const Icon(Icons.lightbulb_outline, size: 20),
                   title: const Text('General Idea', style: TextStyle(fontWeight: FontWeight.w600)),
                   selected: _activeSection == ActiveWorkspaceSection.generalIdea,
                   selectedTileColor: AppColors.amberGold.withOpacity(0.12),
@@ -578,6 +596,7 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
                       setState(() {
                         _activeSection = ActiveWorkspaceSection.chapter;
                         _selectedItemId = ch.id;
+                        _chapterBeatIndex = 0;
                       });
                       if (isDrawer) Navigator.of(context).pop();
                     },
@@ -691,219 +710,162 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
     );
   }
 
-  // --- Main Editor Workspace ---
+  // --- Main Pure Writer Pane (Full Space, No Confining Boxes) ---
 
-  Widget _buildMainPane({
+  Widget _buildPureWriterPane({
     required Project project,
     required List<Arc> arcs,
     required List<Chapter> chapters,
     required List<CustomSection> customSections,
+    required bool showSidebarToggle,
   }) {
     switch (_activeSection) {
       case ActiveWorkspaceSection.generalIdea:
-        return _buildGeneralIdeaEditor(project);
+        return _buildPureGeneralIdea(showSidebarToggle);
 
       case ActiveWorkspaceSection.arc:
         final arc = arcs.firstWhere(
           (a) => a.id == _selectedItemId,
-          orElse: () => arcs.isNotEmpty ? arcs.first : Arc(
-            id: '',
-            projectId: widget.projectId,
-            title: 'Arc',
-            content: '',
-            orderIndex: 0,
-            createdAt: DateTime.now(),
-          ),
+          orElse: () => arcs.isNotEmpty
+              ? arcs.first
+              : Arc(
+                  id: '',
+                  projectId: widget.projectId,
+                  title: 'Arc 1',
+                  content: '',
+                  orderIndex: 0,
+                  createdAt: DateTime.now(),
+                ),
         );
-        return _buildArcEditor(arc);
+        return _buildPureArc(arc, showSidebarToggle);
 
       case ActiveWorkspaceSection.chapter:
         final chapter = chapters.firstWhere(
           (c) => c.id == _selectedItemId,
-          orElse: () => chapters.isNotEmpty ? chapters.first : Chapter(
-            id: '',
-            projectId: widget.projectId,
-            title: 'Chapter',
-            orderIndex: 0,
-            startBeat: '',
-            middleBeat: '',
-            endBeat: '',
-            createdAt: DateTime.now(),
-          ),
+          orElse: () => chapters.isNotEmpty
+              ? chapters.first
+              : Chapter(
+                  id: '',
+                  projectId: widget.projectId,
+                  title: 'Chapter 1',
+                  orderIndex: 0,
+                  startBeat: '',
+                  middleBeat: '',
+                  endBeat: '',
+                  createdAt: DateTime.now(),
+                ),
         );
-        return _buildChapterEditor(chapter);
+        return _buildPureChapter(chapter, showSidebarToggle);
 
       case ActiveWorkspaceSection.customSection:
         final section = customSections.firstWhere(
           (s) => s.id == _selectedItemId,
-          orElse: () => customSections.isNotEmpty ? customSections.first : CustomSection(
-            id: '',
-            projectId: widget.projectId,
-            title: 'Section',
-            content: '',
-            orderIndex: 0,
-            createdAt: DateTime.now(),
-          ),
+          orElse: () => customSections.isNotEmpty
+              ? customSections.first
+              : CustomSection(
+                  id: '',
+                  projectId: widget.projectId,
+                  title: 'Section',
+                  content: '',
+                  orderIndex: 0,
+                  createdAt: DateTime.now(),
+                ),
         );
-        return _buildCustomSectionEditor(section);
+        return _buildPureCustomSection(section, showSidebarToggle);
     }
   }
 
-  // 1. General Idea Editor
-  Widget _buildGeneralIdeaEditor(Project project) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.amberGold.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.lightbulb_outline, color: AppColors.amberGold, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'General Idea',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
+  // 1. Pure General Idea (Full Screen Canvas)
+  Widget _buildPureGeneralIdea(bool showSidebarToggle) {
+    return Column(
+      children: [
+        _buildPureTopBar(
+          title: 'General Idea',
+          tag: 'Brainstorm Canvas',
+          tagColor: AppColors.amberGold,
+          onRename: null,
+          showSidebarToggle: showSidebarToggle,
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: TextField(
+              controller: _generalIdeaController,
+              expands: true,
+              maxLines: null,
+              minLines: null,
+              keyboardType: TextInputType.multiline,
+              style: const TextStyle(
+                fontSize: 17,
+                height: 1.8,
+                letterSpacing: 0.2,
               ),
-              const SizedBox(height: 6),
-              Text(
-                'This is where you add all you want piece by piece. A wide text area for premises, world thoughts, or anything you brainstorm.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
-                ),
+              decoration: const InputDecoration(
+                hintText:
+                    'Start writing your general idea piece by piece...\n\nPremise, world rules, character thoughts, and raw brainstorming. The whole space is yours to write without boundaries.',
+                border: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
               ),
-              const SizedBox(height: 24),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.3)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: TextField(
-                    controller: _generalIdeaController,
-                    maxLines: null,
-                    minLines: 16,
-                    decoration: const InputDecoration(
-                      hintText: 'Start writing your general idea here piece by piece...\n\n• Story core premise\n• Primary motivation & stakes\n• Themes, tone, or key scenes\n• Raw brainstorming thoughts...',
-                      border: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    style: const TextStyle(fontSize: 15, height: 1.6),
-                    onChanged: _onGeneralIdeaChanged,
-                  ),
-                ),
-              ),
-            ],
+              onChanged: _onGeneralIdeaChanged,
+            ),
           ),
         ),
-      ),
+        _buildPureBottomStatusBar(text: _generalIdeaController.text),
+      ],
     );
   }
 
-  // 2. Arc Editor
-  Widget _buildArcEditor(Arc arc) {
+  // 2. Pure Arc (Full Screen Canvas)
+  Widget _buildPureArc(Arc arc, bool showSidebarToggle) {
     if (_loadedArcId != arc.id) {
       _loadedArcId = arc.id;
       _arcContentController.text = arc.content;
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.amberGold.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.timeline, color: AppColors.amberGold, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _renameArc(arc),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              arc.title,
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.edit_outlined, size: 18, color: AppColors.amberGold),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+    return Column(
+      children: [
+        _buildPureTopBar(
+          title: arc.title,
+          tag: 'Arc Narrative',
+          tagColor: AppColors.amberGold,
+          onRename: () => _renameArc(arc),
+          showSidebarToggle: showSidebarToggle,
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: TextField(
+              controller: _arcContentController,
+              expands: true,
+              maxLines: null,
+              minLines: null,
+              keyboardType: TextInputType.multiline,
+              style: const TextStyle(
+                fontSize: 17,
+                height: 1.8,
+                letterSpacing: 0.2,
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Define the narrative movement, major turning points, and progression of this arc.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
-                ),
+              decoration: InputDecoration(
+                hintText:
+                    'Write everything for ${arc.title} here...\n\nOutline the overarching progression, milestones, key conflicts, and character development across this arc.',
+                border: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
               ),
-              const SizedBox(height: 24),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.3)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: TextField(
-                    controller: _arcContentController,
-                    maxLines: null,
-                    minLines: 14,
-                    decoration: InputDecoration(
-                      hintText: 'Outline what happens in ${arc.title}...\n\n• What is the starting state of the characters?\n• What inciting incident propels this arc forward?\n• What climax concludes this arc?',
-                      border: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    style: const TextStyle(fontSize: 15, height: 1.6),
-                    onChanged: (val) => _onArcContentChanged(arc.id, val),
-                  ),
-                ),
-              ),
-            ],
+              onChanged: (val) => _onArcContentChanged(arc.id, val),
+            ),
           ),
         ),
-      ),
+        _buildPureBottomStatusBar(text: _arcContentController.text),
+      ],
     );
   }
 
-  // 3. Chapter Outline Editor (3-Beat Template)
-  Widget _buildChapterEditor(Chapter chapter) {
+  // 3. Pure Chapter (Full Screen Pure Writer Canvas with 3-Beat Navigation)
+  Widget _buildPureChapter(Chapter chapter, bool showSidebarToggle) {
     if (_loadedChapterId != chapter.id) {
       _loadedChapterId = chapter.id;
       _chapterStartController.text = chapter.startBeat;
@@ -911,187 +873,360 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
       _chapterEndController.text = chapter.endBeat;
     }
 
+    // Determine current active text for bottom status bar
+    String activeText = '';
+    if (_chapterBeatIndex == 0) {
+      activeText = _chapterStartController.text;
+    } else if (_chapterBeatIndex == 1) {
+      activeText = _chapterMiddleController.text;
+    } else if (_chapterBeatIndex == 2) {
+      activeText = _chapterEndController.text;
+    } else {
+      activeText = '${_chapterStartController.text}\n\n${_chapterMiddleController.text}\n\n${_chapterEndController.text}';
+    }
+
+    return Column(
+      children: [
+        // Top Header
+        _buildPureTopBar(
+          title: chapter.title,
+          tag: 'Chapter',
+          tagColor: AppColors.royalBlue,
+          onRename: () => _renameChapter(chapter),
+          showSidebarToggle: showSidebarToggle,
+        ),
+
+        // Beat Selector Bar (Start, Middle, End, Combined)
+        _buildChapterBeatSelector(chapter),
+
+        // Pure Writer Full-Screen Writing Canvas
+        Expanded(
+          child: _chapterBeatIndex == 3
+              ? _buildFullChapterContinuousView(chapter)
+              : _buildSingleBeatFullCanvas(chapter),
+        ),
+
+        // Bottom Status Bar
+        _buildPureBottomStatusBar(
+          text: activeText,
+          onAddNextChapter: _addChapter,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSingleBeatFullCanvas(Chapter chapter) {
+    TextEditingController controller;
+    String hintText;
+    ValueChanged<String> onChanged;
+
+    if (_chapterBeatIndex == 0) {
+      controller = _chapterStartController;
+      hintText =
+          'Start (Hook + Situation Setup):\n\nHow does this chapter open? Write the hook, immediate situation, mood, and opening scene... The entire screen is yours to write.';
+      onChanged = (val) => _onChapterStartChanged(chapter.id, val);
+    } else if (_chapterBeatIndex == 1) {
+      controller = _chapterMiddleController;
+      hintText =
+          'Middle (Main Conflict + Development):\n\nWhat is the core friction or obstacle? Write the confrontation, escalation, dialogue, and turning developments...';
+      onChanged = (val) => _onChapterMiddleChanged(chapter.id, val);
+    } else {
+      controller = _chapterEndController;
+      hintText =
+          'End / Cliffhanger (Turning Point or Hook):\n\nHow does this chapter conclude? Write the twist, revelation, dramatic exit, or cliffhanger leading to the next chapter...';
+      onChanged = (val) => _onChapterEndChanged(chapter.id, val);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+      child: TextField(
+        controller: controller,
+        expands: true,
+        maxLines: null,
+        minLines: null,
+        keyboardType: TextInputType.multiline,
+        style: const TextStyle(
+          fontSize: 17,
+          height: 1.8,
+          letterSpacing: 0.2,
+        ),
+        decoration: InputDecoration(
+          hintText: hintText,
+          border: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+        ),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  // Combined Continuous View (Flowing Document)
+  Widget _buildFullChapterContinuousView(Chapter chapter) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Chapter Title & Universal Rename
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.royalBlue.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.auto_stories, color: AppColors.royalBlue, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _renameChapter(chapter),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              chapter.title,
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.edit_outlined, size: 18, color: AppColors.royalBlue),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '3-Beat Chapter Outline: Hook the reader at the start, escalate conflict in the middle, and exit on a sharp cliffhanger.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Beat 1: Start (Hook + Situation Setup)
-              _buildBeatCard(
-                title: 'Start',
-                subtitle: 'Hook + Situation Setup',
-                accentColor: AppColors.emerald,
-                icon: Icons.play_arrow_rounded,
-                controller: _chapterStartController,
-                hintText: 'How does this chapter open? What is the immediate hook, opening situation, emotional tone, and setup?',
-                onChanged: (val) => _onChapterStartChanged(chapter.id, val),
-              ),
-
-              const SizedBox(height: 18),
-
-              // Beat 2: Middle (Main Conflict + Development)
-              _buildBeatCard(
-                title: 'Middle',
-                subtitle: 'Main Conflict + Development',
-                accentColor: AppColors.amberGold,
-                icon: Icons.flash_on_rounded,
-                controller: _chapterMiddleController,
-                hintText: 'What is the main friction or challenge in this chapter? How do the stakes escalate? What action or discovery happens?',
-                onChanged: (val) => _onChapterMiddleChanged(chapter.id, val),
-              ),
-
-              const SizedBox(height: 18),
-
-              // Beat 3: End / Cliffhanger (Turning Point or Hook)
-              _buildBeatCard(
-                title: 'End / Cliffhanger',
-                subtitle: 'Turning Point or Hook',
-                accentColor: AppColors.crimsonInk,
-                icon: Icons.flag_rounded,
-                controller: _chapterEndController,
-                hintText: 'How does the chapter end? What unexpected turn, revelation, decision, or cliffhanger pulls the reader into the next chapter?',
-                onChanged: (val) => _onChapterEndChanged(chapter.id, val),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Add Next Chapter Button
-              Center(
-                child: FilledButton.icon(
-                  onPressed: _addChapter,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add Next Chapter'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.royalBlue,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                ),
-              ),
-            ],
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildContinuousBeatHeader('1. START (Hook & Situation Setup)', AppColors.emerald),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _chapterStartController,
+            maxLines: null,
+            minLines: 8,
+            style: const TextStyle(fontSize: 17, height: 1.8),
+            decoration: const InputDecoration(
+              hintText: 'Write the opening hook and situation setup...',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (val) => _onChapterStartChanged(chapter.id, val),
           ),
+          const Divider(height: 36),
+          _buildContinuousBeatHeader('2. MIDDLE (Main Conflict & Development)', AppColors.amberGold),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _chapterMiddleController,
+            maxLines: null,
+            minLines: 12,
+            style: const TextStyle(fontSize: 17, height: 1.8),
+            decoration: const InputDecoration(
+              hintText: 'Write the main conflict, escalation, and developments...',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (val) => _onChapterMiddleChanged(chapter.id, val),
+          ),
+          const Divider(height: 36),
+          _buildContinuousBeatHeader('3. END / CLIFFHANGER (Turning Point)', AppColors.crimsonInk),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _chapterEndController,
+            maxLines: null,
+            minLines: 8,
+            style: const TextStyle(fontSize: 17, height: 1.8),
+            decoration: const InputDecoration(
+              hintText: 'Write the ending twist, turning point, or cliffhanger...',
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (val) => _onChapterEndChanged(chapter.id, val),
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContinuousBeatHeader(String title, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: color,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChapterBeatSelector(Chapter chapter) {
+    final beats = [
+      {'title': 'Start', 'sub': 'Hook & Setup', 'color': AppColors.emerald, 'icon': Icons.play_arrow_rounded},
+      {'title': 'Middle', 'sub': 'Conflict', 'color': AppColors.amberGold, 'icon': Icons.flash_on_rounded},
+      {'title': 'End / Cliffhanger', 'sub': 'Turning Point', 'color': AppColors.crimsonInk, 'icon': Icons.flag_rounded},
+      {'title': 'Full Chapter', 'sub': 'All 3 Beats', 'color': AppColors.royalBlue, 'icon': Icons.menu_book_rounded},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color?.withOpacity(0.5) ?? Theme.of(context).cardColor.withOpacity(0.5),
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.15),
+          ),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(beats.length, (index) {
+            final b = beats[index];
+            final isSelected = _chapterBeatIndex == index;
+            final color = b['color'] as Color;
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                selected: isSelected,
+                avatar: Icon(
+                  b['icon'] as IconData,
+                  size: 15,
+                  color: isSelected ? Colors.white : color,
+                ),
+                label: Text(
+                  '${b['title']} (${b['sub']})',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? Colors.white : null,
+                  ),
+                ),
+                selectedColor: color,
+                onSelected: (selected) {
+                  if (selected) {
+                    setState(() {
+                      _chapterBeatIndex = index;
+                    });
+                  }
+                },
+              ),
+            );
+          }),
         ),
       ),
     );
   }
 
-  Widget _buildBeatCard({
-    required String title,
-    required String subtitle,
-    required Color accentColor,
-    required IconData icon,
-    required TextEditingController controller,
-    required String hintText,
-    required ValueChanged<String> onChanged,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: accentColor.withOpacity(0.35),
-          width: 1.2,
+  // 4. Pure Custom Section (Full Screen Canvas)
+  Widget _buildPureCustomSection(CustomSection section, bool showSidebarToggle) {
+    if (_loadedCustomId != section.id) {
+      _loadedCustomId = section.id;
+      _customContentController.text = section.content;
+    }
+
+    return Column(
+      children: [
+        _buildPureTopBar(
+          title: section.title,
+          tag: 'Custom Section',
+          tagColor: AppColors.deepTeal,
+          onRename: () => _renameCustomSection(section),
+          showSidebarToggle: showSidebarToggle,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.08),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
-              border: Border(
-                bottom: BorderSide(
-                  color: accentColor.withOpacity(0.2),
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, size: 18, color: accentColor),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: accentColor,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '($subtitle)',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Content text field
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
             child: TextField(
-              controller: controller,
+              controller: _customContentController,
+              expands: true,
               maxLines: null,
-              minLines: 4,
+              minLines: null,
+              keyboardType: TextInputType.multiline,
+              style: const TextStyle(
+                fontSize: 17,
+                height: 1.8,
+                letterSpacing: 0.2,
+              ),
               decoration: InputDecoration(
-                hintText: hintText,
+                hintText:
+                    'Write content for "${section.title}" here...\n\nCharacter profiles, magic systems, world lore, notes, or research. Full-screen writing space without boundaries.',
                 border: InputBorder.none,
                 focusedBorder: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
-              style: const TextStyle(fontSize: 14.5, height: 1.5),
-              onChanged: onChanged,
+              onChanged: (val) => _onCustomContentChanged(section.id, val),
+            ),
+          ),
+        ),
+        _buildPureBottomStatusBar(text: _customContentController.text),
+      ],
+    );
+  }
+
+  // Pure Writer Minimalist Top Bar
+  Widget _buildPureTopBar({
+    required String title,
+    required String tag,
+    required Color tagColor,
+    VoidCallback? onRename,
+    required bool showSidebarToggle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color?.withOpacity(0.4) ?? Theme.of(context).cardColor.withOpacity(0.4),
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.15),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (showSidebarToggle) ...[
+            IconButton(
+              icon: Icon(
+                _isSidebarVisible ? Icons.fullscreen : Icons.view_sidebar_outlined,
+                size: 20,
+              ),
+              tooltip: _isSidebarVisible ? 'Zen Mode (Hide Sidebar)' : 'Show Sidebar',
+              visualDensity: VisualDensity.compact,
+              onPressed: () {
+                setState(() {
+                  _isSidebarVisible = !_isSidebarVisible;
+                });
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: tagColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              tag.toUpperCase(),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: tagColor,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: InkWell(
+              onTap: onRename,
+              borderRadius: BorderRadius.circular(6),
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (onRename != null) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -1099,87 +1234,52 @@ class _ProjectWorkspaceScreenState extends ConsumerState<ProjectWorkspaceScreen>
     );
   }
 
-  // 4. Custom Section Editor
-  Widget _buildCustomSectionEditor(CustomSection section) {
-    if (_loadedCustomId != section.id) {
-      _loadedCustomId = section.id;
-      _customContentController.text = section.content;
-    }
+  // Pure Writer Minimalist Bottom Status Bar
+  Widget _buildPureBottomStatusBar({
+    required String text,
+    VoidCallback? onAddNextChapter,
+  }) {
+    final words = _getWordCount(text);
+    final chars = text.length;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.deepTeal.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.extension_outlined, color: AppColors.deepTeal, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _renameCustomSection(section),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              section.title,
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.edit_outlined, size: 18, color: AppColors.deepTeal),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Custom section created by you. Tap the title anytime to rename.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.3)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: TextField(
-                    controller: _customContentController,
-                    maxLines: null,
-                    minLines: 14,
-                    decoration: InputDecoration(
-                      hintText: 'Add notes, worldbuilding, characters, or rules for "${section.title}"...',
-                      border: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    style: const TextStyle(fontSize: 15, height: 1.6),
-                    onChanged: (val) => _onCustomContentChanged(section.id, val),
-                  ),
-                ),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 9),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color?.withOpacity(0.5) ?? Theme.of(context).cardColor.withOpacity(0.5),
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.15),
           ),
         ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_outline, size: 14, color: AppColors.emerald.withOpacity(0.85)),
+          const SizedBox(width: 6),
+          Text(
+            'Auto-saved',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(width: 18),
+          Text(
+            '$words words  •  $chars characters',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const Spacer(),
+          if (onAddNextChapter != null)
+            TextButton.icon(
+              onPressed: onAddNextChapter,
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Next Chapter', style: TextStyle(fontSize: 12)),
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            ),
+        ],
       ),
     );
   }
