@@ -3,12 +3,11 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
-class $UniversesTable extends Universes
-    with TableInfo<$UniversesTable, Universe> {
+class $BooksTable extends Books with TableInfo<$BooksTable, Book> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $UniversesTable(this.attachedDatabase, [this._alias]);
+  $BooksTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -18,10 +17,10 @@ class $UniversesTable extends Universes
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
-  late final GeneratedColumn<String> title = GeneratedColumn<String>(
-    'title',
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -36,62 +35,6 @@ class $UniversesTable extends Universes
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _loglineMeta = const VerificationMeta(
-    'logline',
-  );
-  @override
-  late final GeneratedColumn<String> logline = GeneratedColumn<String>(
-    'logline',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _synopsisMeta = const VerificationMeta(
-    'synopsis',
-  );
-  @override
-  late final GeneratedColumn<String> synopsis = GeneratedColumn<String>(
-    'synopsis',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _coverColorMeta = const VerificationMeta(
-    'coverColor',
-  );
-  @override
-  late final GeneratedColumn<String> coverColor = GeneratedColumn<String>(
-    'cover_color',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('amber'),
-  );
-  static const VerificationMeta _linkedProjectInkIdMeta =
-      const VerificationMeta('linkedProjectInkId');
-  @override
-  late final GeneratedColumn<String> linkedProjectInkId =
-      GeneratedColumn<String>(
-        'linked_project_ink_id',
-        aliasedName,
-        true,
-        type: DriftSqlType.string,
-        requiredDuringInsert: false,
-      );
-  static const VerificationMeta _linkedProjectInkNameMeta =
-      const VerificationMeta('linkedProjectInkName');
-  @override
-  late final GeneratedColumn<String> linkedProjectInkName =
-      GeneratedColumn<String>(
-        'linked_project_ink_name',
-        aliasedName,
-        true,
-        type: DriftSqlType.string,
-        requiredDuringInsert: false,
-      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -103,38 +46,16 @@ class $UniversesTable extends Universes
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    title,
-    genre,
-    logline,
-    synopsis,
-    coverColor,
-    linkedProjectInkId,
-    linkedProjectInkName,
-    createdAt,
-    updatedAt,
-  ];
+  List<GeneratedColumn> get $columns => [id, name, genre, createdAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'universes';
+  static const String $name = 'books';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Universe> instance, {
+    Insertable<Book> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -144,13 +65,13 @@ class $UniversesTable extends Universes
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('title')) {
+    if (data.containsKey('name')) {
       context.handle(
-        _titleMeta,
-        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
       );
     } else if (isInserting) {
-      context.missing(_titleMeta);
+      context.missing(_nameMeta);
     }
     if (data.containsKey('genre')) {
       context.handle(
@@ -160,42 +81,6 @@ class $UniversesTable extends Universes
     } else if (isInserting) {
       context.missing(_genreMeta);
     }
-    if (data.containsKey('logline')) {
-      context.handle(
-        _loglineMeta,
-        logline.isAcceptableOrUnknown(data['logline']!, _loglineMeta),
-      );
-    }
-    if (data.containsKey('synopsis')) {
-      context.handle(
-        _synopsisMeta,
-        synopsis.isAcceptableOrUnknown(data['synopsis']!, _synopsisMeta),
-      );
-    }
-    if (data.containsKey('cover_color')) {
-      context.handle(
-        _coverColorMeta,
-        coverColor.isAcceptableOrUnknown(data['cover_color']!, _coverColorMeta),
-      );
-    }
-    if (data.containsKey('linked_project_ink_id')) {
-      context.handle(
-        _linkedProjectInkIdMeta,
-        linkedProjectInkId.isAcceptableOrUnknown(
-          data['linked_project_ink_id']!,
-          _linkedProjectInkIdMeta,
-        ),
-      );
-    }
-    if (data.containsKey('linked_project_ink_name')) {
-      context.handle(
-        _linkedProjectInkNameMeta,
-        linkedProjectInkName.isAcceptableOrUnknown(
-          data['linked_project_ink_name']!,
-          _linkedProjectInkNameMeta,
-        ),
-      );
-    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -204,162 +89,80 @@ class $UniversesTable extends Universes
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Universe map(Map<String, dynamic> data, {String? tablePrefix}) {
+  Book map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Universe(
+    return Book(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      title: attachedDatabase.typeMapping.read(
+      name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}title'],
+        data['${effectivePrefix}name'],
       )!,
       genre: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}genre'],
       )!,
-      logline: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}logline'],
-      ),
-      synopsis: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}synopsis'],
-      ),
-      coverColor: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}cover_color'],
-      )!,
-      linkedProjectInkId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}linked_project_ink_id'],
-      ),
-      linkedProjectInkName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}linked_project_ink_name'],
-      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
       )!,
     );
   }
 
   @override
-  $UniversesTable createAlias(String alias) {
-    return $UniversesTable(attachedDatabase, alias);
+  $BooksTable createAlias(String alias) {
+    return $BooksTable(attachedDatabase, alias);
   }
 }
 
-class Universe extends DataClass implements Insertable<Universe> {
+class Book extends DataClass implements Insertable<Book> {
   final String id;
-  final String title;
+  final String name;
   final String genre;
-  final String? logline;
-  final String? synopsis;
-  final String coverColor;
-  final String? linkedProjectInkId;
-  final String? linkedProjectInkName;
   final DateTime createdAt;
-  final DateTime updatedAt;
-  const Universe({
+  const Book({
     required this.id,
-    required this.title,
+    required this.name,
     required this.genre,
-    this.logline,
-    this.synopsis,
-    required this.coverColor,
-    this.linkedProjectInkId,
-    this.linkedProjectInkName,
     required this.createdAt,
-    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['title'] = Variable<String>(title);
+    map['name'] = Variable<String>(name);
     map['genre'] = Variable<String>(genre);
-    if (!nullToAbsent || logline != null) {
-      map['logline'] = Variable<String>(logline);
-    }
-    if (!nullToAbsent || synopsis != null) {
-      map['synopsis'] = Variable<String>(synopsis);
-    }
-    map['cover_color'] = Variable<String>(coverColor);
-    if (!nullToAbsent || linkedProjectInkId != null) {
-      map['linked_project_ink_id'] = Variable<String>(linkedProjectInkId);
-    }
-    if (!nullToAbsent || linkedProjectInkName != null) {
-      map['linked_project_ink_name'] = Variable<String>(linkedProjectInkName);
-    }
     map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
-  UniversesCompanion toCompanion(bool nullToAbsent) {
-    return UniversesCompanion(
+  BooksCompanion toCompanion(bool nullToAbsent) {
+    return BooksCompanion(
       id: Value(id),
-      title: Value(title),
+      name: Value(name),
       genre: Value(genre),
-      logline: logline == null && nullToAbsent
-          ? const Value.absent()
-          : Value(logline),
-      synopsis: synopsis == null && nullToAbsent
-          ? const Value.absent()
-          : Value(synopsis),
-      coverColor: Value(coverColor),
-      linkedProjectInkId: linkedProjectInkId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(linkedProjectInkId),
-      linkedProjectInkName: linkedProjectInkName == null && nullToAbsent
-          ? const Value.absent()
-          : Value(linkedProjectInkName),
       createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
     );
   }
 
-  factory Universe.fromJson(
+  factory Book.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Universe(
+    return Book(
       id: serializer.fromJson<String>(json['id']),
-      title: serializer.fromJson<String>(json['title']),
+      name: serializer.fromJson<String>(json['name']),
       genre: serializer.fromJson<String>(json['genre']),
-      logline: serializer.fromJson<String?>(json['logline']),
-      synopsis: serializer.fromJson<String?>(json['synopsis']),
-      coverColor: serializer.fromJson<String>(json['coverColor']),
-      linkedProjectInkId: serializer.fromJson<String?>(
-        json['linkedProjectInkId'],
-      ),
-      linkedProjectInkName: serializer.fromJson<String?>(
-        json['linkedProjectInkName'],
-      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -367,208 +170,106 @@ class Universe extends DataClass implements Insertable<Universe> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'title': serializer.toJson<String>(title),
+      'name': serializer.toJson<String>(name),
       'genre': serializer.toJson<String>(genre),
-      'logline': serializer.toJson<String?>(logline),
-      'synopsis': serializer.toJson<String?>(synopsis),
-      'coverColor': serializer.toJson<String>(coverColor),
-      'linkedProjectInkId': serializer.toJson<String?>(linkedProjectInkId),
-      'linkedProjectInkName': serializer.toJson<String?>(linkedProjectInkName),
       'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
-  Universe copyWith({
+  Book copyWith({
     String? id,
-    String? title,
+    String? name,
     String? genre,
-    Value<String?> logline = const Value.absent(),
-    Value<String?> synopsis = const Value.absent(),
-    String? coverColor,
-    Value<String?> linkedProjectInkId = const Value.absent(),
-    Value<String?> linkedProjectInkName = const Value.absent(),
     DateTime? createdAt,
-    DateTime? updatedAt,
-  }) => Universe(
+  }) => Book(
     id: id ?? this.id,
-    title: title ?? this.title,
+    name: name ?? this.name,
     genre: genre ?? this.genre,
-    logline: logline.present ? logline.value : this.logline,
-    synopsis: synopsis.present ? synopsis.value : this.synopsis,
-    coverColor: coverColor ?? this.coverColor,
-    linkedProjectInkId: linkedProjectInkId.present
-        ? linkedProjectInkId.value
-        : this.linkedProjectInkId,
-    linkedProjectInkName: linkedProjectInkName.present
-        ? linkedProjectInkName.value
-        : this.linkedProjectInkName,
     createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
   );
-  Universe copyWithCompanion(UniversesCompanion data) {
-    return Universe(
+  Book copyWithCompanion(BooksCompanion data) {
+    return Book(
       id: data.id.present ? data.id.value : this.id,
-      title: data.title.present ? data.title.value : this.title,
+      name: data.name.present ? data.name.value : this.name,
       genre: data.genre.present ? data.genre.value : this.genre,
-      logline: data.logline.present ? data.logline.value : this.logline,
-      synopsis: data.synopsis.present ? data.synopsis.value : this.synopsis,
-      coverColor: data.coverColor.present
-          ? data.coverColor.value
-          : this.coverColor,
-      linkedProjectInkId: data.linkedProjectInkId.present
-          ? data.linkedProjectInkId.value
-          : this.linkedProjectInkId,
-      linkedProjectInkName: data.linkedProjectInkName.present
-          ? data.linkedProjectInkName.value
-          : this.linkedProjectInkName,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('Universe(')
+    return (StringBuffer('Book(')
           ..write('id: $id, ')
-          ..write('title: $title, ')
+          ..write('name: $name, ')
           ..write('genre: $genre, ')
-          ..write('logline: $logline, ')
-          ..write('synopsis: $synopsis, ')
-          ..write('coverColor: $coverColor, ')
-          ..write('linkedProjectInkId: $linkedProjectInkId, ')
-          ..write('linkedProjectInkName: $linkedProjectInkName, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-    id,
-    title,
-    genre,
-    logline,
-    synopsis,
-    coverColor,
-    linkedProjectInkId,
-    linkedProjectInkName,
-    createdAt,
-    updatedAt,
-  );
+  int get hashCode => Object.hash(id, name, genre, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Universe &&
+      (other is Book &&
           other.id == this.id &&
-          other.title == this.title &&
+          other.name == this.name &&
           other.genre == this.genre &&
-          other.logline == this.logline &&
-          other.synopsis == this.synopsis &&
-          other.coverColor == this.coverColor &&
-          other.linkedProjectInkId == this.linkedProjectInkId &&
-          other.linkedProjectInkName == this.linkedProjectInkName &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.createdAt == this.createdAt);
 }
 
-class UniversesCompanion extends UpdateCompanion<Universe> {
+class BooksCompanion extends UpdateCompanion<Book> {
   final Value<String> id;
-  final Value<String> title;
+  final Value<String> name;
   final Value<String> genre;
-  final Value<String?> logline;
-  final Value<String?> synopsis;
-  final Value<String> coverColor;
-  final Value<String?> linkedProjectInkId;
-  final Value<String?> linkedProjectInkName;
   final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
   final Value<int> rowid;
-  const UniversesCompanion({
+  const BooksCompanion({
     this.id = const Value.absent(),
-    this.title = const Value.absent(),
+    this.name = const Value.absent(),
     this.genre = const Value.absent(),
-    this.logline = const Value.absent(),
-    this.synopsis = const Value.absent(),
-    this.coverColor = const Value.absent(),
-    this.linkedProjectInkId = const Value.absent(),
-    this.linkedProjectInkName = const Value.absent(),
     this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  UniversesCompanion.insert({
+  BooksCompanion.insert({
     required String id,
-    required String title,
+    required String name,
     required String genre,
-    this.logline = const Value.absent(),
-    this.synopsis = const Value.absent(),
-    this.coverColor = const Value.absent(),
-    this.linkedProjectInkId = const Value.absent(),
-    this.linkedProjectInkName = const Value.absent(),
     required DateTime createdAt,
-    required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       title = Value(title),
+       name = Value(name),
        genre = Value(genre),
-       createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt);
-  static Insertable<Universe> custom({
+       createdAt = Value(createdAt);
+  static Insertable<Book> custom({
     Expression<String>? id,
-    Expression<String>? title,
+    Expression<String>? name,
     Expression<String>? genre,
-    Expression<String>? logline,
-    Expression<String>? synopsis,
-    Expression<String>? coverColor,
-    Expression<String>? linkedProjectInkId,
-    Expression<String>? linkedProjectInkName,
     Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (title != null) 'title': title,
+      if (name != null) 'name': name,
       if (genre != null) 'genre': genre,
-      if (logline != null) 'logline': logline,
-      if (synopsis != null) 'synopsis': synopsis,
-      if (coverColor != null) 'cover_color': coverColor,
-      if (linkedProjectInkId != null)
-        'linked_project_ink_id': linkedProjectInkId,
-      if (linkedProjectInkName != null)
-        'linked_project_ink_name': linkedProjectInkName,
       if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  UniversesCompanion copyWith({
+  BooksCompanion copyWith({
     Value<String>? id,
-    Value<String>? title,
+    Value<String>? name,
     Value<String>? genre,
-    Value<String?>? logline,
-    Value<String?>? synopsis,
-    Value<String>? coverColor,
-    Value<String?>? linkedProjectInkId,
-    Value<String?>? linkedProjectInkName,
     Value<DateTime>? createdAt,
-    Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
-    return UniversesCompanion(
+    return BooksCompanion(
       id: id ?? this.id,
-      title: title ?? this.title,
+      name: name ?? this.name,
       genre: genre ?? this.genre,
-      logline: logline ?? this.logline,
-      synopsis: synopsis ?? this.synopsis,
-      coverColor: coverColor ?? this.coverColor,
-      linkedProjectInkId: linkedProjectInkId ?? this.linkedProjectInkId,
-      linkedProjectInkName: linkedProjectInkName ?? this.linkedProjectInkName,
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -579,34 +280,14 @@ class UniversesCompanion extends UpdateCompanion<Universe> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (title.present) {
-      map['title'] = Variable<String>(title.value);
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
     }
     if (genre.present) {
       map['genre'] = Variable<String>(genre.value);
     }
-    if (logline.present) {
-      map['logline'] = Variable<String>(logline.value);
-    }
-    if (synopsis.present) {
-      map['synopsis'] = Variable<String>(synopsis.value);
-    }
-    if (coverColor.present) {
-      map['cover_color'] = Variable<String>(coverColor.value);
-    }
-    if (linkedProjectInkId.present) {
-      map['linked_project_ink_id'] = Variable<String>(linkedProjectInkId.value);
-    }
-    if (linkedProjectInkName.present) {
-      map['linked_project_ink_name'] = Variable<String>(
-        linkedProjectInkName.value,
-      );
-    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -616,29 +297,22 @@ class UniversesCompanion extends UpdateCompanion<Universe> {
 
   @override
   String toString() {
-    return (StringBuffer('UniversesCompanion(')
+    return (StringBuffer('BooksCompanion(')
           ..write('id: $id, ')
-          ..write('title: $title, ')
+          ..write('name: $name, ')
           ..write('genre: $genre, ')
-          ..write('logline: $logline, ')
-          ..write('synopsis: $synopsis, ')
-          ..write('coverColor: $coverColor, ')
-          ..write('linkedProjectInkId: $linkedProjectInkId, ')
-          ..write('linkedProjectInkName: $linkedProjectInkName, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $CharactersTable extends Characters
-    with TableInfo<$CharactersTable, Character> {
+class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $CharactersTable(this.attachedDatabase, [this._alias]);
+  $ProjectsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -648,18 +322,16 @@ class $CharactersTable extends Characters
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _universeIdMeta = const VerificationMeta(
-    'universeId',
-  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
   @override
-  late final GeneratedColumn<String> universeId = GeneratedColumn<String>(
-    'universe_id',
+  late final GeneratedColumn<String> bookId = GeneratedColumn<String>(
+    'book_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES universes (id) ON DELETE CASCADE',
+      'REFERENCES books (id) ON DELETE SET NULL',
     ),
   );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
@@ -671,129 +343,26 @@ class $CharactersTable extends Characters
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _aliasMeta = const VerificationMeta('alias');
+  static const VerificationMeta _genreMeta = const VerificationMeta('genre');
   @override
-  late final GeneratedColumn<String> alias = GeneratedColumn<String>(
-    'alias',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _roleMeta = const VerificationMeta('role');
-  @override
-  late final GeneratedColumn<String> role = GeneratedColumn<String>(
-    'role',
+  late final GeneratedColumn<String> genre = GeneratedColumn<String>(
+    'genre',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _archetypeMeta = const VerificationMeta(
-    'archetype',
+  static const VerificationMeta _generalIdeaMeta = const VerificationMeta(
+    'generalIdea',
   );
   @override
-  late final GeneratedColumn<String> archetype = GeneratedColumn<String>(
-    'archetype',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _ageMeta = const VerificationMeta('age');
-  @override
-  late final GeneratedColumn<String> age = GeneratedColumn<String>(
-    'age',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _occupationMeta = const VerificationMeta(
-    'occupation',
-  );
-  @override
-  late final GeneratedColumn<String> occupation = GeneratedColumn<String>(
-    'occupation',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _motivationMeta = const VerificationMeta(
-    'motivation',
-  );
-  @override
-  late final GeneratedColumn<String> motivation = GeneratedColumn<String>(
-    'motivation',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _flawMeta = const VerificationMeta('flaw');
-  @override
-  late final GeneratedColumn<String> flaw = GeneratedColumn<String>(
-    'flaw',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _internalConflictMeta = const VerificationMeta(
-    'internalConflict',
-  );
-  @override
-  late final GeneratedColumn<String> internalConflict = GeneratedColumn<String>(
-    'internal_conflict',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _backstoryMeta = const VerificationMeta(
-    'backstory',
-  );
-  @override
-  late final GeneratedColumn<String> backstory = GeneratedColumn<String>(
-    'backstory',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _arcStageMeta = const VerificationMeta(
-    'arcStage',
-  );
-  @override
-  late final GeneratedColumn<String> arcStage = GeneratedColumn<String>(
-    'arc_stage',
+  late final GeneratedColumn<String> generalIdea = GeneratedColumn<String>(
+    'general_idea',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('Introduction'),
-  );
-  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
-  @override
-  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
-    'notes',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _avatarColorMeta = const VerificationMeta(
-    'avatarColor',
-  );
-  @override
-  late final GeneratedColumn<String> avatarColor = GeneratedColumn<String>(
-    'avatar_color',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('teal'),
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -820,20 +389,10 @@ class $CharactersTable extends Characters
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    universeId,
+    bookId,
     name,
-    alias,
-    role,
-    archetype,
-    age,
-    occupation,
-    motivation,
-    flaw,
-    internalConflict,
-    backstory,
-    arcStage,
-    notes,
-    avatarColor,
+    genre,
+    generalIdea,
     createdAt,
     updatedAt,
   ];
@@ -841,10 +400,10 @@ class $CharactersTable extends Characters
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'characters';
+  static const String $name = 'projects';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Character> instance, {
+    Insertable<Project> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -854,13 +413,11 @@ class $CharactersTable extends Characters
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('universe_id')) {
+    if (data.containsKey('book_id')) {
       context.handle(
-        _universeIdMeta,
-        universeId.isAcceptableOrUnknown(data['universe_id']!, _universeIdMeta),
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
       );
-    } else if (isInserting) {
-      context.missing(_universeIdMeta);
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -870,83 +427,20 @@ class $CharactersTable extends Characters
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
-    if (data.containsKey('alias')) {
+    if (data.containsKey('genre')) {
       context.handle(
-        _aliasMeta,
-        alias.isAcceptableOrUnknown(data['alias']!, _aliasMeta),
-      );
-    }
-    if (data.containsKey('role')) {
-      context.handle(
-        _roleMeta,
-        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+        _genreMeta,
+        genre.isAcceptableOrUnknown(data['genre']!, _genreMeta),
       );
     } else if (isInserting) {
-      context.missing(_roleMeta);
+      context.missing(_genreMeta);
     }
-    if (data.containsKey('archetype')) {
+    if (data.containsKey('general_idea')) {
       context.handle(
-        _archetypeMeta,
-        archetype.isAcceptableOrUnknown(data['archetype']!, _archetypeMeta),
-      );
-    }
-    if (data.containsKey('age')) {
-      context.handle(
-        _ageMeta,
-        age.isAcceptableOrUnknown(data['age']!, _ageMeta),
-      );
-    }
-    if (data.containsKey('occupation')) {
-      context.handle(
-        _occupationMeta,
-        occupation.isAcceptableOrUnknown(data['occupation']!, _occupationMeta),
-      );
-    }
-    if (data.containsKey('motivation')) {
-      context.handle(
-        _motivationMeta,
-        motivation.isAcceptableOrUnknown(data['motivation']!, _motivationMeta),
-      );
-    }
-    if (data.containsKey('flaw')) {
-      context.handle(
-        _flawMeta,
-        flaw.isAcceptableOrUnknown(data['flaw']!, _flawMeta),
-      );
-    }
-    if (data.containsKey('internal_conflict')) {
-      context.handle(
-        _internalConflictMeta,
-        internalConflict.isAcceptableOrUnknown(
-          data['internal_conflict']!,
-          _internalConflictMeta,
-        ),
-      );
-    }
-    if (data.containsKey('backstory')) {
-      context.handle(
-        _backstoryMeta,
-        backstory.isAcceptableOrUnknown(data['backstory']!, _backstoryMeta),
-      );
-    }
-    if (data.containsKey('arc_stage')) {
-      context.handle(
-        _arcStageMeta,
-        arcStage.isAcceptableOrUnknown(data['arc_stage']!, _arcStageMeta),
-      );
-    }
-    if (data.containsKey('notes')) {
-      context.handle(
-        _notesMeta,
-        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
-      );
-    }
-    if (data.containsKey('avatar_color')) {
-      context.handle(
-        _avatarColorMeta,
-        avatarColor.isAcceptableOrUnknown(
-          data['avatar_color']!,
-          _avatarColorMeta,
+        _generalIdeaMeta,
+        generalIdea.isAcceptableOrUnknown(
+          data['general_idea']!,
+          _generalIdeaMeta,
         ),
       );
     }
@@ -972,68 +466,28 @@ class $CharactersTable extends Characters
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Character map(Map<String, dynamic> data, {String? tablePrefix}) {
+  Project map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Character(
+    return Project(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      universeId: attachedDatabase.typeMapping.read(
+      bookId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}universe_id'],
-      )!,
+        data['${effectivePrefix}book_id'],
+      ),
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
-      alias: attachedDatabase.typeMapping.read(
+      genre: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}alias'],
-      ),
-      role: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}role'],
+        data['${effectivePrefix}genre'],
       )!,
-      archetype: attachedDatabase.typeMapping.read(
+      generalIdea: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}archetype'],
-      ),
-      age: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}age'],
-      ),
-      occupation: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}occupation'],
-      ),
-      motivation: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}motivation'],
-      ),
-      flaw: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}flaw'],
-      ),
-      internalConflict: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}internal_conflict'],
-      ),
-      backstory: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}backstory'],
-      ),
-      arcStage: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}arc_stage'],
-      )!,
-      notes: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}notes'],
-      ),
-      avatarColor: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}avatar_color'],
+        data['${effectivePrefix}general_idea'],
       )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -1047,45 +501,25 @@ class $CharactersTable extends Characters
   }
 
   @override
-  $CharactersTable createAlias(String alias) {
-    return $CharactersTable(attachedDatabase, alias);
+  $ProjectsTable createAlias(String alias) {
+    return $ProjectsTable(attachedDatabase, alias);
   }
 }
 
-class Character extends DataClass implements Insertable<Character> {
+class Project extends DataClass implements Insertable<Project> {
   final String id;
-  final String universeId;
+  final String? bookId;
   final String name;
-  final String? alias;
-  final String role;
-  final String? archetype;
-  final String? age;
-  final String? occupation;
-  final String? motivation;
-  final String? flaw;
-  final String? internalConflict;
-  final String? backstory;
-  final String arcStage;
-  final String? notes;
-  final String avatarColor;
+  final String genre;
+  final String generalIdea;
   final DateTime createdAt;
   final DateTime updatedAt;
-  const Character({
+  const Project({
     required this.id,
-    required this.universeId,
+    this.bookId,
     required this.name,
-    this.alias,
-    required this.role,
-    this.archetype,
-    this.age,
-    this.occupation,
-    this.motivation,
-    this.flaw,
-    this.internalConflict,
-    this.backstory,
-    required this.arcStage,
-    this.notes,
-    required this.avatarColor,
+    required this.genre,
+    required this.generalIdea,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -1093,100 +527,42 @@ class Character extends DataClass implements Insertable<Character> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['universe_id'] = Variable<String>(universeId);
+    if (!nullToAbsent || bookId != null) {
+      map['book_id'] = Variable<String>(bookId);
+    }
     map['name'] = Variable<String>(name);
-    if (!nullToAbsent || alias != null) {
-      map['alias'] = Variable<String>(alias);
-    }
-    map['role'] = Variable<String>(role);
-    if (!nullToAbsent || archetype != null) {
-      map['archetype'] = Variable<String>(archetype);
-    }
-    if (!nullToAbsent || age != null) {
-      map['age'] = Variable<String>(age);
-    }
-    if (!nullToAbsent || occupation != null) {
-      map['occupation'] = Variable<String>(occupation);
-    }
-    if (!nullToAbsent || motivation != null) {
-      map['motivation'] = Variable<String>(motivation);
-    }
-    if (!nullToAbsent || flaw != null) {
-      map['flaw'] = Variable<String>(flaw);
-    }
-    if (!nullToAbsent || internalConflict != null) {
-      map['internal_conflict'] = Variable<String>(internalConflict);
-    }
-    if (!nullToAbsent || backstory != null) {
-      map['backstory'] = Variable<String>(backstory);
-    }
-    map['arc_stage'] = Variable<String>(arcStage);
-    if (!nullToAbsent || notes != null) {
-      map['notes'] = Variable<String>(notes);
-    }
-    map['avatar_color'] = Variable<String>(avatarColor);
+    map['genre'] = Variable<String>(genre);
+    map['general_idea'] = Variable<String>(generalIdea);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
-  CharactersCompanion toCompanion(bool nullToAbsent) {
-    return CharactersCompanion(
+  ProjectsCompanion toCompanion(bool nullToAbsent) {
+    return ProjectsCompanion(
       id: Value(id),
-      universeId: Value(universeId),
+      bookId: bookId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bookId),
       name: Value(name),
-      alias: alias == null && nullToAbsent
-          ? const Value.absent()
-          : Value(alias),
-      role: Value(role),
-      archetype: archetype == null && nullToAbsent
-          ? const Value.absent()
-          : Value(archetype),
-      age: age == null && nullToAbsent ? const Value.absent() : Value(age),
-      occupation: occupation == null && nullToAbsent
-          ? const Value.absent()
-          : Value(occupation),
-      motivation: motivation == null && nullToAbsent
-          ? const Value.absent()
-          : Value(motivation),
-      flaw: flaw == null && nullToAbsent ? const Value.absent() : Value(flaw),
-      internalConflict: internalConflict == null && nullToAbsent
-          ? const Value.absent()
-          : Value(internalConflict),
-      backstory: backstory == null && nullToAbsent
-          ? const Value.absent()
-          : Value(backstory),
-      arcStage: Value(arcStage),
-      notes: notes == null && nullToAbsent
-          ? const Value.absent()
-          : Value(notes),
-      avatarColor: Value(avatarColor),
+      genre: Value(genre),
+      generalIdea: Value(generalIdea),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
   }
 
-  factory Character.fromJson(
+  factory Project.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Character(
+    return Project(
       id: serializer.fromJson<String>(json['id']),
-      universeId: serializer.fromJson<String>(json['universeId']),
+      bookId: serializer.fromJson<String?>(json['bookId']),
       name: serializer.fromJson<String>(json['name']),
-      alias: serializer.fromJson<String?>(json['alias']),
-      role: serializer.fromJson<String>(json['role']),
-      archetype: serializer.fromJson<String?>(json['archetype']),
-      age: serializer.fromJson<String?>(json['age']),
-      occupation: serializer.fromJson<String?>(json['occupation']),
-      motivation: serializer.fromJson<String?>(json['motivation']),
-      flaw: serializer.fromJson<String?>(json['flaw']),
-      internalConflict: serializer.fromJson<String?>(json['internalConflict']),
-      backstory: serializer.fromJson<String?>(json['backstory']),
-      arcStage: serializer.fromJson<String>(json['arcStage']),
-      notes: serializer.fromJson<String?>(json['notes']),
-      avatarColor: serializer.fromJson<String>(json['avatarColor']),
+      genre: serializer.fromJson<String>(json['genre']),
+      generalIdea: serializer.fromJson<String>(json['generalIdea']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -1196,91 +572,41 @@ class Character extends DataClass implements Insertable<Character> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'universeId': serializer.toJson<String>(universeId),
+      'bookId': serializer.toJson<String?>(bookId),
       'name': serializer.toJson<String>(name),
-      'alias': serializer.toJson<String?>(alias),
-      'role': serializer.toJson<String>(role),
-      'archetype': serializer.toJson<String?>(archetype),
-      'age': serializer.toJson<String?>(age),
-      'occupation': serializer.toJson<String?>(occupation),
-      'motivation': serializer.toJson<String?>(motivation),
-      'flaw': serializer.toJson<String?>(flaw),
-      'internalConflict': serializer.toJson<String?>(internalConflict),
-      'backstory': serializer.toJson<String?>(backstory),
-      'arcStage': serializer.toJson<String>(arcStage),
-      'notes': serializer.toJson<String?>(notes),
-      'avatarColor': serializer.toJson<String>(avatarColor),
+      'genre': serializer.toJson<String>(genre),
+      'generalIdea': serializer.toJson<String>(generalIdea),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
-  Character copyWith({
+  Project copyWith({
     String? id,
-    String? universeId,
+    Value<String?> bookId = const Value.absent(),
     String? name,
-    Value<String?> alias = const Value.absent(),
-    String? role,
-    Value<String?> archetype = const Value.absent(),
-    Value<String?> age = const Value.absent(),
-    Value<String?> occupation = const Value.absent(),
-    Value<String?> motivation = const Value.absent(),
-    Value<String?> flaw = const Value.absent(),
-    Value<String?> internalConflict = const Value.absent(),
-    Value<String?> backstory = const Value.absent(),
-    String? arcStage,
-    Value<String?> notes = const Value.absent(),
-    String? avatarColor,
+    String? genre,
+    String? generalIdea,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) => Character(
+  }) => Project(
     id: id ?? this.id,
-    universeId: universeId ?? this.universeId,
+    bookId: bookId.present ? bookId.value : this.bookId,
     name: name ?? this.name,
-    alias: alias.present ? alias.value : this.alias,
-    role: role ?? this.role,
-    archetype: archetype.present ? archetype.value : this.archetype,
-    age: age.present ? age.value : this.age,
-    occupation: occupation.present ? occupation.value : this.occupation,
-    motivation: motivation.present ? motivation.value : this.motivation,
-    flaw: flaw.present ? flaw.value : this.flaw,
-    internalConflict: internalConflict.present
-        ? internalConflict.value
-        : this.internalConflict,
-    backstory: backstory.present ? backstory.value : this.backstory,
-    arcStage: arcStage ?? this.arcStage,
-    notes: notes.present ? notes.value : this.notes,
-    avatarColor: avatarColor ?? this.avatarColor,
+    genre: genre ?? this.genre,
+    generalIdea: generalIdea ?? this.generalIdea,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
-  Character copyWithCompanion(CharactersCompanion data) {
-    return Character(
+  Project copyWithCompanion(ProjectsCompanion data) {
+    return Project(
       id: data.id.present ? data.id.value : this.id,
-      universeId: data.universeId.present
-          ? data.universeId.value
-          : this.universeId,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
       name: data.name.present ? data.name.value : this.name,
-      alias: data.alias.present ? data.alias.value : this.alias,
-      role: data.role.present ? data.role.value : this.role,
-      archetype: data.archetype.present ? data.archetype.value : this.archetype,
-      age: data.age.present ? data.age.value : this.age,
-      occupation: data.occupation.present
-          ? data.occupation.value
-          : this.occupation,
-      motivation: data.motivation.present
-          ? data.motivation.value
-          : this.motivation,
-      flaw: data.flaw.present ? data.flaw.value : this.flaw,
-      internalConflict: data.internalConflict.present
-          ? data.internalConflict.value
-          : this.internalConflict,
-      backstory: data.backstory.present ? data.backstory.value : this.backstory,
-      arcStage: data.arcStage.present ? data.arcStage.value : this.arcStage,
-      notes: data.notes.present ? data.notes.value : this.notes,
-      avatarColor: data.avatarColor.present
-          ? data.avatarColor.value
-          : this.avatarColor,
+      genre: data.genre.present ? data.genre.value : this.genre,
+      generalIdea: data.generalIdea.present
+          ? data.generalIdea.value
+          : this.generalIdea,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -1288,22 +614,12 @@ class Character extends DataClass implements Insertable<Character> {
 
   @override
   String toString() {
-    return (StringBuffer('Character(')
+    return (StringBuffer('Project(')
           ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
+          ..write('bookId: $bookId, ')
           ..write('name: $name, ')
-          ..write('alias: $alias, ')
-          ..write('role: $role, ')
-          ..write('archetype: $archetype, ')
-          ..write('age: $age, ')
-          ..write('occupation: $occupation, ')
-          ..write('motivation: $motivation, ')
-          ..write('flaw: $flaw, ')
-          ..write('internalConflict: $internalConflict, ')
-          ..write('backstory: $backstory, ')
-          ..write('arcStage: $arcStage, ')
-          ..write('notes: $notes, ')
-          ..write('avatarColor: $avatarColor, ')
+          ..write('genre: $genre, ')
+          ..write('generalIdea: $generalIdea, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1311,190 +627,92 @@ class Character extends DataClass implements Insertable<Character> {
   }
 
   @override
-  int get hashCode => Object.hash(
-    id,
-    universeId,
-    name,
-    alias,
-    role,
-    archetype,
-    age,
-    occupation,
-    motivation,
-    flaw,
-    internalConflict,
-    backstory,
-    arcStage,
-    notes,
-    avatarColor,
-    createdAt,
-    updatedAt,
-  );
+  int get hashCode =>
+      Object.hash(id, bookId, name, genre, generalIdea, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Character &&
+      (other is Project &&
           other.id == this.id &&
-          other.universeId == this.universeId &&
+          other.bookId == this.bookId &&
           other.name == this.name &&
-          other.alias == this.alias &&
-          other.role == this.role &&
-          other.archetype == this.archetype &&
-          other.age == this.age &&
-          other.occupation == this.occupation &&
-          other.motivation == this.motivation &&
-          other.flaw == this.flaw &&
-          other.internalConflict == this.internalConflict &&
-          other.backstory == this.backstory &&
-          other.arcStage == this.arcStage &&
-          other.notes == this.notes &&
-          other.avatarColor == this.avatarColor &&
+          other.genre == this.genre &&
+          other.generalIdea == this.generalIdea &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
 
-class CharactersCompanion extends UpdateCompanion<Character> {
+class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<String> id;
-  final Value<String> universeId;
+  final Value<String?> bookId;
   final Value<String> name;
-  final Value<String?> alias;
-  final Value<String> role;
-  final Value<String?> archetype;
-  final Value<String?> age;
-  final Value<String?> occupation;
-  final Value<String?> motivation;
-  final Value<String?> flaw;
-  final Value<String?> internalConflict;
-  final Value<String?> backstory;
-  final Value<String> arcStage;
-  final Value<String?> notes;
-  final Value<String> avatarColor;
+  final Value<String> genre;
+  final Value<String> generalIdea;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
-  const CharactersCompanion({
+  const ProjectsCompanion({
     this.id = const Value.absent(),
-    this.universeId = const Value.absent(),
+    this.bookId = const Value.absent(),
     this.name = const Value.absent(),
-    this.alias = const Value.absent(),
-    this.role = const Value.absent(),
-    this.archetype = const Value.absent(),
-    this.age = const Value.absent(),
-    this.occupation = const Value.absent(),
-    this.motivation = const Value.absent(),
-    this.flaw = const Value.absent(),
-    this.internalConflict = const Value.absent(),
-    this.backstory = const Value.absent(),
-    this.arcStage = const Value.absent(),
-    this.notes = const Value.absent(),
-    this.avatarColor = const Value.absent(),
+    this.genre = const Value.absent(),
+    this.generalIdea = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  CharactersCompanion.insert({
+  ProjectsCompanion.insert({
     required String id,
-    required String universeId,
+    this.bookId = const Value.absent(),
     required String name,
-    this.alias = const Value.absent(),
-    required String role,
-    this.archetype = const Value.absent(),
-    this.age = const Value.absent(),
-    this.occupation = const Value.absent(),
-    this.motivation = const Value.absent(),
-    this.flaw = const Value.absent(),
-    this.internalConflict = const Value.absent(),
-    this.backstory = const Value.absent(),
-    this.arcStage = const Value.absent(),
-    this.notes = const Value.absent(),
-    this.avatarColor = const Value.absent(),
+    required String genre,
+    this.generalIdea = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       universeId = Value(universeId),
        name = Value(name),
-       role = Value(role),
+       genre = Value(genre),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
-  static Insertable<Character> custom({
+  static Insertable<Project> custom({
     Expression<String>? id,
-    Expression<String>? universeId,
+    Expression<String>? bookId,
     Expression<String>? name,
-    Expression<String>? alias,
-    Expression<String>? role,
-    Expression<String>? archetype,
-    Expression<String>? age,
-    Expression<String>? occupation,
-    Expression<String>? motivation,
-    Expression<String>? flaw,
-    Expression<String>? internalConflict,
-    Expression<String>? backstory,
-    Expression<String>? arcStage,
-    Expression<String>? notes,
-    Expression<String>? avatarColor,
+    Expression<String>? genre,
+    Expression<String>? generalIdea,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (universeId != null) 'universe_id': universeId,
+      if (bookId != null) 'book_id': bookId,
       if (name != null) 'name': name,
-      if (alias != null) 'alias': alias,
-      if (role != null) 'role': role,
-      if (archetype != null) 'archetype': archetype,
-      if (age != null) 'age': age,
-      if (occupation != null) 'occupation': occupation,
-      if (motivation != null) 'motivation': motivation,
-      if (flaw != null) 'flaw': flaw,
-      if (internalConflict != null) 'internal_conflict': internalConflict,
-      if (backstory != null) 'backstory': backstory,
-      if (arcStage != null) 'arc_stage': arcStage,
-      if (notes != null) 'notes': notes,
-      if (avatarColor != null) 'avatar_color': avatarColor,
+      if (genre != null) 'genre': genre,
+      if (generalIdea != null) 'general_idea': generalIdea,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  CharactersCompanion copyWith({
+  ProjectsCompanion copyWith({
     Value<String>? id,
-    Value<String>? universeId,
+    Value<String?>? bookId,
     Value<String>? name,
-    Value<String?>? alias,
-    Value<String>? role,
-    Value<String?>? archetype,
-    Value<String?>? age,
-    Value<String?>? occupation,
-    Value<String?>? motivation,
-    Value<String?>? flaw,
-    Value<String?>? internalConflict,
-    Value<String?>? backstory,
-    Value<String>? arcStage,
-    Value<String?>? notes,
-    Value<String>? avatarColor,
+    Value<String>? genre,
+    Value<String>? generalIdea,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
-    return CharactersCompanion(
+    return ProjectsCompanion(
       id: id ?? this.id,
-      universeId: universeId ?? this.universeId,
+      bookId: bookId ?? this.bookId,
       name: name ?? this.name,
-      alias: alias ?? this.alias,
-      role: role ?? this.role,
-      archetype: archetype ?? this.archetype,
-      age: age ?? this.age,
-      occupation: occupation ?? this.occupation,
-      motivation: motivation ?? this.motivation,
-      flaw: flaw ?? this.flaw,
-      internalConflict: internalConflict ?? this.internalConflict,
-      backstory: backstory ?? this.backstory,
-      arcStage: arcStage ?? this.arcStage,
-      notes: notes ?? this.notes,
-      avatarColor: avatarColor ?? this.avatarColor,
+      genre: genre ?? this.genre,
+      generalIdea: generalIdea ?? this.generalIdea,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1507,47 +725,17 @@ class CharactersCompanion extends UpdateCompanion<Character> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (universeId.present) {
-      map['universe_id'] = Variable<String>(universeId.value);
+    if (bookId.present) {
+      map['book_id'] = Variable<String>(bookId.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
-    if (alias.present) {
-      map['alias'] = Variable<String>(alias.value);
+    if (genre.present) {
+      map['genre'] = Variable<String>(genre.value);
     }
-    if (role.present) {
-      map['role'] = Variable<String>(role.value);
-    }
-    if (archetype.present) {
-      map['archetype'] = Variable<String>(archetype.value);
-    }
-    if (age.present) {
-      map['age'] = Variable<String>(age.value);
-    }
-    if (occupation.present) {
-      map['occupation'] = Variable<String>(occupation.value);
-    }
-    if (motivation.present) {
-      map['motivation'] = Variable<String>(motivation.value);
-    }
-    if (flaw.present) {
-      map['flaw'] = Variable<String>(flaw.value);
-    }
-    if (internalConflict.present) {
-      map['internal_conflict'] = Variable<String>(internalConflict.value);
-    }
-    if (backstory.present) {
-      map['backstory'] = Variable<String>(backstory.value);
-    }
-    if (arcStage.present) {
-      map['arc_stage'] = Variable<String>(arcStage.value);
-    }
-    if (notes.present) {
-      map['notes'] = Variable<String>(notes.value);
-    }
-    if (avatarColor.present) {
-      map['avatar_color'] = Variable<String>(avatarColor.value);
+    if (generalIdea.present) {
+      map['general_idea'] = Variable<String>(generalIdea.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -1563,22 +751,12 @@ class CharactersCompanion extends UpdateCompanion<Character> {
 
   @override
   String toString() {
-    return (StringBuffer('CharactersCompanion(')
+    return (StringBuffer('ProjectsCompanion(')
           ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
+          ..write('bookId: $bookId, ')
           ..write('name: $name, ')
-          ..write('alias: $alias, ')
-          ..write('role: $role, ')
-          ..write('archetype: $archetype, ')
-          ..write('age: $age, ')
-          ..write('occupation: $occupation, ')
-          ..write('motivation: $motivation, ')
-          ..write('flaw: $flaw, ')
-          ..write('internalConflict: $internalConflict, ')
-          ..write('backstory: $backstory, ')
-          ..write('arcStage: $arcStage, ')
-          ..write('notes: $notes, ')
-          ..write('avatarColor: $avatarColor, ')
+          ..write('genre: $genre, ')
+          ..write('generalIdea: $generalIdea, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -1587,12 +765,11 @@ class CharactersCompanion extends UpdateCompanion<Character> {
   }
 }
 
-class $CharacterRelationshipsTable extends CharacterRelationships
-    with TableInfo<$CharacterRelationshipsTable, CharacterRelationship> {
+class $ArcsTable extends Arcs with TableInfo<$ArcsTable, Arc> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $CharacterRelationshipsTable(this.attachedDatabase, [this._alias]);
+  $ArcsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -1602,71 +779,51 @@ class $CharacterRelationshipsTable extends CharacterRelationships
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _universeIdMeta = const VerificationMeta(
-    'universeId',
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
   );
   @override
-  late final GeneratedColumn<String> universeId = GeneratedColumn<String>(
-    'universe_id',
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+    'project_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES universes (id) ON DELETE CASCADE',
+      'REFERENCES projects (id) ON DELETE CASCADE',
     ),
   );
-  static const VerificationMeta _sourceCharacterIdMeta = const VerificationMeta(
-    'sourceCharacterId',
-  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
-  late final GeneratedColumn<String> sourceCharacterId =
-      GeneratedColumn<String>(
-        'source_character_id',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-        defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES characters (id) ON DELETE CASCADE',
-        ),
-      );
-  static const VerificationMeta _targetCharacterIdMeta = const VerificationMeta(
-    'targetCharacterId',
-  );
-  @override
-  late final GeneratedColumn<String> targetCharacterId =
-      GeneratedColumn<String>(
-        'target_character_id',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-        defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES characters (id) ON DELETE CASCADE',
-        ),
-      );
-  static const VerificationMeta _relationTypeMeta = const VerificationMeta(
-    'relationType',
-  );
-  @override
-  late final GeneratedColumn<String> relationType = GeneratedColumn<String>(
-    'relation_type',
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _descriptionMeta = const VerificationMeta(
-    'description',
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
   );
   @override
-  late final GeneratedColumn<String> description = GeneratedColumn<String>(
-    'description',
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
+  @override
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -1682,21 +839,20 @@ class $CharacterRelationshipsTable extends CharacterRelationships
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    universeId,
-    sourceCharacterId,
-    targetCharacterId,
-    relationType,
-    description,
+    projectId,
+    title,
+    content,
+    orderIndex,
     createdAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'character_relationships';
+  static const String $name = 'arcs';
   @override
   VerificationContext validateIntegrity(
-    Insertable<CharacterRelationship> instance, {
+    Insertable<Arc> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -1706,55 +862,35 @@ class $CharacterRelationshipsTable extends CharacterRelationships
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('universe_id')) {
+    if (data.containsKey('project_id')) {
       context.handle(
-        _universeIdMeta,
-        universeId.isAcceptableOrUnknown(data['universe_id']!, _universeIdMeta),
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_universeIdMeta);
+      context.missing(_projectIdMeta);
     }
-    if (data.containsKey('source_character_id')) {
+    if (data.containsKey('title')) {
       context.handle(
-        _sourceCharacterIdMeta,
-        sourceCharacterId.isAcceptableOrUnknown(
-          data['source_character_id']!,
-          _sourceCharacterIdMeta,
-        ),
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
       );
     } else if (isInserting) {
-      context.missing(_sourceCharacterIdMeta);
+      context.missing(_titleMeta);
     }
-    if (data.containsKey('target_character_id')) {
+    if (data.containsKey('content')) {
       context.handle(
-        _targetCharacterIdMeta,
-        targetCharacterId.isAcceptableOrUnknown(
-          data['target_character_id']!,
-          _targetCharacterIdMeta,
-        ),
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
       );
     } else if (isInserting) {
-      context.missing(_targetCharacterIdMeta);
-    }
-    if (data.containsKey('relation_type')) {
-      context.handle(
-        _relationTypeMeta,
-        relationType.isAcceptableOrUnknown(
-          data['relation_type']!,
-          _relationTypeMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_relationTypeMeta);
-    }
-    if (data.containsKey('description')) {
-      context.handle(
-        _descriptionMeta,
-        description.isAcceptableOrUnknown(
-          data['description']!,
-          _descriptionMeta,
-        ),
-      );
+      context.missing(_orderIndexMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -1770,33 +906,29 @@ class $CharacterRelationshipsTable extends CharacterRelationships
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  CharacterRelationship map(Map<String, dynamic> data, {String? tablePrefix}) {
+  Arc map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CharacterRelationship(
+    return Arc(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      universeId: attachedDatabase.typeMapping.read(
+      projectId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}universe_id'],
+        data['${effectivePrefix}project_id'],
       )!,
-      sourceCharacterId: attachedDatabase.typeMapping.read(
+      title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}source_character_id'],
+        data['${effectivePrefix}title'],
       )!,
-      targetCharacterId: attachedDatabase.typeMapping.read(
+      content: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}target_character_id'],
+        data['${effectivePrefix}content'],
       )!,
-      relationType: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}relation_type'],
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_index'],
       )!,
-      description: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}description'],
-      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1805,70 +937,60 @@ class $CharacterRelationshipsTable extends CharacterRelationships
   }
 
   @override
-  $CharacterRelationshipsTable createAlias(String alias) {
-    return $CharacterRelationshipsTable(attachedDatabase, alias);
+  $ArcsTable createAlias(String alias) {
+    return $ArcsTable(attachedDatabase, alias);
   }
 }
 
-class CharacterRelationship extends DataClass
-    implements Insertable<CharacterRelationship> {
+class Arc extends DataClass implements Insertable<Arc> {
   final String id;
-  final String universeId;
-  final String sourceCharacterId;
-  final String targetCharacterId;
-  final String relationType;
-  final String? description;
+  final String projectId;
+  final String title;
+  final String content;
+  final int orderIndex;
   final DateTime createdAt;
-  const CharacterRelationship({
+  const Arc({
     required this.id,
-    required this.universeId,
-    required this.sourceCharacterId,
-    required this.targetCharacterId,
-    required this.relationType,
-    this.description,
+    required this.projectId,
+    required this.title,
+    required this.content,
+    required this.orderIndex,
     required this.createdAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['universe_id'] = Variable<String>(universeId);
-    map['source_character_id'] = Variable<String>(sourceCharacterId);
-    map['target_character_id'] = Variable<String>(targetCharacterId);
-    map['relation_type'] = Variable<String>(relationType);
-    if (!nullToAbsent || description != null) {
-      map['description'] = Variable<String>(description);
-    }
+    map['project_id'] = Variable<String>(projectId);
+    map['title'] = Variable<String>(title);
+    map['content'] = Variable<String>(content);
+    map['order_index'] = Variable<int>(orderIndex);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
 
-  CharacterRelationshipsCompanion toCompanion(bool nullToAbsent) {
-    return CharacterRelationshipsCompanion(
+  ArcsCompanion toCompanion(bool nullToAbsent) {
+    return ArcsCompanion(
       id: Value(id),
-      universeId: Value(universeId),
-      sourceCharacterId: Value(sourceCharacterId),
-      targetCharacterId: Value(targetCharacterId),
-      relationType: Value(relationType),
-      description: description == null && nullToAbsent
-          ? const Value.absent()
-          : Value(description),
+      projectId: Value(projectId),
+      title: Value(title),
+      content: Value(content),
+      orderIndex: Value(orderIndex),
       createdAt: Value(createdAt),
     );
   }
 
-  factory CharacterRelationship.fromJson(
+  factory Arc.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CharacterRelationship(
+    return Arc(
       id: serializer.fromJson<String>(json['id']),
-      universeId: serializer.fromJson<String>(json['universeId']),
-      sourceCharacterId: serializer.fromJson<String>(json['sourceCharacterId']),
-      targetCharacterId: serializer.fromJson<String>(json['targetCharacterId']),
-      relationType: serializer.fromJson<String>(json['relationType']),
-      description: serializer.fromJson<String?>(json['description']),
+      projectId: serializer.fromJson<String>(json['projectId']),
+      title: serializer.fromJson<String>(json['title']),
+      content: serializer.fromJson<String>(json['content']),
+      orderIndex: serializer.fromJson<int>(json['orderIndex']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1877,167 +999,135 @@ class CharacterRelationship extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'universeId': serializer.toJson<String>(universeId),
-      'sourceCharacterId': serializer.toJson<String>(sourceCharacterId),
-      'targetCharacterId': serializer.toJson<String>(targetCharacterId),
-      'relationType': serializer.toJson<String>(relationType),
-      'description': serializer.toJson<String?>(description),
+      'projectId': serializer.toJson<String>(projectId),
+      'title': serializer.toJson<String>(title),
+      'content': serializer.toJson<String>(content),
+      'orderIndex': serializer.toJson<int>(orderIndex),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
 
-  CharacterRelationship copyWith({
+  Arc copyWith({
     String? id,
-    String? universeId,
-    String? sourceCharacterId,
-    String? targetCharacterId,
-    String? relationType,
-    Value<String?> description = const Value.absent(),
+    String? projectId,
+    String? title,
+    String? content,
+    int? orderIndex,
     DateTime? createdAt,
-  }) => CharacterRelationship(
+  }) => Arc(
     id: id ?? this.id,
-    universeId: universeId ?? this.universeId,
-    sourceCharacterId: sourceCharacterId ?? this.sourceCharacterId,
-    targetCharacterId: targetCharacterId ?? this.targetCharacterId,
-    relationType: relationType ?? this.relationType,
-    description: description.present ? description.value : this.description,
+    projectId: projectId ?? this.projectId,
+    title: title ?? this.title,
+    content: content ?? this.content,
+    orderIndex: orderIndex ?? this.orderIndex,
     createdAt: createdAt ?? this.createdAt,
   );
-  CharacterRelationship copyWithCompanion(
-    CharacterRelationshipsCompanion data,
-  ) {
-    return CharacterRelationship(
+  Arc copyWithCompanion(ArcsCompanion data) {
+    return Arc(
       id: data.id.present ? data.id.value : this.id,
-      universeId: data.universeId.present
-          ? data.universeId.value
-          : this.universeId,
-      sourceCharacterId: data.sourceCharacterId.present
-          ? data.sourceCharacterId.value
-          : this.sourceCharacterId,
-      targetCharacterId: data.targetCharacterId.present
-          ? data.targetCharacterId.value
-          : this.targetCharacterId,
-      relationType: data.relationType.present
-          ? data.relationType.value
-          : this.relationType,
-      description: data.description.present
-          ? data.description.value
-          : this.description,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      title: data.title.present ? data.title.value : this.title,
+      content: data.content.present ? data.content.value : this.content,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('CharacterRelationship(')
+    return (StringBuffer('Arc(')
           ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
-          ..write('sourceCharacterId: $sourceCharacterId, ')
-          ..write('targetCharacterId: $targetCharacterId, ')
-          ..write('relationType: $relationType, ')
-          ..write('description: $description, ')
+          ..write('projectId: $projectId, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('orderIndex: $orderIndex, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-    id,
-    universeId,
-    sourceCharacterId,
-    targetCharacterId,
-    relationType,
-    description,
-    createdAt,
-  );
+  int get hashCode =>
+      Object.hash(id, projectId, title, content, orderIndex, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is CharacterRelationship &&
+      (other is Arc &&
           other.id == this.id &&
-          other.universeId == this.universeId &&
-          other.sourceCharacterId == this.sourceCharacterId &&
-          other.targetCharacterId == this.targetCharacterId &&
-          other.relationType == this.relationType &&
-          other.description == this.description &&
+          other.projectId == this.projectId &&
+          other.title == this.title &&
+          other.content == this.content &&
+          other.orderIndex == this.orderIndex &&
           other.createdAt == this.createdAt);
 }
 
-class CharacterRelationshipsCompanion
-    extends UpdateCompanion<CharacterRelationship> {
+class ArcsCompanion extends UpdateCompanion<Arc> {
   final Value<String> id;
-  final Value<String> universeId;
-  final Value<String> sourceCharacterId;
-  final Value<String> targetCharacterId;
-  final Value<String> relationType;
-  final Value<String?> description;
+  final Value<String> projectId;
+  final Value<String> title;
+  final Value<String> content;
+  final Value<int> orderIndex;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
-  const CharacterRelationshipsCompanion({
+  const ArcsCompanion({
     this.id = const Value.absent(),
-    this.universeId = const Value.absent(),
-    this.sourceCharacterId = const Value.absent(),
-    this.targetCharacterId = const Value.absent(),
-    this.relationType = const Value.absent(),
-    this.description = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.content = const Value.absent(),
+    this.orderIndex = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  CharacterRelationshipsCompanion.insert({
+  ArcsCompanion.insert({
     required String id,
-    required String universeId,
-    required String sourceCharacterId,
-    required String targetCharacterId,
-    required String relationType,
-    this.description = const Value.absent(),
+    required String projectId,
+    required String title,
+    this.content = const Value.absent(),
+    required int orderIndex,
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       universeId = Value(universeId),
-       sourceCharacterId = Value(sourceCharacterId),
-       targetCharacterId = Value(targetCharacterId),
-       relationType = Value(relationType),
+       projectId = Value(projectId),
+       title = Value(title),
+       orderIndex = Value(orderIndex),
        createdAt = Value(createdAt);
-  static Insertable<CharacterRelationship> custom({
+  static Insertable<Arc> custom({
     Expression<String>? id,
-    Expression<String>? universeId,
-    Expression<String>? sourceCharacterId,
-    Expression<String>? targetCharacterId,
-    Expression<String>? relationType,
-    Expression<String>? description,
+    Expression<String>? projectId,
+    Expression<String>? title,
+    Expression<String>? content,
+    Expression<int>? orderIndex,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (universeId != null) 'universe_id': universeId,
-      if (sourceCharacterId != null) 'source_character_id': sourceCharacterId,
-      if (targetCharacterId != null) 'target_character_id': targetCharacterId,
-      if (relationType != null) 'relation_type': relationType,
-      if (description != null) 'description': description,
+      if (projectId != null) 'project_id': projectId,
+      if (title != null) 'title': title,
+      if (content != null) 'content': content,
+      if (orderIndex != null) 'order_index': orderIndex,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  CharacterRelationshipsCompanion copyWith({
+  ArcsCompanion copyWith({
     Value<String>? id,
-    Value<String>? universeId,
-    Value<String>? sourceCharacterId,
-    Value<String>? targetCharacterId,
-    Value<String>? relationType,
-    Value<String?>? description,
+    Value<String>? projectId,
+    Value<String>? title,
+    Value<String>? content,
+    Value<int>? orderIndex,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
-    return CharacterRelationshipsCompanion(
+    return ArcsCompanion(
       id: id ?? this.id,
-      universeId: universeId ?? this.universeId,
-      sourceCharacterId: sourceCharacterId ?? this.sourceCharacterId,
-      targetCharacterId: targetCharacterId ?? this.targetCharacterId,
-      relationType: relationType ?? this.relationType,
-      description: description ?? this.description,
+      projectId: projectId ?? this.projectId,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      orderIndex: orderIndex ?? this.orderIndex,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2049,20 +1139,17 @@ class CharacterRelationshipsCompanion
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (universeId.present) {
-      map['universe_id'] = Variable<String>(universeId.value);
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
     }
-    if (sourceCharacterId.present) {
-      map['source_character_id'] = Variable<String>(sourceCharacterId.value);
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
     }
-    if (targetCharacterId.present) {
-      map['target_character_id'] = Variable<String>(targetCharacterId.value);
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
     }
-    if (relationType.present) {
-      map['relation_type'] = Variable<String>(relationType.value);
-    }
-    if (description.present) {
-      map['description'] = Variable<String>(description.value);
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -2075,13 +1162,12 @@ class CharacterRelationshipsCompanion
 
   @override
   String toString() {
-    return (StringBuffer('CharacterRelationshipsCompanion(')
+    return (StringBuffer('ArcsCompanion(')
           ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
-          ..write('sourceCharacterId: $sourceCharacterId, ')
-          ..write('targetCharacterId: $targetCharacterId, ')
-          ..write('relationType: $relationType, ')
-          ..write('description: $description, ')
+          ..write('projectId: $projectId, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('orderIndex: $orderIndex, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2103,40 +1189,19 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _universeIdMeta = const VerificationMeta(
-    'universeId',
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
   );
   @override
-  late final GeneratedColumn<String> universeId = GeneratedColumn<String>(
-    'universe_id',
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+    'project_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES universes (id) ON DELETE CASCADE',
+      'REFERENCES projects (id) ON DELETE CASCADE',
     ),
-  );
-  static const VerificationMeta _chapterNumberMeta = const VerificationMeta(
-    'chapterNumber',
-  );
-  @override
-  late final GeneratedColumn<int> chapterNumber = GeneratedColumn<int>(
-    'chapter_number',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _actMeta = const VerificationMeta('act');
-  @override
-  late final GeneratedColumn<String> act = GeneratedColumn<String>(
-    'act',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('Act I'),
   );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
@@ -2146,38 +1211,6 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-  );
-  static const VerificationMeta _objectiveMeta = const VerificationMeta(
-    'objective',
-  );
-  @override
-  late final GeneratedColumn<String> objective = GeneratedColumn<String>(
-    'objective',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _estimatedWordCountMeta =
-      const VerificationMeta('estimatedWordCount');
-  @override
-  late final GeneratedColumn<int> estimatedWordCount = GeneratedColumn<int>(
-    'estimated_word_count',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(2500),
-  );
-  static const VerificationMeta _statusMeta = const VerificationMeta('status');
-  @override
-  late final GeneratedColumn<String> status = GeneratedColumn<String>(
-    'status',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('Outlined'),
   );
   static const VerificationMeta _orderIndexMeta = const VerificationMeta(
     'orderIndex',
@@ -2190,14 +1223,41 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  static const VerificationMeta _startBeatMeta = const VerificationMeta(
+    'startBeat',
+  );
   @override
-  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
-    'notes',
+  late final GeneratedColumn<String> startBeat = GeneratedColumn<String>(
+    'start_beat',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _middleBeatMeta = const VerificationMeta(
+    'middleBeat',
+  );
+  @override
+  late final GeneratedColumn<String> middleBeat = GeneratedColumn<String>(
+    'middle_beat',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _endBeatMeta = const VerificationMeta(
+    'endBeat',
+  );
+  @override
+  late final GeneratedColumn<String> endBeat = GeneratedColumn<String>(
+    'end_beat',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -2210,31 +1270,16 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    universeId,
-    chapterNumber,
-    act,
+    projectId,
     title,
-    objective,
-    estimatedWordCount,
-    status,
     orderIndex,
-    notes,
+    startBeat,
+    middleBeat,
+    endBeat,
     createdAt,
-    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2253,30 +1298,13 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('universe_id')) {
+    if (data.containsKey('project_id')) {
       context.handle(
-        _universeIdMeta,
-        universeId.isAcceptableOrUnknown(data['universe_id']!, _universeIdMeta),
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_universeIdMeta);
-    }
-    if (data.containsKey('chapter_number')) {
-      context.handle(
-        _chapterNumberMeta,
-        chapterNumber.isAcceptableOrUnknown(
-          data['chapter_number']!,
-          _chapterNumberMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_chapterNumberMeta);
-    }
-    if (data.containsKey('act')) {
-      context.handle(
-        _actMeta,
-        act.isAcceptableOrUnknown(data['act']!, _actMeta),
-      );
+      context.missing(_projectIdMeta);
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -2286,27 +1314,6 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
     } else if (isInserting) {
       context.missing(_titleMeta);
     }
-    if (data.containsKey('objective')) {
-      context.handle(
-        _objectiveMeta,
-        objective.isAcceptableOrUnknown(data['objective']!, _objectiveMeta),
-      );
-    }
-    if (data.containsKey('estimated_word_count')) {
-      context.handle(
-        _estimatedWordCountMeta,
-        estimatedWordCount.isAcceptableOrUnknown(
-          data['estimated_word_count']!,
-          _estimatedWordCountMeta,
-        ),
-      );
-    }
-    if (data.containsKey('status')) {
-      context.handle(
-        _statusMeta,
-        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
-      );
-    }
     if (data.containsKey('order_index')) {
       context.handle(
         _orderIndexMeta,
@@ -2315,10 +1322,22 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
     } else if (isInserting) {
       context.missing(_orderIndexMeta);
     }
-    if (data.containsKey('notes')) {
+    if (data.containsKey('start_beat')) {
       context.handle(
-        _notesMeta,
-        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+        _startBeatMeta,
+        startBeat.isAcceptableOrUnknown(data['start_beat']!, _startBeatMeta),
+      );
+    }
+    if (data.containsKey('middle_beat')) {
+      context.handle(
+        _middleBeatMeta,
+        middleBeat.isAcceptableOrUnknown(data['middle_beat']!, _middleBeatMeta),
+      );
+    }
+    if (data.containsKey('end_beat')) {
+      context.handle(
+        _endBeatMeta,
+        endBeat.isAcceptableOrUnknown(data['end_beat']!, _endBeatMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -2328,14 +1347,6 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
       );
     } else if (isInserting) {
       context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
     }
     return context;
   }
@@ -2350,49 +1361,33 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      universeId: attachedDatabase.typeMapping.read(
+      projectId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}universe_id'],
-      )!,
-      chapterNumber: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}chapter_number'],
-      )!,
-      act: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}act'],
+        data['${effectivePrefix}project_id'],
       )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
       )!,
-      objective: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}objective'],
-      ),
-      estimatedWordCount: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}estimated_word_count'],
-      )!,
-      status: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}status'],
-      )!,
       orderIndex: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}order_index'],
       )!,
-      notes: attachedDatabase.typeMapping.read(
+      startBeat: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}notes'],
-      ),
+        data['${effectivePrefix}start_beat'],
+      )!,
+      middleBeat: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}middle_beat'],
+      )!,
+      endBeat: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}end_beat'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
       )!,
     );
   }
@@ -2405,71 +1400,47 @@ class $ChaptersTable extends Chapters with TableInfo<$ChaptersTable, Chapter> {
 
 class Chapter extends DataClass implements Insertable<Chapter> {
   final String id;
-  final String universeId;
-  final int chapterNumber;
-  final String act;
+  final String projectId;
   final String title;
-  final String? objective;
-  final int estimatedWordCount;
-  final String status;
   final int orderIndex;
-  final String? notes;
+  final String startBeat;
+  final String middleBeat;
+  final String endBeat;
   final DateTime createdAt;
-  final DateTime updatedAt;
   const Chapter({
     required this.id,
-    required this.universeId,
-    required this.chapterNumber,
-    required this.act,
+    required this.projectId,
     required this.title,
-    this.objective,
-    required this.estimatedWordCount,
-    required this.status,
     required this.orderIndex,
-    this.notes,
+    required this.startBeat,
+    required this.middleBeat,
+    required this.endBeat,
     required this.createdAt,
-    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['universe_id'] = Variable<String>(universeId);
-    map['chapter_number'] = Variable<int>(chapterNumber);
-    map['act'] = Variable<String>(act);
+    map['project_id'] = Variable<String>(projectId);
     map['title'] = Variable<String>(title);
-    if (!nullToAbsent || objective != null) {
-      map['objective'] = Variable<String>(objective);
-    }
-    map['estimated_word_count'] = Variable<int>(estimatedWordCount);
-    map['status'] = Variable<String>(status);
     map['order_index'] = Variable<int>(orderIndex);
-    if (!nullToAbsent || notes != null) {
-      map['notes'] = Variable<String>(notes);
-    }
+    map['start_beat'] = Variable<String>(startBeat);
+    map['middle_beat'] = Variable<String>(middleBeat);
+    map['end_beat'] = Variable<String>(endBeat);
     map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
   ChaptersCompanion toCompanion(bool nullToAbsent) {
     return ChaptersCompanion(
       id: Value(id),
-      universeId: Value(universeId),
-      chapterNumber: Value(chapterNumber),
-      act: Value(act),
+      projectId: Value(projectId),
       title: Value(title),
-      objective: objective == null && nullToAbsent
-          ? const Value.absent()
-          : Value(objective),
-      estimatedWordCount: Value(estimatedWordCount),
-      status: Value(status),
       orderIndex: Value(orderIndex),
-      notes: notes == null && nullToAbsent
-          ? const Value.absent()
-          : Value(notes),
+      startBeat: Value(startBeat),
+      middleBeat: Value(middleBeat),
+      endBeat: Value(endBeat),
       createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
     );
   }
 
@@ -2480,17 +1451,13 @@ class Chapter extends DataClass implements Insertable<Chapter> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Chapter(
       id: serializer.fromJson<String>(json['id']),
-      universeId: serializer.fromJson<String>(json['universeId']),
-      chapterNumber: serializer.fromJson<int>(json['chapterNumber']),
-      act: serializer.fromJson<String>(json['act']),
+      projectId: serializer.fromJson<String>(json['projectId']),
       title: serializer.fromJson<String>(json['title']),
-      objective: serializer.fromJson<String?>(json['objective']),
-      estimatedWordCount: serializer.fromJson<int>(json['estimatedWordCount']),
-      status: serializer.fromJson<String>(json['status']),
       orderIndex: serializer.fromJson<int>(json['orderIndex']),
-      notes: serializer.fromJson<String?>(json['notes']),
+      startBeat: serializer.fromJson<String>(json['startBeat']),
+      middleBeat: serializer.fromJson<String>(json['middleBeat']),
+      endBeat: serializer.fromJson<String>(json['endBeat']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -2498,69 +1465,49 @@ class Chapter extends DataClass implements Insertable<Chapter> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'universeId': serializer.toJson<String>(universeId),
-      'chapterNumber': serializer.toJson<int>(chapterNumber),
-      'act': serializer.toJson<String>(act),
+      'projectId': serializer.toJson<String>(projectId),
       'title': serializer.toJson<String>(title),
-      'objective': serializer.toJson<String?>(objective),
-      'estimatedWordCount': serializer.toJson<int>(estimatedWordCount),
-      'status': serializer.toJson<String>(status),
       'orderIndex': serializer.toJson<int>(orderIndex),
-      'notes': serializer.toJson<String?>(notes),
+      'startBeat': serializer.toJson<String>(startBeat),
+      'middleBeat': serializer.toJson<String>(middleBeat),
+      'endBeat': serializer.toJson<String>(endBeat),
       'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
   Chapter copyWith({
     String? id,
-    String? universeId,
-    int? chapterNumber,
-    String? act,
+    String? projectId,
     String? title,
-    Value<String?> objective = const Value.absent(),
-    int? estimatedWordCount,
-    String? status,
     int? orderIndex,
-    Value<String?> notes = const Value.absent(),
+    String? startBeat,
+    String? middleBeat,
+    String? endBeat,
     DateTime? createdAt,
-    DateTime? updatedAt,
   }) => Chapter(
     id: id ?? this.id,
-    universeId: universeId ?? this.universeId,
-    chapterNumber: chapterNumber ?? this.chapterNumber,
-    act: act ?? this.act,
+    projectId: projectId ?? this.projectId,
     title: title ?? this.title,
-    objective: objective.present ? objective.value : this.objective,
-    estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
-    status: status ?? this.status,
     orderIndex: orderIndex ?? this.orderIndex,
-    notes: notes.present ? notes.value : this.notes,
+    startBeat: startBeat ?? this.startBeat,
+    middleBeat: middleBeat ?? this.middleBeat,
+    endBeat: endBeat ?? this.endBeat,
     createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
   );
   Chapter copyWithCompanion(ChaptersCompanion data) {
     return Chapter(
       id: data.id.present ? data.id.value : this.id,
-      universeId: data.universeId.present
-          ? data.universeId.value
-          : this.universeId,
-      chapterNumber: data.chapterNumber.present
-          ? data.chapterNumber.value
-          : this.chapterNumber,
-      act: data.act.present ? data.act.value : this.act,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
       title: data.title.present ? data.title.value : this.title,
-      objective: data.objective.present ? data.objective.value : this.objective,
-      estimatedWordCount: data.estimatedWordCount.present
-          ? data.estimatedWordCount.value
-          : this.estimatedWordCount,
-      status: data.status.present ? data.status.value : this.status,
       orderIndex: data.orderIndex.present
           ? data.orderIndex.value
           : this.orderIndex,
-      notes: data.notes.present ? data.notes.value : this.notes,
+      startBeat: data.startBeat.present ? data.startBeat.value : this.startBeat,
+      middleBeat: data.middleBeat.present
+          ? data.middleBeat.value
+          : this.middleBeat,
+      endBeat: data.endBeat.present ? data.endBeat.value : this.endBeat,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -2568,17 +1515,13 @@ class Chapter extends DataClass implements Insertable<Chapter> {
   String toString() {
     return (StringBuffer('Chapter(')
           ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
-          ..write('chapterNumber: $chapterNumber, ')
-          ..write('act: $act, ')
+          ..write('projectId: $projectId, ')
           ..write('title: $title, ')
-          ..write('objective: $objective, ')
-          ..write('estimatedWordCount: $estimatedWordCount, ')
-          ..write('status: $status, ')
           ..write('orderIndex: $orderIndex, ')
-          ..write('notes: $notes, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('startBeat: $startBeat, ')
+          ..write('middleBeat: $middleBeat, ')
+          ..write('endBeat: $endBeat, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -2586,147 +1529,108 @@ class Chapter extends DataClass implements Insertable<Chapter> {
   @override
   int get hashCode => Object.hash(
     id,
-    universeId,
-    chapterNumber,
-    act,
+    projectId,
     title,
-    objective,
-    estimatedWordCount,
-    status,
     orderIndex,
-    notes,
+    startBeat,
+    middleBeat,
+    endBeat,
     createdAt,
-    updatedAt,
   );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Chapter &&
           other.id == this.id &&
-          other.universeId == this.universeId &&
-          other.chapterNumber == this.chapterNumber &&
-          other.act == this.act &&
+          other.projectId == this.projectId &&
           other.title == this.title &&
-          other.objective == this.objective &&
-          other.estimatedWordCount == this.estimatedWordCount &&
-          other.status == this.status &&
           other.orderIndex == this.orderIndex &&
-          other.notes == this.notes &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.startBeat == this.startBeat &&
+          other.middleBeat == this.middleBeat &&
+          other.endBeat == this.endBeat &&
+          other.createdAt == this.createdAt);
 }
 
 class ChaptersCompanion extends UpdateCompanion<Chapter> {
   final Value<String> id;
-  final Value<String> universeId;
-  final Value<int> chapterNumber;
-  final Value<String> act;
+  final Value<String> projectId;
   final Value<String> title;
-  final Value<String?> objective;
-  final Value<int> estimatedWordCount;
-  final Value<String> status;
   final Value<int> orderIndex;
-  final Value<String?> notes;
+  final Value<String> startBeat;
+  final Value<String> middleBeat;
+  final Value<String> endBeat;
   final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const ChaptersCompanion({
     this.id = const Value.absent(),
-    this.universeId = const Value.absent(),
-    this.chapterNumber = const Value.absent(),
-    this.act = const Value.absent(),
+    this.projectId = const Value.absent(),
     this.title = const Value.absent(),
-    this.objective = const Value.absent(),
-    this.estimatedWordCount = const Value.absent(),
-    this.status = const Value.absent(),
     this.orderIndex = const Value.absent(),
-    this.notes = const Value.absent(),
+    this.startBeat = const Value.absent(),
+    this.middleBeat = const Value.absent(),
+    this.endBeat = const Value.absent(),
     this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ChaptersCompanion.insert({
     required String id,
-    required String universeId,
-    required int chapterNumber,
-    this.act = const Value.absent(),
+    required String projectId,
     required String title,
-    this.objective = const Value.absent(),
-    this.estimatedWordCount = const Value.absent(),
-    this.status = const Value.absent(),
     required int orderIndex,
-    this.notes = const Value.absent(),
+    this.startBeat = const Value.absent(),
+    this.middleBeat = const Value.absent(),
+    this.endBeat = const Value.absent(),
     required DateTime createdAt,
-    required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       universeId = Value(universeId),
-       chapterNumber = Value(chapterNumber),
+       projectId = Value(projectId),
        title = Value(title),
        orderIndex = Value(orderIndex),
-       createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt);
+       createdAt = Value(createdAt);
   static Insertable<Chapter> custom({
     Expression<String>? id,
-    Expression<String>? universeId,
-    Expression<int>? chapterNumber,
-    Expression<String>? act,
+    Expression<String>? projectId,
     Expression<String>? title,
-    Expression<String>? objective,
-    Expression<int>? estimatedWordCount,
-    Expression<String>? status,
     Expression<int>? orderIndex,
-    Expression<String>? notes,
+    Expression<String>? startBeat,
+    Expression<String>? middleBeat,
+    Expression<String>? endBeat,
     Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (universeId != null) 'universe_id': universeId,
-      if (chapterNumber != null) 'chapter_number': chapterNumber,
-      if (act != null) 'act': act,
+      if (projectId != null) 'project_id': projectId,
       if (title != null) 'title': title,
-      if (objective != null) 'objective': objective,
-      if (estimatedWordCount != null)
-        'estimated_word_count': estimatedWordCount,
-      if (status != null) 'status': status,
       if (orderIndex != null) 'order_index': orderIndex,
-      if (notes != null) 'notes': notes,
+      if (startBeat != null) 'start_beat': startBeat,
+      if (middleBeat != null) 'middle_beat': middleBeat,
+      if (endBeat != null) 'end_beat': endBeat,
       if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
   ChaptersCompanion copyWith({
     Value<String>? id,
-    Value<String>? universeId,
-    Value<int>? chapterNumber,
-    Value<String>? act,
+    Value<String>? projectId,
     Value<String>? title,
-    Value<String?>? objective,
-    Value<int>? estimatedWordCount,
-    Value<String>? status,
     Value<int>? orderIndex,
-    Value<String?>? notes,
+    Value<String>? startBeat,
+    Value<String>? middleBeat,
+    Value<String>? endBeat,
     Value<DateTime>? createdAt,
-    Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
     return ChaptersCompanion(
       id: id ?? this.id,
-      universeId: universeId ?? this.universeId,
-      chapterNumber: chapterNumber ?? this.chapterNumber,
-      act: act ?? this.act,
+      projectId: projectId ?? this.projectId,
       title: title ?? this.title,
-      objective: objective ?? this.objective,
-      estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
-      status: status ?? this.status,
       orderIndex: orderIndex ?? this.orderIndex,
-      notes: notes ?? this.notes,
+      startBeat: startBeat ?? this.startBeat,
+      middleBeat: middleBeat ?? this.middleBeat,
+      endBeat: endBeat ?? this.endBeat,
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2737,38 +1641,26 @@ class ChaptersCompanion extends UpdateCompanion<Chapter> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (universeId.present) {
-      map['universe_id'] = Variable<String>(universeId.value);
-    }
-    if (chapterNumber.present) {
-      map['chapter_number'] = Variable<int>(chapterNumber.value);
-    }
-    if (act.present) {
-      map['act'] = Variable<String>(act.value);
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
-    if (objective.present) {
-      map['objective'] = Variable<String>(objective.value);
-    }
-    if (estimatedWordCount.present) {
-      map['estimated_word_count'] = Variable<int>(estimatedWordCount.value);
-    }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
-    }
     if (orderIndex.present) {
       map['order_index'] = Variable<int>(orderIndex.value);
     }
-    if (notes.present) {
-      map['notes'] = Variable<String>(notes.value);
+    if (startBeat.present) {
+      map['start_beat'] = Variable<String>(startBeat.value);
+    }
+    if (middleBeat.present) {
+      map['middle_beat'] = Variable<String>(middleBeat.value);
+    }
+    if (endBeat.present) {
+      map['end_beat'] = Variable<String>(endBeat.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -2780,28 +1672,25 @@ class ChaptersCompanion extends UpdateCompanion<Chapter> {
   String toString() {
     return (StringBuffer('ChaptersCompanion(')
           ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
-          ..write('chapterNumber: $chapterNumber, ')
-          ..write('act: $act, ')
+          ..write('projectId: $projectId, ')
           ..write('title: $title, ')
-          ..write('objective: $objective, ')
-          ..write('estimatedWordCount: $estimatedWordCount, ')
-          ..write('status: $status, ')
           ..write('orderIndex: $orderIndex, ')
-          ..write('notes: $notes, ')
+          ..write('startBeat: $startBeat, ')
+          ..write('middleBeat: $middleBeat, ')
+          ..write('endBeat: $endBeat, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
+class $CustomSectionsTable extends CustomSections
+    with TableInfo<$CustomSectionsTable, CustomSection> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $ScenesTable(this.attachedDatabase, [this._alias]);
+  $CustomSectionsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -2811,44 +1700,19 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _chapterIdMeta = const VerificationMeta(
-    'chapterId',
+  static const VerificationMeta _projectIdMeta = const VerificationMeta(
+    'projectId',
   );
   @override
-  late final GeneratedColumn<String> chapterId = GeneratedColumn<String>(
-    'chapter_id',
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+    'project_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES chapters (id) ON DELETE CASCADE',
+      'REFERENCES projects (id) ON DELETE CASCADE',
     ),
-  );
-  static const VerificationMeta _universeIdMeta = const VerificationMeta(
-    'universeId',
-  );
-  @override
-  late final GeneratedColumn<String> universeId = GeneratedColumn<String>(
-    'universe_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES universes (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _sceneNumberMeta = const VerificationMeta(
-    'sceneNumber',
-  );
-  @override
-  late final GeneratedColumn<int> sceneNumber = GeneratedColumn<int>(
-    'scene_number',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
   );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
@@ -2859,63 +1723,17 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _summaryMeta = const VerificationMeta(
-    'summary',
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
   );
   @override
-  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
-    'summary',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _povCharacterIdMeta = const VerificationMeta(
-    'povCharacterId',
-  );
-  @override
-  late final GeneratedColumn<String> povCharacterId = GeneratedColumn<String>(
-    'pov_character_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES characters (id) ON DELETE SET NULL',
-    ),
-  );
-  static const VerificationMeta _locationNameMeta = const VerificationMeta(
-    'locationName',
-  );
-  @override
-  late final GeneratedColumn<String> locationName = GeneratedColumn<String>(
-    'location_name',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _tensionLevelMeta = const VerificationMeta(
-    'tensionLevel',
-  );
-  @override
-  late final GeneratedColumn<int> tensionLevel = GeneratedColumn<int>(
-    'tension_level',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(5),
-  );
-  static const VerificationMeta _statusMeta = const VerificationMeta('status');
-  @override
-  late final GeneratedColumn<String> status = GeneratedColumn<String>(
-    'status',
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('Outlined'),
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _orderIndexMeta = const VerificationMeta(
     'orderIndex',
@@ -2939,41 +1757,23 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    chapterId,
-    universeId,
-    sceneNumber,
+    projectId,
     title,
-    summary,
-    povCharacterId,
-    locationName,
-    tensionLevel,
-    status,
+    content,
     orderIndex,
     createdAt,
-    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'scenes';
+  static const String $name = 'custom_sections';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Scene> instance, {
+    Insertable<CustomSection> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -2983,32 +1783,13 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('chapter_id')) {
+    if (data.containsKey('project_id')) {
       context.handle(
-        _chapterIdMeta,
-        chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta),
+        _projectIdMeta,
+        projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_chapterIdMeta);
-    }
-    if (data.containsKey('universe_id')) {
-      context.handle(
-        _universeIdMeta,
-        universeId.isAcceptableOrUnknown(data['universe_id']!, _universeIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_universeIdMeta);
-    }
-    if (data.containsKey('scene_number')) {
-      context.handle(
-        _sceneNumberMeta,
-        sceneNumber.isAcceptableOrUnknown(
-          data['scene_number']!,
-          _sceneNumberMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_sceneNumberMeta);
+      context.missing(_projectIdMeta);
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -3018,43 +1799,10 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
     } else if (isInserting) {
       context.missing(_titleMeta);
     }
-    if (data.containsKey('summary')) {
+    if (data.containsKey('content')) {
       context.handle(
-        _summaryMeta,
-        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
-      );
-    }
-    if (data.containsKey('pov_character_id')) {
-      context.handle(
-        _povCharacterIdMeta,
-        povCharacterId.isAcceptableOrUnknown(
-          data['pov_character_id']!,
-          _povCharacterIdMeta,
-        ),
-      );
-    }
-    if (data.containsKey('location_name')) {
-      context.handle(
-        _locationNameMeta,
-        locationName.isAcceptableOrUnknown(
-          data['location_name']!,
-          _locationNameMeta,
-        ),
-      );
-    }
-    if (data.containsKey('tension_level')) {
-      context.handle(
-        _tensionLevelMeta,
-        tensionLevel.isAcceptableOrUnknown(
-          data['tension_level']!,
-          _tensionLevelMeta,
-        ),
-      );
-    }
-    if (data.containsKey('status')) {
-      context.handle(
-        _statusMeta,
-        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
       );
     }
     if (data.containsKey('order_index')) {
@@ -3073,62 +1821,30 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Scene map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CustomSection map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Scene(
+    return CustomSection(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      chapterId: attachedDatabase.typeMapping.read(
+      projectId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}chapter_id'],
-      )!,
-      universeId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}universe_id'],
-      )!,
-      sceneNumber: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}scene_number'],
+        data['${effectivePrefix}project_id'],
       )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
       )!,
-      summary: attachedDatabase.typeMapping.read(
+      content: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}summary'],
-      ),
-      povCharacterId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}pov_character_id'],
-      ),
-      locationName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}location_name'],
-      ),
-      tensionLevel: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}tension_level'],
-      )!,
-      status: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}status'],
+        data['${effectivePrefix}content'],
       )!,
       orderIndex: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -3138,116 +1854,65 @@ class $ScenesTable extends Scenes with TableInfo<$ScenesTable, Scene> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
     );
   }
 
   @override
-  $ScenesTable createAlias(String alias) {
-    return $ScenesTable(attachedDatabase, alias);
+  $CustomSectionsTable createAlias(String alias) {
+    return $CustomSectionsTable(attachedDatabase, alias);
   }
 }
 
-class Scene extends DataClass implements Insertable<Scene> {
+class CustomSection extends DataClass implements Insertable<CustomSection> {
   final String id;
-  final String chapterId;
-  final String universeId;
-  final int sceneNumber;
+  final String projectId;
   final String title;
-  final String? summary;
-  final String? povCharacterId;
-  final String? locationName;
-  final int tensionLevel;
-  final String status;
+  final String content;
   final int orderIndex;
   final DateTime createdAt;
-  final DateTime updatedAt;
-  const Scene({
+  const CustomSection({
     required this.id,
-    required this.chapterId,
-    required this.universeId,
-    required this.sceneNumber,
+    required this.projectId,
     required this.title,
-    this.summary,
-    this.povCharacterId,
-    this.locationName,
-    required this.tensionLevel,
-    required this.status,
+    required this.content,
     required this.orderIndex,
     required this.createdAt,
-    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['chapter_id'] = Variable<String>(chapterId);
-    map['universe_id'] = Variable<String>(universeId);
-    map['scene_number'] = Variable<int>(sceneNumber);
+    map['project_id'] = Variable<String>(projectId);
     map['title'] = Variable<String>(title);
-    if (!nullToAbsent || summary != null) {
-      map['summary'] = Variable<String>(summary);
-    }
-    if (!nullToAbsent || povCharacterId != null) {
-      map['pov_character_id'] = Variable<String>(povCharacterId);
-    }
-    if (!nullToAbsent || locationName != null) {
-      map['location_name'] = Variable<String>(locationName);
-    }
-    map['tension_level'] = Variable<int>(tensionLevel);
-    map['status'] = Variable<String>(status);
+    map['content'] = Variable<String>(content);
     map['order_index'] = Variable<int>(orderIndex);
     map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
-  ScenesCompanion toCompanion(bool nullToAbsent) {
-    return ScenesCompanion(
+  CustomSectionsCompanion toCompanion(bool nullToAbsent) {
+    return CustomSectionsCompanion(
       id: Value(id),
-      chapterId: Value(chapterId),
-      universeId: Value(universeId),
-      sceneNumber: Value(sceneNumber),
+      projectId: Value(projectId),
       title: Value(title),
-      summary: summary == null && nullToAbsent
-          ? const Value.absent()
-          : Value(summary),
-      povCharacterId: povCharacterId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(povCharacterId),
-      locationName: locationName == null && nullToAbsent
-          ? const Value.absent()
-          : Value(locationName),
-      tensionLevel: Value(tensionLevel),
-      status: Value(status),
+      content: Value(content),
       orderIndex: Value(orderIndex),
       createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
     );
   }
 
-  factory Scene.fromJson(
+  factory CustomSection.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Scene(
+    return CustomSection(
       id: serializer.fromJson<String>(json['id']),
-      chapterId: serializer.fromJson<String>(json['chapterId']),
-      universeId: serializer.fromJson<String>(json['universeId']),
-      sceneNumber: serializer.fromJson<int>(json['sceneNumber']),
+      projectId: serializer.fromJson<String>(json['projectId']),
       title: serializer.fromJson<String>(json['title']),
-      summary: serializer.fromJson<String?>(json['summary']),
-      povCharacterId: serializer.fromJson<String?>(json['povCharacterId']),
-      locationName: serializer.fromJson<String?>(json['locationName']),
-      tensionLevel: serializer.fromJson<int>(json['tensionLevel']),
-      status: serializer.fromJson<String>(json['status']),
+      content: serializer.fromJson<String>(json['content']),
       orderIndex: serializer.fromJson<int>(json['orderIndex']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -3255,255 +1920,136 @@ class Scene extends DataClass implements Insertable<Scene> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'chapterId': serializer.toJson<String>(chapterId),
-      'universeId': serializer.toJson<String>(universeId),
-      'sceneNumber': serializer.toJson<int>(sceneNumber),
+      'projectId': serializer.toJson<String>(projectId),
       'title': serializer.toJson<String>(title),
-      'summary': serializer.toJson<String?>(summary),
-      'povCharacterId': serializer.toJson<String?>(povCharacterId),
-      'locationName': serializer.toJson<String?>(locationName),
-      'tensionLevel': serializer.toJson<int>(tensionLevel),
-      'status': serializer.toJson<String>(status),
+      'content': serializer.toJson<String>(content),
       'orderIndex': serializer.toJson<int>(orderIndex),
       'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
-  Scene copyWith({
+  CustomSection copyWith({
     String? id,
-    String? chapterId,
-    String? universeId,
-    int? sceneNumber,
+    String? projectId,
     String? title,
-    Value<String?> summary = const Value.absent(),
-    Value<String?> povCharacterId = const Value.absent(),
-    Value<String?> locationName = const Value.absent(),
-    int? tensionLevel,
-    String? status,
+    String? content,
     int? orderIndex,
     DateTime? createdAt,
-    DateTime? updatedAt,
-  }) => Scene(
+  }) => CustomSection(
     id: id ?? this.id,
-    chapterId: chapterId ?? this.chapterId,
-    universeId: universeId ?? this.universeId,
-    sceneNumber: sceneNumber ?? this.sceneNumber,
+    projectId: projectId ?? this.projectId,
     title: title ?? this.title,
-    summary: summary.present ? summary.value : this.summary,
-    povCharacterId: povCharacterId.present
-        ? povCharacterId.value
-        : this.povCharacterId,
-    locationName: locationName.present ? locationName.value : this.locationName,
-    tensionLevel: tensionLevel ?? this.tensionLevel,
-    status: status ?? this.status,
+    content: content ?? this.content,
     orderIndex: orderIndex ?? this.orderIndex,
     createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
   );
-  Scene copyWithCompanion(ScenesCompanion data) {
-    return Scene(
+  CustomSection copyWithCompanion(CustomSectionsCompanion data) {
+    return CustomSection(
       id: data.id.present ? data.id.value : this.id,
-      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
-      universeId: data.universeId.present
-          ? data.universeId.value
-          : this.universeId,
-      sceneNumber: data.sceneNumber.present
-          ? data.sceneNumber.value
-          : this.sceneNumber,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
       title: data.title.present ? data.title.value : this.title,
-      summary: data.summary.present ? data.summary.value : this.summary,
-      povCharacterId: data.povCharacterId.present
-          ? data.povCharacterId.value
-          : this.povCharacterId,
-      locationName: data.locationName.present
-          ? data.locationName.value
-          : this.locationName,
-      tensionLevel: data.tensionLevel.present
-          ? data.tensionLevel.value
-          : this.tensionLevel,
-      status: data.status.present ? data.status.value : this.status,
+      content: data.content.present ? data.content.value : this.content,
       orderIndex: data.orderIndex.present
           ? data.orderIndex.value
           : this.orderIndex,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('Scene(')
+    return (StringBuffer('CustomSection(')
           ..write('id: $id, ')
-          ..write('chapterId: $chapterId, ')
-          ..write('universeId: $universeId, ')
-          ..write('sceneNumber: $sceneNumber, ')
+          ..write('projectId: $projectId, ')
           ..write('title: $title, ')
-          ..write('summary: $summary, ')
-          ..write('povCharacterId: $povCharacterId, ')
-          ..write('locationName: $locationName, ')
-          ..write('tensionLevel: $tensionLevel, ')
-          ..write('status: $status, ')
+          ..write('content: $content, ')
           ..write('orderIndex: $orderIndex, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-    id,
-    chapterId,
-    universeId,
-    sceneNumber,
-    title,
-    summary,
-    povCharacterId,
-    locationName,
-    tensionLevel,
-    status,
-    orderIndex,
-    createdAt,
-    updatedAt,
-  );
+  int get hashCode =>
+      Object.hash(id, projectId, title, content, orderIndex, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Scene &&
+      (other is CustomSection &&
           other.id == this.id &&
-          other.chapterId == this.chapterId &&
-          other.universeId == this.universeId &&
-          other.sceneNumber == this.sceneNumber &&
+          other.projectId == this.projectId &&
           other.title == this.title &&
-          other.summary == this.summary &&
-          other.povCharacterId == this.povCharacterId &&
-          other.locationName == this.locationName &&
-          other.tensionLevel == this.tensionLevel &&
-          other.status == this.status &&
+          other.content == this.content &&
           other.orderIndex == this.orderIndex &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.createdAt == this.createdAt);
 }
 
-class ScenesCompanion extends UpdateCompanion<Scene> {
+class CustomSectionsCompanion extends UpdateCompanion<CustomSection> {
   final Value<String> id;
-  final Value<String> chapterId;
-  final Value<String> universeId;
-  final Value<int> sceneNumber;
+  final Value<String> projectId;
   final Value<String> title;
-  final Value<String?> summary;
-  final Value<String?> povCharacterId;
-  final Value<String?> locationName;
-  final Value<int> tensionLevel;
-  final Value<String> status;
+  final Value<String> content;
   final Value<int> orderIndex;
   final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
   final Value<int> rowid;
-  const ScenesCompanion({
+  const CustomSectionsCompanion({
     this.id = const Value.absent(),
-    this.chapterId = const Value.absent(),
-    this.universeId = const Value.absent(),
-    this.sceneNumber = const Value.absent(),
+    this.projectId = const Value.absent(),
     this.title = const Value.absent(),
-    this.summary = const Value.absent(),
-    this.povCharacterId = const Value.absent(),
-    this.locationName = const Value.absent(),
-    this.tensionLevel = const Value.absent(),
-    this.status = const Value.absent(),
+    this.content = const Value.absent(),
     this.orderIndex = const Value.absent(),
     this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  ScenesCompanion.insert({
+  CustomSectionsCompanion.insert({
     required String id,
-    required String chapterId,
-    required String universeId,
-    required int sceneNumber,
+    required String projectId,
     required String title,
-    this.summary = const Value.absent(),
-    this.povCharacterId = const Value.absent(),
-    this.locationName = const Value.absent(),
-    this.tensionLevel = const Value.absent(),
-    this.status = const Value.absent(),
+    this.content = const Value.absent(),
     required int orderIndex,
     required DateTime createdAt,
-    required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       chapterId = Value(chapterId),
-       universeId = Value(universeId),
-       sceneNumber = Value(sceneNumber),
+       projectId = Value(projectId),
        title = Value(title),
        orderIndex = Value(orderIndex),
-       createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt);
-  static Insertable<Scene> custom({
+       createdAt = Value(createdAt);
+  static Insertable<CustomSection> custom({
     Expression<String>? id,
-    Expression<String>? chapterId,
-    Expression<String>? universeId,
-    Expression<int>? sceneNumber,
+    Expression<String>? projectId,
     Expression<String>? title,
-    Expression<String>? summary,
-    Expression<String>? povCharacterId,
-    Expression<String>? locationName,
-    Expression<int>? tensionLevel,
-    Expression<String>? status,
+    Expression<String>? content,
     Expression<int>? orderIndex,
     Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (chapterId != null) 'chapter_id': chapterId,
-      if (universeId != null) 'universe_id': universeId,
-      if (sceneNumber != null) 'scene_number': sceneNumber,
+      if (projectId != null) 'project_id': projectId,
       if (title != null) 'title': title,
-      if (summary != null) 'summary': summary,
-      if (povCharacterId != null) 'pov_character_id': povCharacterId,
-      if (locationName != null) 'location_name': locationName,
-      if (tensionLevel != null) 'tension_level': tensionLevel,
-      if (status != null) 'status': status,
+      if (content != null) 'content': content,
       if (orderIndex != null) 'order_index': orderIndex,
       if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  ScenesCompanion copyWith({
+  CustomSectionsCompanion copyWith({
     Value<String>? id,
-    Value<String>? chapterId,
-    Value<String>? universeId,
-    Value<int>? sceneNumber,
+    Value<String>? projectId,
     Value<String>? title,
-    Value<String?>? summary,
-    Value<String?>? povCharacterId,
-    Value<String?>? locationName,
-    Value<int>? tensionLevel,
-    Value<String>? status,
+    Value<String>? content,
     Value<int>? orderIndex,
     Value<DateTime>? createdAt,
-    Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
-    return ScenesCompanion(
+    return CustomSectionsCompanion(
       id: id ?? this.id,
-      chapterId: chapterId ?? this.chapterId,
-      universeId: universeId ?? this.universeId,
-      sceneNumber: sceneNumber ?? this.sceneNumber,
+      projectId: projectId ?? this.projectId,
       title: title ?? this.title,
-      summary: summary ?? this.summary,
-      povCharacterId: povCharacterId ?? this.povCharacterId,
-      locationName: locationName ?? this.locationName,
-      tensionLevel: tensionLevel ?? this.tensionLevel,
-      status: status ?? this.status,
+      content: content ?? this.content,
       orderIndex: orderIndex ?? this.orderIndex,
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3514,32 +2060,14 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (chapterId.present) {
-      map['chapter_id'] = Variable<String>(chapterId.value);
-    }
-    if (universeId.present) {
-      map['universe_id'] = Variable<String>(universeId.value);
-    }
-    if (sceneNumber.present) {
-      map['scene_number'] = Variable<int>(sceneNumber.value);
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
-    if (summary.present) {
-      map['summary'] = Variable<String>(summary.value);
-    }
-    if (povCharacterId.present) {
-      map['pov_character_id'] = Variable<String>(povCharacterId.value);
-    }
-    if (locationName.present) {
-      map['location_name'] = Variable<String>(locationName.value);
-    }
-    if (tensionLevel.present) {
-      map['tension_level'] = Variable<int>(tensionLevel.value);
-    }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
     }
     if (orderIndex.present) {
       map['order_index'] = Variable<int>(orderIndex.value);
@@ -3547,9 +2075,6 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3558,1055 +2083,12 @@ class ScenesCompanion extends UpdateCompanion<Scene> {
 
   @override
   String toString() {
-    return (StringBuffer('ScenesCompanion(')
+    return (StringBuffer('CustomSectionsCompanion(')
           ..write('id: $id, ')
-          ..write('chapterId: $chapterId, ')
-          ..write('universeId: $universeId, ')
-          ..write('sceneNumber: $sceneNumber, ')
+          ..write('projectId: $projectId, ')
           ..write('title: $title, ')
-          ..write('summary: $summary, ')
-          ..write('povCharacterId: $povCharacterId, ')
-          ..write('locationName: $locationName, ')
-          ..write('tensionLevel: $tensionLevel, ')
-          ..write('status: $status, ')
+          ..write('content: $content, ')
           ..write('orderIndex: $orderIndex, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $LoreEntriesTable extends LoreEntries
-    with TableInfo<$LoreEntriesTable, LoreEntry> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $LoreEntriesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-    'id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _universeIdMeta = const VerificationMeta(
-    'universeId',
-  );
-  @override
-  late final GeneratedColumn<String> universeId = GeneratedColumn<String>(
-    'universe_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES universes (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _titleMeta = const VerificationMeta('title');
-  @override
-  late final GeneratedColumn<String> title = GeneratedColumn<String>(
-    'title',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _categoryMeta = const VerificationMeta(
-    'category',
-  );
-  @override
-  late final GeneratedColumn<String> category = GeneratedColumn<String>(
-    'category',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _summaryMeta = const VerificationMeta(
-    'summary',
-  );
-  @override
-  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
-    'summary',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _contentMeta = const VerificationMeta(
-    'content',
-  );
-  @override
-  late final GeneratedColumn<String> content = GeneratedColumn<String>(
-    'content',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
-  @override
-  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
-    'tags',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    universeId,
-    title,
-    category,
-    summary,
-    content,
-    tags,
-    createdAt,
-    updatedAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'lore_entries';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<LoreEntry> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('universe_id')) {
-      context.handle(
-        _universeIdMeta,
-        universeId.isAcceptableOrUnknown(data['universe_id']!, _universeIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_universeIdMeta);
-    }
-    if (data.containsKey('title')) {
-      context.handle(
-        _titleMeta,
-        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_titleMeta);
-    }
-    if (data.containsKey('category')) {
-      context.handle(
-        _categoryMeta,
-        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_categoryMeta);
-    }
-    if (data.containsKey('summary')) {
-      context.handle(
-        _summaryMeta,
-        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
-      );
-    }
-    if (data.containsKey('content')) {
-      context.handle(
-        _contentMeta,
-        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
-      );
-    }
-    if (data.containsKey('tags')) {
-      context.handle(
-        _tagsMeta,
-        tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta),
-      );
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  LoreEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return LoreEntry(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}id'],
-      )!,
-      universeId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}universe_id'],
-      )!,
-      title: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}title'],
-      )!,
-      category: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}category'],
-      )!,
-      summary: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}summary'],
-      ),
-      content: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}content'],
-      ),
-      tags: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}tags'],
-      ),
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-    );
-  }
-
-  @override
-  $LoreEntriesTable createAlias(String alias) {
-    return $LoreEntriesTable(attachedDatabase, alias);
-  }
-}
-
-class LoreEntry extends DataClass implements Insertable<LoreEntry> {
-  final String id;
-  final String universeId;
-  final String title;
-  final String category;
-  final String? summary;
-  final String? content;
-  final String? tags;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  const LoreEntry({
-    required this.id,
-    required this.universeId,
-    required this.title,
-    required this.category,
-    this.summary,
-    this.content,
-    this.tags,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['universe_id'] = Variable<String>(universeId);
-    map['title'] = Variable<String>(title);
-    map['category'] = Variable<String>(category);
-    if (!nullToAbsent || summary != null) {
-      map['summary'] = Variable<String>(summary);
-    }
-    if (!nullToAbsent || content != null) {
-      map['content'] = Variable<String>(content);
-    }
-    if (!nullToAbsent || tags != null) {
-      map['tags'] = Variable<String>(tags);
-    }
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
-    return map;
-  }
-
-  LoreEntriesCompanion toCompanion(bool nullToAbsent) {
-    return LoreEntriesCompanion(
-      id: Value(id),
-      universeId: Value(universeId),
-      title: Value(title),
-      category: Value(category),
-      summary: summary == null && nullToAbsent
-          ? const Value.absent()
-          : Value(summary),
-      content: content == null && nullToAbsent
-          ? const Value.absent()
-          : Value(content),
-      tags: tags == null && nullToAbsent ? const Value.absent() : Value(tags),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-    );
-  }
-
-  factory LoreEntry.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return LoreEntry(
-      id: serializer.fromJson<String>(json['id']),
-      universeId: serializer.fromJson<String>(json['universeId']),
-      title: serializer.fromJson<String>(json['title']),
-      category: serializer.fromJson<String>(json['category']),
-      summary: serializer.fromJson<String?>(json['summary']),
-      content: serializer.fromJson<String?>(json['content']),
-      tags: serializer.fromJson<String?>(json['tags']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'universeId': serializer.toJson<String>(universeId),
-      'title': serializer.toJson<String>(title),
-      'category': serializer.toJson<String>(category),
-      'summary': serializer.toJson<String?>(summary),
-      'content': serializer.toJson<String?>(content),
-      'tags': serializer.toJson<String?>(tags),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
-    };
-  }
-
-  LoreEntry copyWith({
-    String? id,
-    String? universeId,
-    String? title,
-    String? category,
-    Value<String?> summary = const Value.absent(),
-    Value<String?> content = const Value.absent(),
-    Value<String?> tags = const Value.absent(),
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) => LoreEntry(
-    id: id ?? this.id,
-    universeId: universeId ?? this.universeId,
-    title: title ?? this.title,
-    category: category ?? this.category,
-    summary: summary.present ? summary.value : this.summary,
-    content: content.present ? content.value : this.content,
-    tags: tags.present ? tags.value : this.tags,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
-  );
-  LoreEntry copyWithCompanion(LoreEntriesCompanion data) {
-    return LoreEntry(
-      id: data.id.present ? data.id.value : this.id,
-      universeId: data.universeId.present
-          ? data.universeId.value
-          : this.universeId,
-      title: data.title.present ? data.title.value : this.title,
-      category: data.category.present ? data.category.value : this.category,
-      summary: data.summary.present ? data.summary.value : this.summary,
-      content: data.content.present ? data.content.value : this.content,
-      tags: data.tags.present ? data.tags.value : this.tags,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('LoreEntry(')
-          ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
-          ..write('title: $title, ')
-          ..write('category: $category, ')
-          ..write('summary: $summary, ')
-          ..write('content: $content, ')
-          ..write('tags: $tags, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    universeId,
-    title,
-    category,
-    summary,
-    content,
-    tags,
-    createdAt,
-    updatedAt,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is LoreEntry &&
-          other.id == this.id &&
-          other.universeId == this.universeId &&
-          other.title == this.title &&
-          other.category == this.category &&
-          other.summary == this.summary &&
-          other.content == this.content &&
-          other.tags == this.tags &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
-}
-
-class LoreEntriesCompanion extends UpdateCompanion<LoreEntry> {
-  final Value<String> id;
-  final Value<String> universeId;
-  final Value<String> title;
-  final Value<String> category;
-  final Value<String?> summary;
-  final Value<String?> content;
-  final Value<String?> tags;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
-  final Value<int> rowid;
-  const LoreEntriesCompanion({
-    this.id = const Value.absent(),
-    this.universeId = const Value.absent(),
-    this.title = const Value.absent(),
-    this.category = const Value.absent(),
-    this.summary = const Value.absent(),
-    this.content = const Value.absent(),
-    this.tags = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  LoreEntriesCompanion.insert({
-    required String id,
-    required String universeId,
-    required String title,
-    required String category,
-    this.summary = const Value.absent(),
-    this.content = const Value.absent(),
-    this.tags = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
-    this.rowid = const Value.absent(),
-  }) : id = Value(id),
-       universeId = Value(universeId),
-       title = Value(title),
-       category = Value(category),
-       createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt);
-  static Insertable<LoreEntry> custom({
-    Expression<String>? id,
-    Expression<String>? universeId,
-    Expression<String>? title,
-    Expression<String>? category,
-    Expression<String>? summary,
-    Expression<String>? content,
-    Expression<String>? tags,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (universeId != null) 'universe_id': universeId,
-      if (title != null) 'title': title,
-      if (category != null) 'category': category,
-      if (summary != null) 'summary': summary,
-      if (content != null) 'content': content,
-      if (tags != null) 'tags': tags,
-      if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  LoreEntriesCompanion copyWith({
-    Value<String>? id,
-    Value<String>? universeId,
-    Value<String>? title,
-    Value<String>? category,
-    Value<String?>? summary,
-    Value<String?>? content,
-    Value<String?>? tags,
-    Value<DateTime>? createdAt,
-    Value<DateTime>? updatedAt,
-    Value<int>? rowid,
-  }) {
-    return LoreEntriesCompanion(
-      id: id ?? this.id,
-      universeId: universeId ?? this.universeId,
-      title: title ?? this.title,
-      category: category ?? this.category,
-      summary: summary ?? this.summary,
-      content: content ?? this.content,
-      tags: tags ?? this.tags,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (universeId.present) {
-      map['universe_id'] = Variable<String>(universeId.value);
-    }
-    if (title.present) {
-      map['title'] = Variable<String>(title.value);
-    }
-    if (category.present) {
-      map['category'] = Variable<String>(category.value);
-    }
-    if (summary.present) {
-      map['summary'] = Variable<String>(summary.value);
-    }
-    if (content.present) {
-      map['content'] = Variable<String>(content.value);
-    }
-    if (tags.present) {
-      map['tags'] = Variable<String>(tags.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('LoreEntriesCompanion(')
-          ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
-          ..write('title: $title, ')
-          ..write('category: $category, ')
-          ..write('summary: $summary, ')
-          ..write('content: $content, ')
-          ..write('tags: $tags, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $IdeaSparksTable extends IdeaSparks
-    with TableInfo<$IdeaSparksTable, IdeaSpark> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $IdeaSparksTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-    'id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _universeIdMeta = const VerificationMeta(
-    'universeId',
-  );
-  @override
-  late final GeneratedColumn<String> universeId = GeneratedColumn<String>(
-    'universe_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES universes (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _contentMeta = const VerificationMeta(
-    'content',
-  );
-  @override
-  late final GeneratedColumn<String> content = GeneratedColumn<String>(
-    'content',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _categoryMeta = const VerificationMeta(
-    'category',
-  );
-  @override
-  late final GeneratedColumn<String> category = GeneratedColumn<String>(
-    'category',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('General'),
-  );
-  static const VerificationMeta _isPinnedMeta = const VerificationMeta(
-    'isPinned',
-  );
-  @override
-  late final GeneratedColumn<bool> isPinned = GeneratedColumn<bool>(
-    'is_pinned',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_pinned" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  static const VerificationMeta _isConvertedMeta = const VerificationMeta(
-    'isConverted',
-  );
-  @override
-  late final GeneratedColumn<bool> isConverted = GeneratedColumn<bool>(
-    'is_converted',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_converted" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    universeId,
-    content,
-    category,
-    isPinned,
-    isConverted,
-    createdAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'idea_sparks';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<IdeaSpark> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('universe_id')) {
-      context.handle(
-        _universeIdMeta,
-        universeId.isAcceptableOrUnknown(data['universe_id']!, _universeIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_universeIdMeta);
-    }
-    if (data.containsKey('content')) {
-      context.handle(
-        _contentMeta,
-        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_contentMeta);
-    }
-    if (data.containsKey('category')) {
-      context.handle(
-        _categoryMeta,
-        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
-      );
-    }
-    if (data.containsKey('is_pinned')) {
-      context.handle(
-        _isPinnedMeta,
-        isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta),
-      );
-    }
-    if (data.containsKey('is_converted')) {
-      context.handle(
-        _isConvertedMeta,
-        isConverted.isAcceptableOrUnknown(
-          data['is_converted']!,
-          _isConvertedMeta,
-        ),
-      );
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  IdeaSpark map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return IdeaSpark(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}id'],
-      )!,
-      universeId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}universe_id'],
-      )!,
-      content: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}content'],
-      )!,
-      category: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}category'],
-      )!,
-      isPinned: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_pinned'],
-      )!,
-      isConverted: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_converted'],
-      )!,
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
-    );
-  }
-
-  @override
-  $IdeaSparksTable createAlias(String alias) {
-    return $IdeaSparksTable(attachedDatabase, alias);
-  }
-}
-
-class IdeaSpark extends DataClass implements Insertable<IdeaSpark> {
-  final String id;
-  final String universeId;
-  final String content;
-  final String category;
-  final bool isPinned;
-  final bool isConverted;
-  final DateTime createdAt;
-  const IdeaSpark({
-    required this.id,
-    required this.universeId,
-    required this.content,
-    required this.category,
-    required this.isPinned,
-    required this.isConverted,
-    required this.createdAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['universe_id'] = Variable<String>(universeId);
-    map['content'] = Variable<String>(content);
-    map['category'] = Variable<String>(category);
-    map['is_pinned'] = Variable<bool>(isPinned);
-    map['is_converted'] = Variable<bool>(isConverted);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    return map;
-  }
-
-  IdeaSparksCompanion toCompanion(bool nullToAbsent) {
-    return IdeaSparksCompanion(
-      id: Value(id),
-      universeId: Value(universeId),
-      content: Value(content),
-      category: Value(category),
-      isPinned: Value(isPinned),
-      isConverted: Value(isConverted),
-      createdAt: Value(createdAt),
-    );
-  }
-
-  factory IdeaSpark.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return IdeaSpark(
-      id: serializer.fromJson<String>(json['id']),
-      universeId: serializer.fromJson<String>(json['universeId']),
-      content: serializer.fromJson<String>(json['content']),
-      category: serializer.fromJson<String>(json['category']),
-      isPinned: serializer.fromJson<bool>(json['isPinned']),
-      isConverted: serializer.fromJson<bool>(json['isConverted']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'universeId': serializer.toJson<String>(universeId),
-      'content': serializer.toJson<String>(content),
-      'category': serializer.toJson<String>(category),
-      'isPinned': serializer.toJson<bool>(isPinned),
-      'isConverted': serializer.toJson<bool>(isConverted),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-    };
-  }
-
-  IdeaSpark copyWith({
-    String? id,
-    String? universeId,
-    String? content,
-    String? category,
-    bool? isPinned,
-    bool? isConverted,
-    DateTime? createdAt,
-  }) => IdeaSpark(
-    id: id ?? this.id,
-    universeId: universeId ?? this.universeId,
-    content: content ?? this.content,
-    category: category ?? this.category,
-    isPinned: isPinned ?? this.isPinned,
-    isConverted: isConverted ?? this.isConverted,
-    createdAt: createdAt ?? this.createdAt,
-  );
-  IdeaSpark copyWithCompanion(IdeaSparksCompanion data) {
-    return IdeaSpark(
-      id: data.id.present ? data.id.value : this.id,
-      universeId: data.universeId.present
-          ? data.universeId.value
-          : this.universeId,
-      content: data.content.present ? data.content.value : this.content,
-      category: data.category.present ? data.category.value : this.category,
-      isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
-      isConverted: data.isConverted.present
-          ? data.isConverted.value
-          : this.isConverted,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('IdeaSpark(')
-          ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
-          ..write('content: $content, ')
-          ..write('category: $category, ')
-          ..write('isPinned: $isPinned, ')
-          ..write('isConverted: $isConverted, ')
-          ..write('createdAt: $createdAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    universeId,
-    content,
-    category,
-    isPinned,
-    isConverted,
-    createdAt,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is IdeaSpark &&
-          other.id == this.id &&
-          other.universeId == this.universeId &&
-          other.content == this.content &&
-          other.category == this.category &&
-          other.isPinned == this.isPinned &&
-          other.isConverted == this.isConverted &&
-          other.createdAt == this.createdAt);
-}
-
-class IdeaSparksCompanion extends UpdateCompanion<IdeaSpark> {
-  final Value<String> id;
-  final Value<String> universeId;
-  final Value<String> content;
-  final Value<String> category;
-  final Value<bool> isPinned;
-  final Value<bool> isConverted;
-  final Value<DateTime> createdAt;
-  final Value<int> rowid;
-  const IdeaSparksCompanion({
-    this.id = const Value.absent(),
-    this.universeId = const Value.absent(),
-    this.content = const Value.absent(),
-    this.category = const Value.absent(),
-    this.isPinned = const Value.absent(),
-    this.isConverted = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  IdeaSparksCompanion.insert({
-    required String id,
-    required String universeId,
-    required String content,
-    this.category = const Value.absent(),
-    this.isPinned = const Value.absent(),
-    this.isConverted = const Value.absent(),
-    required DateTime createdAt,
-    this.rowid = const Value.absent(),
-  }) : id = Value(id),
-       universeId = Value(universeId),
-       content = Value(content),
-       createdAt = Value(createdAt);
-  static Insertable<IdeaSpark> custom({
-    Expression<String>? id,
-    Expression<String>? universeId,
-    Expression<String>? content,
-    Expression<String>? category,
-    Expression<bool>? isPinned,
-    Expression<bool>? isConverted,
-    Expression<DateTime>? createdAt,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (universeId != null) 'universe_id': universeId,
-      if (content != null) 'content': content,
-      if (category != null) 'category': category,
-      if (isPinned != null) 'is_pinned': isPinned,
-      if (isConverted != null) 'is_converted': isConverted,
-      if (createdAt != null) 'created_at': createdAt,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  IdeaSparksCompanion copyWith({
-    Value<String>? id,
-    Value<String>? universeId,
-    Value<String>? content,
-    Value<String>? category,
-    Value<bool>? isPinned,
-    Value<bool>? isConverted,
-    Value<DateTime>? createdAt,
-    Value<int>? rowid,
-  }) {
-    return IdeaSparksCompanion(
-      id: id ?? this.id,
-      universeId: universeId ?? this.universeId,
-      content: content ?? this.content,
-      category: category ?? this.category,
-      isPinned: isPinned ?? this.isPinned,
-      isConverted: isConverted ?? this.isConverted,
-      createdAt: createdAt ?? this.createdAt,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (universeId.present) {
-      map['universe_id'] = Variable<String>(universeId.value);
-    }
-    if (content.present) {
-      map['content'] = Variable<String>(content.value);
-    }
-    if (category.present) {
-      map['category'] = Variable<String>(category.value);
-    }
-    if (isPinned.present) {
-      map['is_pinned'] = Variable<bool>(isPinned.value);
-    }
-    if (isConverted.present) {
-      map['is_converted'] = Variable<bool>(isConverted.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('IdeaSparksCompanion(')
-          ..write('id: $id, ')
-          ..write('universeId: $universeId, ')
-          ..write('content: $content, ')
-          ..write('category: $category, ')
-          ..write('isPinned: $isPinned, ')
-          ..write('isConverted: $isConverted, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4617,256 +2099,98 @@ class IdeaSparksCompanion extends UpdateCompanion<IdeaSpark> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
-  late final $UniversesTable universes = $UniversesTable(this);
-  late final $CharactersTable characters = $CharactersTable(this);
-  late final $CharacterRelationshipsTable characterRelationships =
-      $CharacterRelationshipsTable(this);
+  late final $BooksTable books = $BooksTable(this);
+  late final $ProjectsTable projects = $ProjectsTable(this);
+  late final $ArcsTable arcs = $ArcsTable(this);
   late final $ChaptersTable chapters = $ChaptersTable(this);
-  late final $ScenesTable scenes = $ScenesTable(this);
-  late final $LoreEntriesTable loreEntries = $LoreEntriesTable(this);
-  late final $IdeaSparksTable ideaSparks = $IdeaSparksTable(this);
+  late final $CustomSectionsTable customSections = $CustomSectionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
-    universes,
-    characters,
-    characterRelationships,
+    books,
+    projects,
+    arcs,
     chapters,
-    scenes,
-    loreEntries,
-    ideaSparks,
+    customSections,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
     WritePropagation(
       on: TableUpdateQuery.onTableName(
-        'universes',
+        'books',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('characters', kind: UpdateKind.delete)],
+      result: [TableUpdate('projects', kind: UpdateKind.update)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
-        'universes',
+        'projects',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('character_relationships', kind: UpdateKind.delete)],
+      result: [TableUpdate('arcs', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
-        'characters',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('character_relationships', kind: UpdateKind.delete)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'characters',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('character_relationships', kind: UpdateKind.delete)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'universes',
+        'projects',
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('chapters', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
-        'chapters',
+        'projects',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('scenes', kind: UpdateKind.delete)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'universes',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('scenes', kind: UpdateKind.delete)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'characters',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('scenes', kind: UpdateKind.update)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'universes',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('lore_entries', kind: UpdateKind.delete)],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'universes',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('idea_sparks', kind: UpdateKind.delete)],
+      result: [TableUpdate('custom_sections', kind: UpdateKind.delete)],
     ),
   ]);
 }
 
-typedef $$UniversesTableCreateCompanionBuilder =
-    UniversesCompanion Function({
+typedef $$BooksTableCreateCompanionBuilder =
+    BooksCompanion Function({
       required String id,
-      required String title,
+      required String name,
       required String genre,
-      Value<String?> logline,
-      Value<String?> synopsis,
-      Value<String> coverColor,
-      Value<String?> linkedProjectInkId,
-      Value<String?> linkedProjectInkName,
       required DateTime createdAt,
-      required DateTime updatedAt,
       Value<int> rowid,
     });
-typedef $$UniversesTableUpdateCompanionBuilder =
-    UniversesCompanion Function({
+typedef $$BooksTableUpdateCompanionBuilder =
+    BooksCompanion Function({
       Value<String> id,
-      Value<String> title,
+      Value<String> name,
       Value<String> genre,
-      Value<String?> logline,
-      Value<String?> synopsis,
-      Value<String> coverColor,
-      Value<String?> linkedProjectInkId,
-      Value<String?> linkedProjectInkName,
       Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
       Value<int> rowid,
     });
 
-final class $$UniversesTableReferences
-    extends BaseReferences<_$AppDatabase, $UniversesTable, Universe> {
-  $$UniversesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+final class $$BooksTableReferences
+    extends BaseReferences<_$AppDatabase, $BooksTable, Book> {
+  $$BooksTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static MultiTypedResultKey<$CharactersTable, List<Character>>
-  _charactersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.characters,
-    aliasName: 'universes__id__characters__universe_id',
-  );
-
-  $$CharactersTableProcessedTableManager get charactersRefs {
-    final manager = $$CharactersTableTableManager(
-      $_db,
-      $_db.characters,
-    ).filter((f) => f.universeId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_charactersRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<
-    $CharacterRelationshipsTable,
-    List<CharacterRelationship>
-  >
-  _characterRelationshipsRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.characterRelationships,
-        aliasName: 'universes__id__character_relationships__universe_id',
-      );
-
-  $$CharacterRelationshipsTableProcessedTableManager
-  get characterRelationshipsRefs {
-    final manager = $$CharacterRelationshipsTableTableManager(
-      $_db,
-      $_db.characterRelationships,
-    ).filter((f) => f.universeId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(
-      _characterRelationshipsRefsTable($_db),
-    );
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$ChaptersTable, List<Chapter>> _chaptersRefsTable(
+  static MultiTypedResultKey<$ProjectsTable, List<Project>> _projectsRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
-    db.chapters,
-    aliasName: 'universes__id__chapters__universe_id',
+    db.projects,
+    aliasName: $_aliasNameGenerator(db.books.id, db.projects.bookId),
   );
 
-  $$ChaptersTableProcessedTableManager get chaptersRefs {
-    final manager = $$ChaptersTableTableManager(
+  $$ProjectsTableProcessedTableManager get projectsRefs {
+    final manager = $$ProjectsTableTableManager(
       $_db,
-      $_db.chapters,
-    ).filter((f) => f.universeId.id.sqlEquals($_itemColumn<String>('id')!));
+      $_db.projects,
+    ).filter((f) => f.bookId.id.sqlEquals($_itemColumn<String>('id')!));
 
-    final cache = $_typedResult.readTableOrNull(_chaptersRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$ScenesTable, List<Scene>> _scenesRefsTable(
-    _$AppDatabase db,
-  ) => MultiTypedResultKey.fromTable(
-    db.scenes,
-    aliasName: 'universes__id__scenes__universe_id',
-  );
-
-  $$ScenesTableProcessedTableManager get scenesRefs {
-    final manager = $$ScenesTableTableManager(
-      $_db,
-      $_db.scenes,
-    ).filter((f) => f.universeId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_scenesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$LoreEntriesTable, List<LoreEntry>>
-  _loreEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.loreEntries,
-    aliasName: 'universes__id__lore_entries__universe_id',
-  );
-
-  $$LoreEntriesTableProcessedTableManager get loreEntriesRefs {
-    final manager = $$LoreEntriesTableTableManager(
-      $_db,
-      $_db.loreEntries,
-    ).filter((f) => f.universeId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_loreEntriesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$IdeaSparksTable, List<IdeaSpark>>
-  _ideaSparksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.ideaSparks,
-    aliasName: 'universes__id__idea_sparks__universe_id',
-  );
-
-  $$IdeaSparksTableProcessedTableManager get ideaSparksRefs {
-    final manager = $$IdeaSparksTableTableManager(
-      $_db,
-      $_db.ideaSparks,
-    ).filter((f) => f.universeId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_ideaSparksRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(_projectsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
 
-class $$UniversesTableFilterComposer
-    extends Composer<_$AppDatabase, $UniversesTable> {
-  $$UniversesTableFilterComposer({
+class $$BooksTableFilterComposer extends Composer<_$AppDatabase, $BooksTable> {
+  $$BooksTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -4878,8 +2202,8 @@ class $$UniversesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get title => $composableBuilder(
-    column: $table.title,
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4888,28 +2212,345 @@ class $$UniversesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get logline => $composableBuilder(
-    column: $table.logline,
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get synopsis => $composableBuilder(
-    column: $table.synopsis,
+  Expression<bool> projectsRefs(
+    Expression<bool> Function($$ProjectsTableFilterComposer f) f,
+  ) {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.bookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableFilterComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$BooksTableOrderingComposer
+    extends Composer<_$AppDatabase, $BooksTable> {
+  $$BooksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get genre => $composableBuilder(
+    column: $table.genre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BooksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BooksTable> {
+  $$BooksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get genre =>
+      $composableBuilder(column: $table.genre, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> projectsRefs<T extends Object>(
+    Expression<T> Function($$ProjectsTableAnnotationComposer a) f,
+  ) {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.bookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$BooksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BooksTable,
+          Book,
+          $$BooksTableFilterComposer,
+          $$BooksTableOrderingComposer,
+          $$BooksTableAnnotationComposer,
+          $$BooksTableCreateCompanionBuilder,
+          $$BooksTableUpdateCompanionBuilder,
+          (Book, $$BooksTableReferences),
+          Book,
+          PrefetchHooks Function({bool projectsRefs})
+        > {
+  $$BooksTableTableManager(_$AppDatabase db, $BooksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BooksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BooksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BooksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> genre = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BooksCompanion(
+                id: id,
+                name: name,
+                genre: genre,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String genre,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => BooksCompanion.insert(
+                id: id,
+                name: name,
+                genre: genre,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable(table), $$BooksTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback: ({projectsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (projectsRefs) db.projects],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (projectsRefs)
+                    await $_getPrefetchedData<Book, $BooksTable, Project>(
+                      currentTable: table,
+                      referencedTable: $$BooksTableReferences
+                          ._projectsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$BooksTableReferences(db, table, p0).projectsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.bookId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$BooksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BooksTable,
+      Book,
+      $$BooksTableFilterComposer,
+      $$BooksTableOrderingComposer,
+      $$BooksTableAnnotationComposer,
+      $$BooksTableCreateCompanionBuilder,
+      $$BooksTableUpdateCompanionBuilder,
+      (Book, $$BooksTableReferences),
+      Book,
+      PrefetchHooks Function({bool projectsRefs})
+    >;
+typedef $$ProjectsTableCreateCompanionBuilder =
+    ProjectsCompanion Function({
+      required String id,
+      Value<String?> bookId,
+      required String name,
+      required String genre,
+      Value<String> generalIdea,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ProjectsTableUpdateCompanionBuilder =
+    ProjectsCompanion Function({
+      Value<String> id,
+      Value<String?> bookId,
+      Value<String> name,
+      Value<String> genre,
+      Value<String> generalIdea,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$ProjectsTableReferences
+    extends BaseReferences<_$AppDatabase, $ProjectsTable, Project> {
+  $$ProjectsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $BooksTable _bookIdTable(_$AppDatabase db) => db.books.createAlias(
+    $_aliasNameGenerator(db.projects.bookId, db.books.id),
+  );
+
+  $$BooksTableProcessedTableManager? get bookId {
+    final $_column = $_itemColumn<String>('book_id');
+    if ($_column == null) return null;
+    final manager = $$BooksTableTableManager(
+      $_db,
+      $_db.books,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$ArcsTable, List<Arc>> _arcsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.arcs,
+    aliasName: $_aliasNameGenerator(db.projects.id, db.arcs.projectId),
+  );
+
+  $$ArcsTableProcessedTableManager get arcsRefs {
+    final manager = $$ArcsTableTableManager(
+      $_db,
+      $_db.arcs,
+    ).filter((f) => f.projectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_arcsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ChaptersTable, List<Chapter>> _chaptersRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.chapters,
+    aliasName: $_aliasNameGenerator(db.projects.id, db.chapters.projectId),
+  );
+
+  $$ChaptersTableProcessedTableManager get chaptersRefs {
+    final manager = $$ChaptersTableTableManager(
+      $_db,
+      $_db.chapters,
+    ).filter((f) => f.projectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_chaptersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CustomSectionsTable, List<CustomSection>>
+  _customSectionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.customSections,
+    aliasName: $_aliasNameGenerator(
+      db.projects.id,
+      db.customSections.projectId,
+    ),
+  );
+
+  $$CustomSectionsTableProcessedTableManager get customSectionsRefs {
+    final manager = $$CustomSectionsTableTableManager(
+      $_db,
+      $_db.customSections,
+    ).filter((f) => f.projectId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_customSectionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$ProjectsTableFilterComposer
+    extends Composer<_$AppDatabase, $ProjectsTable> {
+  $$ProjectsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get coverColor => $composableBuilder(
-    column: $table.coverColor,
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get linkedProjectInkId => $composableBuilder(
-    column: $table.linkedProjectInkId,
+  ColumnFilters<String> get genre => $composableBuilder(
+    column: $table.genre,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get linkedProjectInkName => $composableBuilder(
-    column: $table.linkedProjectInkName,
+  ColumnFilters<String> get generalIdea => $composableBuilder(
+    column: $table.generalIdea,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4923,54 +2564,51 @@ class $$UniversesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  Expression<bool> charactersRefs(
-    Expression<bool> Function($$CharactersTableFilterComposer f) f,
-  ) {
-    final $$CharactersTableFilterComposer composer = $composerBuilder(
+  $$BooksTableFilterComposer get bookId {
+    final $$BooksTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.universeId,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.books,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableFilterComposer(
+          }) => $$BooksTableFilterComposer(
             $db: $db,
-            $table: $db.characters,
+            $table: $db.books,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
                 $removeJoinBuilderFromRootComposer,
           ),
     );
-    return f(composer);
+    return composer;
   }
 
-  Expression<bool> characterRelationshipsRefs(
-    Expression<bool> Function($$CharacterRelationshipsTableFilterComposer f) f,
+  Expression<bool> arcsRefs(
+    Expression<bool> Function($$ArcsTableFilterComposer f) f,
   ) {
-    final $$CharacterRelationshipsTableFilterComposer composer =
-        $composerBuilder(
-          composer: this,
-          getCurrentColumn: (t) => t.id,
-          referencedTable: $db.characterRelationships,
-          getReferencedColumn: (t) => t.universeId,
-          builder:
-              (
-                joinBuilder, {
-                $addJoinBuilderToRootComposer,
+    final $$ArcsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.arcs,
+      getReferencedColumn: (t) => t.projectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ArcsTableFilterComposer(
+            $db: $db,
+            $table: $db.arcs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
                 $removeJoinBuilderFromRootComposer,
-              }) => $$CharacterRelationshipsTableFilterComposer(
-                $db: $db,
-                $table: $db.characterRelationships,
-                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                joinBuilder: joinBuilder,
-                $removeJoinBuilderFromRootComposer:
-                    $removeJoinBuilderFromRootComposer,
-              ),
-        );
+          ),
+    );
     return f(composer);
   }
 
@@ -4981,7 +2619,7 @@ class $$UniversesTableFilterComposer
       composer: this,
       getCurrentColumn: (t) => t.id,
       referencedTable: $db.chapters,
-      getReferencedColumn: (t) => t.universeId,
+      getReferencedColumn: (t) => t.projectId,
       builder:
           (
             joinBuilder, {
@@ -4999,72 +2637,22 @@ class $$UniversesTableFilterComposer
     return f(composer);
   }
 
-  Expression<bool> scenesRefs(
-    Expression<bool> Function($$ScenesTableFilterComposer f) f,
+  Expression<bool> customSectionsRefs(
+    Expression<bool> Function($$CustomSectionsTableFilterComposer f) f,
   ) {
-    final $$ScenesTableFilterComposer composer = $composerBuilder(
+    final $$CustomSectionsTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.scenes,
-      getReferencedColumn: (t) => t.universeId,
+      referencedTable: $db.customSections,
+      getReferencedColumn: (t) => t.projectId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ScenesTableFilterComposer(
+          }) => $$CustomSectionsTableFilterComposer(
             $db: $db,
-            $table: $db.scenes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> loreEntriesRefs(
-    Expression<bool> Function($$LoreEntriesTableFilterComposer f) f,
-  ) {
-    final $$LoreEntriesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.loreEntries,
-      getReferencedColumn: (t) => t.universeId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$LoreEntriesTableFilterComposer(
-            $db: $db,
-            $table: $db.loreEntries,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> ideaSparksRefs(
-    Expression<bool> Function($$IdeaSparksTableFilterComposer f) f,
-  ) {
-    final $$IdeaSparksTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.ideaSparks,
-      getReferencedColumn: (t) => t.universeId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$IdeaSparksTableFilterComposer(
-            $db: $db,
-            $table: $db.ideaSparks,
+            $table: $db.customSections,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5075,9 +2663,9 @@ class $$UniversesTableFilterComposer
   }
 }
 
-class $$UniversesTableOrderingComposer
-    extends Composer<_$AppDatabase, $UniversesTable> {
-  $$UniversesTableOrderingComposer({
+class $$ProjectsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProjectsTable> {
+  $$ProjectsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -5089,8 +2677,8 @@ class $$UniversesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get title => $composableBuilder(
-    column: $table.title,
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5099,28 +2687,8 @@ class $$UniversesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get logline => $composableBuilder(
-    column: $table.logline,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get synopsis => $composableBuilder(
-    column: $table.synopsis,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get coverColor => $composableBuilder(
-    column: $table.coverColor,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get linkedProjectInkId => $composableBuilder(
-    column: $table.linkedProjectInkId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get linkedProjectInkName => $composableBuilder(
-    column: $table.linkedProjectInkName,
+  ColumnOrderings<String> get generalIdea => $composableBuilder(
+    column: $table.generalIdea,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5133,11 +2701,34 @@ class $$UniversesTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$BooksTableOrderingComposer get bookId {
+    final $$BooksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.books,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BooksTableOrderingComposer(
+            $db: $db,
+            $table: $db.books,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
-class $$UniversesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $UniversesTable> {
-  $$UniversesTableAnnotationComposer({
+class $$ProjectsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProjectsTable> {
+  $$ProjectsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -5147,30 +2738,14 @@ class $$UniversesTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get title =>
-      $composableBuilder(column: $table.title, builder: (column) => column);
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
 
   GeneratedColumn<String> get genre =>
       $composableBuilder(column: $table.genre, builder: (column) => column);
 
-  GeneratedColumn<String> get logline =>
-      $composableBuilder(column: $table.logline, builder: (column) => column);
-
-  GeneratedColumn<String> get synopsis =>
-      $composableBuilder(column: $table.synopsis, builder: (column) => column);
-
-  GeneratedColumn<String> get coverColor => $composableBuilder(
-    column: $table.coverColor,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get linkedProjectInkId => $composableBuilder(
-    column: $table.linkedProjectInkId,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get linkedProjectInkName => $composableBuilder(
-    column: $table.linkedProjectInkName,
+  GeneratedColumn<String> get generalIdea => $composableBuilder(
+    column: $table.generalIdea,
     builder: (column) => column,
   );
 
@@ -5180,54 +2755,51 @@ class $$UniversesTableAnnotationComposer
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
-  Expression<T> charactersRefs<T extends Object>(
-    Expression<T> Function($$CharactersTableAnnotationComposer a) f,
-  ) {
-    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
+  $$BooksTableAnnotationComposer get bookId {
+    final $$BooksTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.universeId,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.books,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableAnnotationComposer(
+          }) => $$BooksTableAnnotationComposer(
             $db: $db,
-            $table: $db.characters,
+            $table: $db.books,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
                 $removeJoinBuilderFromRootComposer,
           ),
     );
-    return f(composer);
+    return composer;
   }
 
-  Expression<T> characterRelationshipsRefs<T extends Object>(
-    Expression<T> Function($$CharacterRelationshipsTableAnnotationComposer a) f,
+  Expression<T> arcsRefs<T extends Object>(
+    Expression<T> Function($$ArcsTableAnnotationComposer a) f,
   ) {
-    final $$CharacterRelationshipsTableAnnotationComposer composer =
-        $composerBuilder(
-          composer: this,
-          getCurrentColumn: (t) => t.id,
-          referencedTable: $db.characterRelationships,
-          getReferencedColumn: (t) => t.universeId,
-          builder:
-              (
-                joinBuilder, {
-                $addJoinBuilderToRootComposer,
+    final $$ArcsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.arcs,
+      getReferencedColumn: (t) => t.projectId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ArcsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.arcs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
                 $removeJoinBuilderFromRootComposer,
-              }) => $$CharacterRelationshipsTableAnnotationComposer(
-                $db: $db,
-                $table: $db.characterRelationships,
-                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                joinBuilder: joinBuilder,
-                $removeJoinBuilderFromRootComposer:
-                    $removeJoinBuilderFromRootComposer,
-              ),
-        );
+          ),
+    );
     return f(composer);
   }
 
@@ -5238,7 +2810,7 @@ class $$UniversesTableAnnotationComposer
       composer: this,
       getCurrentColumn: (t) => t.id,
       referencedTable: $db.chapters,
-      getReferencedColumn: (t) => t.universeId,
+      getReferencedColumn: (t) => t.projectId,
       builder:
           (
             joinBuilder, {
@@ -5256,72 +2828,22 @@ class $$UniversesTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> scenesRefs<T extends Object>(
-    Expression<T> Function($$ScenesTableAnnotationComposer a) f,
+  Expression<T> customSectionsRefs<T extends Object>(
+    Expression<T> Function($$CustomSectionsTableAnnotationComposer a) f,
   ) {
-    final $$ScenesTableAnnotationComposer composer = $composerBuilder(
+    final $$CustomSectionsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.id,
-      referencedTable: $db.scenes,
-      getReferencedColumn: (t) => t.universeId,
+      referencedTable: $db.customSections,
+      getReferencedColumn: (t) => t.projectId,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ScenesTableAnnotationComposer(
+          }) => $$CustomSectionsTableAnnotationComposer(
             $db: $db,
-            $table: $db.scenes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> loreEntriesRefs<T extends Object>(
-    Expression<T> Function($$LoreEntriesTableAnnotationComposer a) f,
-  ) {
-    final $$LoreEntriesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.loreEntries,
-      getReferencedColumn: (t) => t.universeId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$LoreEntriesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.loreEntries,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> ideaSparksRefs<T extends Object>(
-    Expression<T> Function($$IdeaSparksTableAnnotationComposer a) f,
-  ) {
-    final $$IdeaSparksTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.ideaSparks,
-      getReferencedColumn: (t) => t.universeId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$IdeaSparksTableAnnotationComposer(
-            $db: $db,
-            $table: $db.ideaSparks,
+            $table: $db.customSections,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5332,61 +2854,53 @@ class $$UniversesTableAnnotationComposer
   }
 }
 
-class $$UniversesTableTableManager
+class $$ProjectsTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $UniversesTable,
-          Universe,
-          $$UniversesTableFilterComposer,
-          $$UniversesTableOrderingComposer,
-          $$UniversesTableAnnotationComposer,
-          $$UniversesTableCreateCompanionBuilder,
-          $$UniversesTableUpdateCompanionBuilder,
-          (Universe, $$UniversesTableReferences),
-          Universe,
+          $ProjectsTable,
+          Project,
+          $$ProjectsTableFilterComposer,
+          $$ProjectsTableOrderingComposer,
+          $$ProjectsTableAnnotationComposer,
+          $$ProjectsTableCreateCompanionBuilder,
+          $$ProjectsTableUpdateCompanionBuilder,
+          (Project, $$ProjectsTableReferences),
+          Project,
           PrefetchHooks Function({
-            bool charactersRefs,
-            bool characterRelationshipsRefs,
+            bool bookId,
+            bool arcsRefs,
             bool chaptersRefs,
-            bool scenesRefs,
-            bool loreEntriesRefs,
-            bool ideaSparksRefs,
+            bool customSectionsRefs,
           })
         > {
-  $$UniversesTableTableManager(_$AppDatabase db, $UniversesTable table)
+  $$ProjectsTableTableManager(_$AppDatabase db, $ProjectsTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$UniversesTableFilterComposer($db: db, $table: table),
+              $$ProjectsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$UniversesTableOrderingComposer($db: db, $table: table),
+              $$ProjectsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$UniversesTableAnnotationComposer($db: db, $table: table),
+              $$ProjectsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String> title = const Value.absent(),
+                Value<String?> bookId = const Value.absent(),
+                Value<String> name = const Value.absent(),
                 Value<String> genre = const Value.absent(),
-                Value<String?> logline = const Value.absent(),
-                Value<String?> synopsis = const Value.absent(),
-                Value<String> coverColor = const Value.absent(),
-                Value<String?> linkedProjectInkId = const Value.absent(),
-                Value<String?> linkedProjectInkName = const Value.absent(),
+                Value<String> generalIdea = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => UniversesCompanion(
+              }) => ProjectsCompanion(
                 id: id,
-                title: title,
+                bookId: bookId,
+                name: name,
                 genre: genre,
-                logline: logline,
-                synopsis: synopsis,
-                coverColor: coverColor,
-                linkedProjectInkId: linkedProjectInkId,
-                linkedProjectInkName: linkedProjectInkName,
+                generalIdea: generalIdea,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -5394,25 +2908,19 @@ class $$UniversesTableTableManager
           createCompanionCallback:
               ({
                 required String id,
-                required String title,
+                Value<String?> bookId = const Value.absent(),
+                required String name,
                 required String genre,
-                Value<String?> logline = const Value.absent(),
-                Value<String?> synopsis = const Value.absent(),
-                Value<String> coverColor = const Value.absent(),
-                Value<String?> linkedProjectInkId = const Value.absent(),
-                Value<String?> linkedProjectInkName = const Value.absent(),
+                Value<String> generalIdea = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
-              }) => UniversesCompanion.insert(
+              }) => ProjectsCompanion.insert(
                 id: id,
-                title: title,
+                bookId: bookId,
+                name: name,
                 genre: genre,
-                logline: logline,
-                synopsis: synopsis,
-                coverColor: coverColor,
-                linkedProjectInkId: linkedProjectInkId,
-                linkedProjectInkName: linkedProjectInkName,
+                generalIdea: generalIdea,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -5420,1314 +2928,25 @@ class $$UniversesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$UniversesTable, Universe>(table),
-                  $$UniversesTableReferences(db, table, e),
+                  e.readTable(table),
+                  $$ProjectsTableReferences(db, table, e),
                 ),
               )
               .toList(),
           prefetchHooksCallback:
               ({
-                charactersRefs = false,
-                characterRelationshipsRefs = false,
+                bookId = false,
+                arcsRefs = false,
                 chaptersRefs = false,
-                scenesRefs = false,
-                loreEntriesRefs = false,
-                ideaSparksRefs = false,
+                customSectionsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
-                    if (charactersRefs) db.characters,
-                    if (characterRelationshipsRefs) db.characterRelationships,
+                    if (arcsRefs) db.arcs,
                     if (chaptersRefs) db.chapters,
-                    if (scenesRefs) db.scenes,
-                    if (loreEntriesRefs) db.loreEntries,
-                    if (ideaSparksRefs) db.ideaSparks,
+                    if (customSectionsRefs) db.customSections,
                   ],
-                  addJoins: null,
-                  getPrefetchedDataCallback: (items) async {
-                    return [
-                      if (charactersRefs)
-                        await $_getPrefetchedData<
-                          Universe,
-                          $UniversesTable,
-                          Character
-                        >(
-                          currentTable: table,
-                          referencedTable: $$UniversesTableReferences
-                              ._charactersRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$UniversesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).charactersRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.universeId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (characterRelationshipsRefs)
-                        await $_getPrefetchedData<
-                          Universe,
-                          $UniversesTable,
-                          CharacterRelationship
-                        >(
-                          currentTable: table,
-                          referencedTable: $$UniversesTableReferences
-                              ._characterRelationshipsRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$UniversesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).characterRelationshipsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.universeId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (chaptersRefs)
-                        await $_getPrefetchedData<
-                          Universe,
-                          $UniversesTable,
-                          Chapter
-                        >(
-                          currentTable: table,
-                          referencedTable: $$UniversesTableReferences
-                              ._chaptersRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$UniversesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).chaptersRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.universeId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (scenesRefs)
-                        await $_getPrefetchedData<
-                          Universe,
-                          $UniversesTable,
-                          Scene
-                        >(
-                          currentTable: table,
-                          referencedTable: $$UniversesTableReferences
-                              ._scenesRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$UniversesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).scenesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.universeId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (loreEntriesRefs)
-                        await $_getPrefetchedData<
-                          Universe,
-                          $UniversesTable,
-                          LoreEntry
-                        >(
-                          currentTable: table,
-                          referencedTable: $$UniversesTableReferences
-                              ._loreEntriesRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$UniversesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).loreEntriesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.universeId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (ideaSparksRefs)
-                        await $_getPrefetchedData<
-                          Universe,
-                          $UniversesTable,
-                          IdeaSpark
-                        >(
-                          currentTable: table,
-                          referencedTable: $$UniversesTableReferences
-                              ._ideaSparksRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$UniversesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).ideaSparksRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.universeId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                    ];
-                  },
-                );
-              },
-        ),
-      );
-}
-
-typedef $$UniversesTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $UniversesTable,
-      Universe,
-      $$UniversesTableFilterComposer,
-      $$UniversesTableOrderingComposer,
-      $$UniversesTableAnnotationComposer,
-      $$UniversesTableCreateCompanionBuilder,
-      $$UniversesTableUpdateCompanionBuilder,
-      (Universe, $$UniversesTableReferences),
-      Universe,
-      PrefetchHooks Function({
-        bool charactersRefs,
-        bool characterRelationshipsRefs,
-        bool chaptersRefs,
-        bool scenesRefs,
-        bool loreEntriesRefs,
-        bool ideaSparksRefs,
-      })
-    >;
-typedef $$CharactersTableCreateCompanionBuilder =
-    CharactersCompanion Function({
-      required String id,
-      required String universeId,
-      required String name,
-      Value<String?> alias,
-      required String role,
-      Value<String?> archetype,
-      Value<String?> age,
-      Value<String?> occupation,
-      Value<String?> motivation,
-      Value<String?> flaw,
-      Value<String?> internalConflict,
-      Value<String?> backstory,
-      Value<String> arcStage,
-      Value<String?> notes,
-      Value<String> avatarColor,
-      required DateTime createdAt,
-      required DateTime updatedAt,
-      Value<int> rowid,
-    });
-typedef $$CharactersTableUpdateCompanionBuilder =
-    CharactersCompanion Function({
-      Value<String> id,
-      Value<String> universeId,
-      Value<String> name,
-      Value<String?> alias,
-      Value<String> role,
-      Value<String?> archetype,
-      Value<String?> age,
-      Value<String?> occupation,
-      Value<String?> motivation,
-      Value<String?> flaw,
-      Value<String?> internalConflict,
-      Value<String?> backstory,
-      Value<String> arcStage,
-      Value<String?> notes,
-      Value<String> avatarColor,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
-      Value<int> rowid,
-    });
-
-final class $$CharactersTableReferences
-    extends BaseReferences<_$AppDatabase, $CharactersTable, Character> {
-  $$CharactersTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $UniversesTable _universeIdTable(_$AppDatabase db) =>
-      db.universes.createAlias('characters__universe_id__universes__id');
-
-  $$UniversesTableProcessedTableManager get universeId {
-    final $_column = $_itemColumn<String>('universe_id')!;
-
-    final manager = $$UniversesTableTableManager(
-      $_db,
-      $_db.universes,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_universeIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static MultiTypedResultKey<$ScenesTable, List<Scene>> _scenesRefsTable(
-    _$AppDatabase db,
-  ) => MultiTypedResultKey.fromTable(
-    db.scenes,
-    aliasName: 'characters__id__scenes__pov_character_id',
-  );
-
-  $$ScenesTableProcessedTableManager get scenesRefs {
-    final manager = $$ScenesTableTableManager(
-      $_db,
-      $_db.scenes,
-    ).filter((f) => f.povCharacterId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_scenesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-}
-
-class $$CharactersTableFilterComposer
-    extends Composer<_$AppDatabase, $CharactersTable> {
-  $$CharactersTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get alias => $composableBuilder(
-    column: $table.alias,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get role => $composableBuilder(
-    column: $table.role,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get archetype => $composableBuilder(
-    column: $table.archetype,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get age => $composableBuilder(
-    column: $table.age,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get occupation => $composableBuilder(
-    column: $table.occupation,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get motivation => $composableBuilder(
-    column: $table.motivation,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get flaw => $composableBuilder(
-    column: $table.flaw,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get internalConflict => $composableBuilder(
-    column: $table.internalConflict,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get backstory => $composableBuilder(
-    column: $table.backstory,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get arcStage => $composableBuilder(
-    column: $table.arcStage,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get notes => $composableBuilder(
-    column: $table.notes,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get avatarColor => $composableBuilder(
-    column: $table.avatarColor,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$UniversesTableFilterComposer get universeId {
-    final $$UniversesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableFilterComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  Expression<bool> scenesRefs(
-    Expression<bool> Function($$ScenesTableFilterComposer f) f,
-  ) {
-    final $$ScenesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.scenes,
-      getReferencedColumn: (t) => t.povCharacterId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ScenesTableFilterComposer(
-            $db: $db,
-            $table: $db.scenes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-}
-
-class $$CharactersTableOrderingComposer
-    extends Composer<_$AppDatabase, $CharactersTable> {
-  $$CharactersTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get alias => $composableBuilder(
-    column: $table.alias,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get role => $composableBuilder(
-    column: $table.role,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get archetype => $composableBuilder(
-    column: $table.archetype,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get age => $composableBuilder(
-    column: $table.age,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get occupation => $composableBuilder(
-    column: $table.occupation,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get motivation => $composableBuilder(
-    column: $table.motivation,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get flaw => $composableBuilder(
-    column: $table.flaw,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get internalConflict => $composableBuilder(
-    column: $table.internalConflict,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get backstory => $composableBuilder(
-    column: $table.backstory,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get arcStage => $composableBuilder(
-    column: $table.arcStage,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get notes => $composableBuilder(
-    column: $table.notes,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get avatarColor => $composableBuilder(
-    column: $table.avatarColor,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$UniversesTableOrderingComposer get universeId {
-    final $$UniversesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableOrderingComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$CharactersTableAnnotationComposer
-    extends Composer<_$AppDatabase, $CharactersTable> {
-  $$CharactersTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get name =>
-      $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<String> get alias =>
-      $composableBuilder(column: $table.alias, builder: (column) => column);
-
-  GeneratedColumn<String> get role =>
-      $composableBuilder(column: $table.role, builder: (column) => column);
-
-  GeneratedColumn<String> get archetype =>
-      $composableBuilder(column: $table.archetype, builder: (column) => column);
-
-  GeneratedColumn<String> get age =>
-      $composableBuilder(column: $table.age, builder: (column) => column);
-
-  GeneratedColumn<String> get occupation => $composableBuilder(
-    column: $table.occupation,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get motivation => $composableBuilder(
-    column: $table.motivation,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get flaw =>
-      $composableBuilder(column: $table.flaw, builder: (column) => column);
-
-  GeneratedColumn<String> get internalConflict => $composableBuilder(
-    column: $table.internalConflict,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get backstory =>
-      $composableBuilder(column: $table.backstory, builder: (column) => column);
-
-  GeneratedColumn<String> get arcStage =>
-      $composableBuilder(column: $table.arcStage, builder: (column) => column);
-
-  GeneratedColumn<String> get notes =>
-      $composableBuilder(column: $table.notes, builder: (column) => column);
-
-  GeneratedColumn<String> get avatarColor => $composableBuilder(
-    column: $table.avatarColor,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  $$UniversesTableAnnotationComposer get universeId {
-    final $$UniversesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  Expression<T> scenesRefs<T extends Object>(
-    Expression<T> Function($$ScenesTableAnnotationComposer a) f,
-  ) {
-    final $$ScenesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.scenes,
-      getReferencedColumn: (t) => t.povCharacterId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ScenesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.scenes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-}
-
-class $$CharactersTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $CharactersTable,
-          Character,
-          $$CharactersTableFilterComposer,
-          $$CharactersTableOrderingComposer,
-          $$CharactersTableAnnotationComposer,
-          $$CharactersTableCreateCompanionBuilder,
-          $$CharactersTableUpdateCompanionBuilder,
-          (Character, $$CharactersTableReferences),
-          Character,
-          PrefetchHooks Function({bool universeId, bool scenesRefs})
-        > {
-  $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$CharactersTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$CharactersTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$CharactersTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> id = const Value.absent(),
-                Value<String> universeId = const Value.absent(),
-                Value<String> name = const Value.absent(),
-                Value<String?> alias = const Value.absent(),
-                Value<String> role = const Value.absent(),
-                Value<String?> archetype = const Value.absent(),
-                Value<String?> age = const Value.absent(),
-                Value<String?> occupation = const Value.absent(),
-                Value<String?> motivation = const Value.absent(),
-                Value<String?> flaw = const Value.absent(),
-                Value<String?> internalConflict = const Value.absent(),
-                Value<String?> backstory = const Value.absent(),
-                Value<String> arcStage = const Value.absent(),
-                Value<String?> notes = const Value.absent(),
-                Value<String> avatarColor = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => CharactersCompanion(
-                id: id,
-                universeId: universeId,
-                name: name,
-                alias: alias,
-                role: role,
-                archetype: archetype,
-                age: age,
-                occupation: occupation,
-                motivation: motivation,
-                flaw: flaw,
-                internalConflict: internalConflict,
-                backstory: backstory,
-                arcStage: arcStage,
-                notes: notes,
-                avatarColor: avatarColor,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String id,
-                required String universeId,
-                required String name,
-                Value<String?> alias = const Value.absent(),
-                required String role,
-                Value<String?> archetype = const Value.absent(),
-                Value<String?> age = const Value.absent(),
-                Value<String?> occupation = const Value.absent(),
-                Value<String?> motivation = const Value.absent(),
-                Value<String?> flaw = const Value.absent(),
-                Value<String?> internalConflict = const Value.absent(),
-                Value<String?> backstory = const Value.absent(),
-                Value<String> arcStage = const Value.absent(),
-                Value<String?> notes = const Value.absent(),
-                Value<String> avatarColor = const Value.absent(),
-                required DateTime createdAt,
-                required DateTime updatedAt,
-                Value<int> rowid = const Value.absent(),
-              }) => CharactersCompanion.insert(
-                id: id,
-                universeId: universeId,
-                name: name,
-                alias: alias,
-                role: role,
-                archetype: archetype,
-                age: age,
-                occupation: occupation,
-                motivation: motivation,
-                flaw: flaw,
-                internalConflict: internalConflict,
-                backstory: backstory,
-                arcStage: arcStage,
-                notes: notes,
-                avatarColor: avatarColor,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$CharactersTable, Character>(table),
-                  $$CharactersTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({universeId = false, scenesRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (scenesRefs) db.scenes],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (universeId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.universeId,
-                                referencedTable: $$CharactersTableReferences
-                                    ._universeIdTable(db),
-                                referencedColumn: $$CharactersTableReferences
-                                    ._universeIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (scenesRefs)
-                    await $_getPrefetchedData<
-                      Character,
-                      $CharactersTable,
-                      Scene
-                    >(
-                      currentTable: table,
-                      referencedTable: $$CharactersTableReferences
-                          ._scenesRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$CharactersTableReferences(db, table, p0).scenesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.povCharacterId == item.id,
-                          ),
-                      typedResults: items,
-                    ),
-                ];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$CharactersTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $CharactersTable,
-      Character,
-      $$CharactersTableFilterComposer,
-      $$CharactersTableOrderingComposer,
-      $$CharactersTableAnnotationComposer,
-      $$CharactersTableCreateCompanionBuilder,
-      $$CharactersTableUpdateCompanionBuilder,
-      (Character, $$CharactersTableReferences),
-      Character,
-      PrefetchHooks Function({bool universeId, bool scenesRefs})
-    >;
-typedef $$CharacterRelationshipsTableCreateCompanionBuilder =
-    CharacterRelationshipsCompanion Function({
-      required String id,
-      required String universeId,
-      required String sourceCharacterId,
-      required String targetCharacterId,
-      required String relationType,
-      Value<String?> description,
-      required DateTime createdAt,
-      Value<int> rowid,
-    });
-typedef $$CharacterRelationshipsTableUpdateCompanionBuilder =
-    CharacterRelationshipsCompanion Function({
-      Value<String> id,
-      Value<String> universeId,
-      Value<String> sourceCharacterId,
-      Value<String> targetCharacterId,
-      Value<String> relationType,
-      Value<String?> description,
-      Value<DateTime> createdAt,
-      Value<int> rowid,
-    });
-
-final class $$CharacterRelationshipsTableReferences
-    extends
-        BaseReferences<
-          _$AppDatabase,
-          $CharacterRelationshipsTable,
-          CharacterRelationship
-        > {
-  $$CharacterRelationshipsTableReferences(
-    super.$_db,
-    super.$_table,
-    super.$_typedResult,
-  );
-
-  static $UniversesTable _universeIdTable(_$AppDatabase db) => db.universes
-      .createAlias('character_relationships__universe_id__universes__id');
-
-  $$UniversesTableProcessedTableManager get universeId {
-    final $_column = $_itemColumn<String>('universe_id')!;
-
-    final manager = $$UniversesTableTableManager(
-      $_db,
-      $_db.universes,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_universeIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static $CharactersTable _sourceCharacterIdTable(_$AppDatabase db) =>
-      db.characters.createAlias(
-        'character_relationships__source_character_id__characters__id',
-      );
-
-  $$CharactersTableProcessedTableManager get sourceCharacterId {
-    final $_column = $_itemColumn<String>('source_character_id')!;
-
-    final manager = $$CharactersTableTableManager(
-      $_db,
-      $_db.characters,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_sourceCharacterIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static $CharactersTable _targetCharacterIdTable(_$AppDatabase db) =>
-      db.characters.createAlias(
-        'character_relationships__target_character_id__characters__id',
-      );
-
-  $$CharactersTableProcessedTableManager get targetCharacterId {
-    final $_column = $_itemColumn<String>('target_character_id')!;
-
-    final manager = $$CharactersTableTableManager(
-      $_db,
-      $_db.characters,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_targetCharacterIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$CharacterRelationshipsTableFilterComposer
-    extends Composer<_$AppDatabase, $CharacterRelationshipsTable> {
-  $$CharacterRelationshipsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get relationType => $composableBuilder(
-    column: $table.relationType,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get description => $composableBuilder(
-    column: $table.description,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$UniversesTableFilterComposer get universeId {
-    final $$UniversesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableFilterComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CharactersTableFilterComposer get sourceCharacterId {
-    final $$CharactersTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceCharacterId,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableFilterComposer(
-            $db: $db,
-            $table: $db.characters,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CharactersTableFilterComposer get targetCharacterId {
-    final $$CharactersTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.targetCharacterId,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableFilterComposer(
-            $db: $db,
-            $table: $db.characters,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$CharacterRelationshipsTableOrderingComposer
-    extends Composer<_$AppDatabase, $CharacterRelationshipsTable> {
-  $$CharacterRelationshipsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get relationType => $composableBuilder(
-    column: $table.relationType,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get description => $composableBuilder(
-    column: $table.description,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$UniversesTableOrderingComposer get universeId {
-    final $$UniversesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableOrderingComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CharactersTableOrderingComposer get sourceCharacterId {
-    final $$CharactersTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceCharacterId,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableOrderingComposer(
-            $db: $db,
-            $table: $db.characters,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CharactersTableOrderingComposer get targetCharacterId {
-    final $$CharactersTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.targetCharacterId,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableOrderingComposer(
-            $db: $db,
-            $table: $db.characters,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$CharacterRelationshipsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $CharacterRelationshipsTable> {
-  $$CharacterRelationshipsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get relationType => $composableBuilder(
-    column: $table.relationType,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get description => $composableBuilder(
-    column: $table.description,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  $$UniversesTableAnnotationComposer get universeId {
-    final $$UniversesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CharactersTableAnnotationComposer get sourceCharacterId {
-    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.sourceCharacterId,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableAnnotationComposer(
-            $db: $db,
-            $table: $db.characters,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CharactersTableAnnotationComposer get targetCharacterId {
-    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.targetCharacterId,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableAnnotationComposer(
-            $db: $db,
-            $table: $db.characters,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$CharacterRelationshipsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $CharacterRelationshipsTable,
-          CharacterRelationship,
-          $$CharacterRelationshipsTableFilterComposer,
-          $$CharacterRelationshipsTableOrderingComposer,
-          $$CharacterRelationshipsTableAnnotationComposer,
-          $$CharacterRelationshipsTableCreateCompanionBuilder,
-          $$CharacterRelationshipsTableUpdateCompanionBuilder,
-          (CharacterRelationship, $$CharacterRelationshipsTableReferences),
-          CharacterRelationship,
-          PrefetchHooks Function({
-            bool universeId,
-            bool sourceCharacterId,
-            bool targetCharacterId,
-          })
-        > {
-  $$CharacterRelationshipsTableTableManager(
-    _$AppDatabase db,
-    $CharacterRelationshipsTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$CharacterRelationshipsTableFilterComposer(
-                $db: db,
-                $table: table,
-              ),
-          createOrderingComposer: () =>
-              $$CharacterRelationshipsTableOrderingComposer(
-                $db: db,
-                $table: table,
-              ),
-          createComputedFieldComposer: () =>
-              $$CharacterRelationshipsTableAnnotationComposer(
-                $db: db,
-                $table: table,
-              ),
-          updateCompanionCallback:
-              ({
-                Value<String> id = const Value.absent(),
-                Value<String> universeId = const Value.absent(),
-                Value<String> sourceCharacterId = const Value.absent(),
-                Value<String> targetCharacterId = const Value.absent(),
-                Value<String> relationType = const Value.absent(),
-                Value<String?> description = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => CharacterRelationshipsCompanion(
-                id: id,
-                universeId: universeId,
-                sourceCharacterId: sourceCharacterId,
-                targetCharacterId: targetCharacterId,
-                relationType: relationType,
-                description: description,
-                createdAt: createdAt,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String id,
-                required String universeId,
-                required String sourceCharacterId,
-                required String targetCharacterId,
-                required String relationType,
-                Value<String?> description = const Value.absent(),
-                required DateTime createdAt,
-                Value<int> rowid = const Value.absent(),
-              }) => CharacterRelationshipsCompanion.insert(
-                id: id,
-                universeId: universeId,
-                sourceCharacterId: sourceCharacterId,
-                targetCharacterId: targetCharacterId,
-                relationType: relationType,
-                description: description,
-                createdAt: createdAt,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<
-                    $CharacterRelationshipsTable,
-                    CharacterRelationship
-                  >(table),
-                  $$CharacterRelationshipsTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback:
-              ({
-                universeId = false,
-                sourceCharacterId = false,
-                targetCharacterId = false,
-              }) {
-                return PrefetchHooks(
-                  db: db,
-                  explicitlyWatchedTables: [],
                   addJoins:
                       <
                         T extends TableManagerState<
@@ -6744,48 +2963,16 @@ class $$CharacterRelationshipsTableTableManager
                           dynamic
                         >
                       >(state) {
-                        if (universeId) {
+                        if (bookId) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.universeId,
-                                    referencedTable:
-                                        $$CharacterRelationshipsTableReferences
-                                            ._universeIdTable(db),
-                                    referencedColumn:
-                                        $$CharacterRelationshipsTableReferences
-                                            ._universeIdTable(db)
-                                            .id,
-                                  )
-                                  as T;
-                        }
-                        if (sourceCharacterId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.sourceCharacterId,
-                                    referencedTable:
-                                        $$CharacterRelationshipsTableReferences
-                                            ._sourceCharacterIdTable(db),
-                                    referencedColumn:
-                                        $$CharacterRelationshipsTableReferences
-                                            ._sourceCharacterIdTable(db)
-                                            .id,
-                                  )
-                                  as T;
-                        }
-                        if (targetCharacterId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.targetCharacterId,
-                                    referencedTable:
-                                        $$CharacterRelationshipsTableReferences
-                                            ._targetCharacterIdTable(db),
-                                    referencedColumn:
-                                        $$CharacterRelationshipsTableReferences
-                                            ._targetCharacterIdTable(db)
-                                            .id,
+                                    currentColumn: table.bookId,
+                                    referencedTable: $$ProjectsTableReferences
+                                        ._bookIdTable(db),
+                                    referencedColumn: $$ProjectsTableReferences
+                                        ._bookIdTable(db)
+                                        .id,
                                   )
                                   as T;
                         }
@@ -6793,7 +2980,63 @@ class $$CharacterRelationshipsTableTableManager
                         return state;
                       },
                   getPrefetchedDataCallback: (items) async {
-                    return [];
+                    return [
+                      if (arcsRefs)
+                        await $_getPrefetchedData<Project, $ProjectsTable, Arc>(
+                          currentTable: table,
+                          referencedTable: $$ProjectsTableReferences
+                              ._arcsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProjectsTableReferences(db, table, p0).arcsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.projectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (chaptersRefs)
+                        await $_getPrefetchedData<
+                          Project,
+                          $ProjectsTable,
+                          Chapter
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProjectsTableReferences
+                              ._chaptersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).chaptersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.projectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (customSectionsRefs)
+                        await $_getPrefetchedData<
+                          Project,
+                          $ProjectsTable,
+                          CustomSection
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProjectsTableReferences
+                              ._customSectionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProjectsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).customSectionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.projectId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
                 );
               },
@@ -6801,54 +3044,381 @@ class $$CharacterRelationshipsTableTableManager
       );
 }
 
-typedef $$CharacterRelationshipsTableProcessedTableManager =
+typedef $$ProjectsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $CharacterRelationshipsTable,
-      CharacterRelationship,
-      $$CharacterRelationshipsTableFilterComposer,
-      $$CharacterRelationshipsTableOrderingComposer,
-      $$CharacterRelationshipsTableAnnotationComposer,
-      $$CharacterRelationshipsTableCreateCompanionBuilder,
-      $$CharacterRelationshipsTableUpdateCompanionBuilder,
-      (CharacterRelationship, $$CharacterRelationshipsTableReferences),
-      CharacterRelationship,
+      $ProjectsTable,
+      Project,
+      $$ProjectsTableFilterComposer,
+      $$ProjectsTableOrderingComposer,
+      $$ProjectsTableAnnotationComposer,
+      $$ProjectsTableCreateCompanionBuilder,
+      $$ProjectsTableUpdateCompanionBuilder,
+      (Project, $$ProjectsTableReferences),
+      Project,
       PrefetchHooks Function({
-        bool universeId,
-        bool sourceCharacterId,
-        bool targetCharacterId,
+        bool bookId,
+        bool arcsRefs,
+        bool chaptersRefs,
+        bool customSectionsRefs,
       })
+    >;
+typedef $$ArcsTableCreateCompanionBuilder =
+    ArcsCompanion Function({
+      required String id,
+      required String projectId,
+      required String title,
+      Value<String> content,
+      required int orderIndex,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ArcsTableUpdateCompanionBuilder =
+    ArcsCompanion Function({
+      Value<String> id,
+      Value<String> projectId,
+      Value<String> title,
+      Value<String> content,
+      Value<int> orderIndex,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$ArcsTableReferences
+    extends BaseReferences<_$AppDatabase, $ArcsTable, Arc> {
+  $$ArcsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) => db.projects
+      .createAlias($_aliasNameGenerator(db.arcs.projectId, db.projects.id));
+
+  $$ProjectsTableProcessedTableManager get projectId {
+    final $_column = $_itemColumn<String>('project_id')!;
+
+    final manager = $$ProjectsTableTableManager(
+      $_db,
+      $_db.projects,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ArcsTableFilterComposer extends Composer<_$AppDatabase, $ArcsTable> {
+  $$ArcsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableFilterComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ArcsTableOrderingComposer extends Composer<_$AppDatabase, $ArcsTable> {
+  $$ArcsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableOrderingComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ArcsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ArcsTable> {
+  $$ArcsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProjectsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.projects,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ArcsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ArcsTable,
+          Arc,
+          $$ArcsTableFilterComposer,
+          $$ArcsTableOrderingComposer,
+          $$ArcsTableAnnotationComposer,
+          $$ArcsTableCreateCompanionBuilder,
+          $$ArcsTableUpdateCompanionBuilder,
+          (Arc, $$ArcsTableReferences),
+          Arc,
+          PrefetchHooks Function({bool projectId})
+        > {
+  $$ArcsTableTableManager(_$AppDatabase db, $ArcsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ArcsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ArcsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ArcsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> projectId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ArcsCompanion(
+                id: id,
+                projectId: projectId,
+                title: title,
+                content: content,
+                orderIndex: orderIndex,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String projectId,
+                required String title,
+                Value<String> content = const Value.absent(),
+                required int orderIndex,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ArcsCompanion.insert(
+                id: id,
+                projectId: projectId,
+                title: title,
+                content: content,
+                orderIndex: orderIndex,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable(table), $$ArcsTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback: ({projectId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (projectId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.projectId,
+                                referencedTable: $$ArcsTableReferences
+                                    ._projectIdTable(db),
+                                referencedColumn: $$ArcsTableReferences
+                                    ._projectIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ArcsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ArcsTable,
+      Arc,
+      $$ArcsTableFilterComposer,
+      $$ArcsTableOrderingComposer,
+      $$ArcsTableAnnotationComposer,
+      $$ArcsTableCreateCompanionBuilder,
+      $$ArcsTableUpdateCompanionBuilder,
+      (Arc, $$ArcsTableReferences),
+      Arc,
+      PrefetchHooks Function({bool projectId})
     >;
 typedef $$ChaptersTableCreateCompanionBuilder =
     ChaptersCompanion Function({
       required String id,
-      required String universeId,
-      required int chapterNumber,
-      Value<String> act,
+      required String projectId,
       required String title,
-      Value<String?> objective,
-      Value<int> estimatedWordCount,
-      Value<String> status,
       required int orderIndex,
-      Value<String?> notes,
+      Value<String> startBeat,
+      Value<String> middleBeat,
+      Value<String> endBeat,
       required DateTime createdAt,
-      required DateTime updatedAt,
       Value<int> rowid,
     });
 typedef $$ChaptersTableUpdateCompanionBuilder =
     ChaptersCompanion Function({
       Value<String> id,
-      Value<String> universeId,
-      Value<int> chapterNumber,
-      Value<String> act,
+      Value<String> projectId,
       Value<String> title,
-      Value<String?> objective,
-      Value<int> estimatedWordCount,
-      Value<String> status,
       Value<int> orderIndex,
-      Value<String?> notes,
+      Value<String> startBeat,
+      Value<String> middleBeat,
+      Value<String> endBeat,
       Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
       Value<int> rowid,
     });
 
@@ -6856,39 +3426,20 @@ final class $$ChaptersTableReferences
     extends BaseReferences<_$AppDatabase, $ChaptersTable, Chapter> {
   $$ChaptersTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $UniversesTable _universeIdTable(_$AppDatabase db) =>
-      db.universes.createAlias('chapters__universe_id__universes__id');
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) => db.projects
+      .createAlias($_aliasNameGenerator(db.chapters.projectId, db.projects.id));
 
-  $$UniversesTableProcessedTableManager get universeId {
-    final $_column = $_itemColumn<String>('universe_id')!;
+  $$ProjectsTableProcessedTableManager get projectId {
+    final $_column = $_itemColumn<String>('project_id')!;
 
-    final manager = $$UniversesTableTableManager(
+    final manager = $$ProjectsTableTableManager(
       $_db,
-      $_db.universes,
+      $_db.projects,
     ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_universeIdTable($_db));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static MultiTypedResultKey<$ScenesTable, List<Scene>> _scenesRefsTable(
-    _$AppDatabase db,
-  ) => MultiTypedResultKey.fromTable(
-    db.scenes,
-    aliasName: 'chapters__id__scenes__chapter_id',
-  );
-
-  $$ScenesTableProcessedTableManager get scenesRefs {
-    final manager = $$ScenesTableTableManager(
-      $_db,
-      $_db.scenes,
-    ).filter((f) => f.chapterId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_scenesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -6907,33 +3458,8 @@ class $$ChaptersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get chapterNumber => $composableBuilder(
-    column: $table.chapterNumber,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get act => $composableBuilder(
-    column: $table.act,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get objective => $composableBuilder(
-    column: $table.objective,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get estimatedWordCount => $composableBuilder(
-    column: $table.estimatedWordCount,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get status => $composableBuilder(
-    column: $table.status,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6942,8 +3468,18 @@ class $$ChaptersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get notes => $composableBuilder(
-    column: $table.notes,
+  ColumnFilters<String> get startBeat => $composableBuilder(
+    column: $table.startBeat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get middleBeat => $composableBuilder(
+    column: $table.middleBeat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get endBeat => $composableBuilder(
+    column: $table.endBeat,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6952,25 +3488,20 @@ class $$ChaptersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$UniversesTableFilterComposer get universeId {
-    final $$UniversesTableFilterComposer composer = $composerBuilder(
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableFilterComposer(
+          }) => $$ProjectsTableFilterComposer(
             $db: $db,
-            $table: $db.universes,
+            $table: $db.projects,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6978,31 +3509,6 @@ class $$ChaptersTableFilterComposer
           ),
     );
     return composer;
-  }
-
-  Expression<bool> scenesRefs(
-    Expression<bool> Function($$ScenesTableFilterComposer f) f,
-  ) {
-    final $$ScenesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.scenes,
-      getReferencedColumn: (t) => t.chapterId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ScenesTableFilterComposer(
-            $db: $db,
-            $table: $db.scenes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
   }
 }
 
@@ -7020,33 +3526,8 @@ class $$ChaptersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get chapterNumber => $composableBuilder(
-    column: $table.chapterNumber,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get act => $composableBuilder(
-    column: $table.act,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get objective => $composableBuilder(
-    column: $table.objective,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get estimatedWordCount => $composableBuilder(
-    column: $table.estimatedWordCount,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get status => $composableBuilder(
-    column: $table.status,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7055,8 +3536,18 @@ class $$ChaptersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get notes => $composableBuilder(
-    column: $table.notes,
+  ColumnOrderings<String> get startBeat => $composableBuilder(
+    column: $table.startBeat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get middleBeat => $composableBuilder(
+    column: $table.middleBeat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get endBeat => $composableBuilder(
+    column: $table.endBeat,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7065,25 +3556,20 @@ class $$ChaptersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$UniversesTableOrderingComposer get universeId {
-    final $$UniversesTableOrderingComposer composer = $composerBuilder(
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableOrderingComposer(
+          }) => $$ProjectsTableOrderingComposer(
             $db: $db,
-            $table: $db.universes,
+            $table: $db.projects,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7106,56 +3592,42 @@ class $$ChaptersTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get chapterNumber => $composableBuilder(
-    column: $table.chapterNumber,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get act =>
-      $composableBuilder(column: $table.act, builder: (column) => column);
-
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
-
-  GeneratedColumn<String> get objective =>
-      $composableBuilder(column: $table.objective, builder: (column) => column);
-
-  GeneratedColumn<int> get estimatedWordCount => $composableBuilder(
-    column: $table.estimatedWordCount,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
 
   GeneratedColumn<int> get orderIndex => $composableBuilder(
     column: $table.orderIndex,
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get notes =>
-      $composableBuilder(column: $table.notes, builder: (column) => column);
+  GeneratedColumn<String> get startBeat =>
+      $composableBuilder(column: $table.startBeat, builder: (column) => column);
+
+  GeneratedColumn<String> get middleBeat => $composableBuilder(
+    column: $table.middleBeat,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get endBeat =>
+      $composableBuilder(column: $table.endBeat, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  $$UniversesTableAnnotationComposer get universeId {
-    final $$UniversesTableAnnotationComposer composer = $composerBuilder(
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableAnnotationComposer(
+          }) => $$ProjectsTableAnnotationComposer(
             $db: $db,
-            $table: $db.universes,
+            $table: $db.projects,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7163,31 +3635,6 @@ class $$ChaptersTableAnnotationComposer
           ),
     );
     return composer;
-  }
-
-  Expression<T> scenesRefs<T extends Object>(
-    Expression<T> Function($$ScenesTableAnnotationComposer a) f,
-  ) {
-    final $$ScenesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.scenes,
-      getReferencedColumn: (t) => t.chapterId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ScenesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.scenes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
   }
 }
 
@@ -7204,7 +3651,7 @@ class $$ChaptersTableTableManager
           $$ChaptersTableUpdateCompanionBuilder,
           (Chapter, $$ChaptersTableReferences),
           Chapter,
-          PrefetchHooks Function({bool universeId, bool scenesRefs})
+          PrefetchHooks Function({bool projectId})
         > {
   $$ChaptersTableTableManager(_$AppDatabase db, $ChaptersTable table)
     : super(
@@ -7220,75 +3667,59 @@ class $$ChaptersTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String> universeId = const Value.absent(),
-                Value<int> chapterNumber = const Value.absent(),
-                Value<String> act = const Value.absent(),
+                Value<String> projectId = const Value.absent(),
                 Value<String> title = const Value.absent(),
-                Value<String?> objective = const Value.absent(),
-                Value<int> estimatedWordCount = const Value.absent(),
-                Value<String> status = const Value.absent(),
                 Value<int> orderIndex = const Value.absent(),
-                Value<String?> notes = const Value.absent(),
+                Value<String> startBeat = const Value.absent(),
+                Value<String> middleBeat = const Value.absent(),
+                Value<String> endBeat = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ChaptersCompanion(
                 id: id,
-                universeId: universeId,
-                chapterNumber: chapterNumber,
-                act: act,
+                projectId: projectId,
                 title: title,
-                objective: objective,
-                estimatedWordCount: estimatedWordCount,
-                status: status,
                 orderIndex: orderIndex,
-                notes: notes,
+                startBeat: startBeat,
+                middleBeat: middleBeat,
+                endBeat: endBeat,
                 createdAt: createdAt,
-                updatedAt: updatedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String id,
-                required String universeId,
-                required int chapterNumber,
-                Value<String> act = const Value.absent(),
+                required String projectId,
                 required String title,
-                Value<String?> objective = const Value.absent(),
-                Value<int> estimatedWordCount = const Value.absent(),
-                Value<String> status = const Value.absent(),
                 required int orderIndex,
-                Value<String?> notes = const Value.absent(),
+                Value<String> startBeat = const Value.absent(),
+                Value<String> middleBeat = const Value.absent(),
+                Value<String> endBeat = const Value.absent(),
                 required DateTime createdAt,
-                required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => ChaptersCompanion.insert(
                 id: id,
-                universeId: universeId,
-                chapterNumber: chapterNumber,
-                act: act,
+                projectId: projectId,
                 title: title,
-                objective: objective,
-                estimatedWordCount: estimatedWordCount,
-                status: status,
                 orderIndex: orderIndex,
-                notes: notes,
+                startBeat: startBeat,
+                middleBeat: middleBeat,
+                endBeat: endBeat,
                 createdAt: createdAt,
-                updatedAt: updatedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$ChaptersTable, Chapter>(table),
+                  e.readTable(table),
                   $$ChaptersTableReferences(db, table, e),
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({universeId = false, scenesRefs = false}) {
+          prefetchHooksCallback: ({projectId = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (scenesRefs) db.scenes],
+              explicitlyWatchedTables: [],
               addJoins:
                   <
                     T extends TableManagerState<
@@ -7305,15 +3736,15 @@ class $$ChaptersTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (universeId) {
+                    if (projectId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.universeId,
+                                currentColumn: table.projectId,
                                 referencedTable: $$ChaptersTableReferences
-                                    ._universeIdTable(db),
+                                    ._projectIdTable(db),
                                 referencedColumn: $$ChaptersTableReferences
-                                    ._universeIdTable(db)
+                                    ._projectIdTable(db)
                                     .id,
                               )
                               as T;
@@ -7322,19 +3753,7 @@ class $$ChaptersTableTableManager
                     return state;
                   },
               getPrefetchedDataCallback: (items) async {
-                return [
-                  if (scenesRefs)
-                    await $_getPrefetchedData<Chapter, $ChaptersTable, Scene>(
-                      currentTable: table,
-                      referencedTable: $$ChaptersTableReferences
-                          ._scenesRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$ChaptersTableReferences(db, table, p0).scenesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.chapterId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                return [];
               },
             );
           },
@@ -7354,92 +3773,50 @@ typedef $$ChaptersTableProcessedTableManager =
       $$ChaptersTableUpdateCompanionBuilder,
       (Chapter, $$ChaptersTableReferences),
       Chapter,
-      PrefetchHooks Function({bool universeId, bool scenesRefs})
+      PrefetchHooks Function({bool projectId})
     >;
-typedef $$ScenesTableCreateCompanionBuilder =
-    ScenesCompanion Function({
+typedef $$CustomSectionsTableCreateCompanionBuilder =
+    CustomSectionsCompanion Function({
       required String id,
-      required String chapterId,
-      required String universeId,
-      required int sceneNumber,
+      required String projectId,
       required String title,
-      Value<String?> summary,
-      Value<String?> povCharacterId,
-      Value<String?> locationName,
-      Value<int> tensionLevel,
-      Value<String> status,
+      Value<String> content,
       required int orderIndex,
       required DateTime createdAt,
-      required DateTime updatedAt,
       Value<int> rowid,
     });
-typedef $$ScenesTableUpdateCompanionBuilder =
-    ScenesCompanion Function({
+typedef $$CustomSectionsTableUpdateCompanionBuilder =
+    CustomSectionsCompanion Function({
       Value<String> id,
-      Value<String> chapterId,
-      Value<String> universeId,
-      Value<int> sceneNumber,
+      Value<String> projectId,
       Value<String> title,
-      Value<String?> summary,
-      Value<String?> povCharacterId,
-      Value<String?> locationName,
-      Value<int> tensionLevel,
-      Value<String> status,
+      Value<String> content,
       Value<int> orderIndex,
       Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
       Value<int> rowid,
     });
 
-final class $$ScenesTableReferences
-    extends BaseReferences<_$AppDatabase, $ScenesTable, Scene> {
-  $$ScenesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+final class $$CustomSectionsTableReferences
+    extends BaseReferences<_$AppDatabase, $CustomSectionsTable, CustomSection> {
+  $$CustomSectionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
 
-  static $ChaptersTable _chapterIdTable(_$AppDatabase db) =>
-      db.chapters.createAlias('scenes__chapter_id__chapters__id');
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) =>
+      db.projects.createAlias(
+        $_aliasNameGenerator(db.customSections.projectId, db.projects.id),
+      );
 
-  $$ChaptersTableProcessedTableManager get chapterId {
-    final $_column = $_itemColumn<String>('chapter_id')!;
+  $$ProjectsTableProcessedTableManager get projectId {
+    final $_column = $_itemColumn<String>('project_id')!;
 
-    final manager = $$ChaptersTableTableManager(
+    final manager = $$ProjectsTableTableManager(
       $_db,
-      $_db.chapters,
+      $_db.projects,
     ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_chapterIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static $UniversesTable _universeIdTable(_$AppDatabase db) =>
-      db.universes.createAlias('scenes__universe_id__universes__id');
-
-  $$UniversesTableProcessedTableManager get universeId {
-    final $_column = $_itemColumn<String>('universe_id')!;
-
-    final manager = $$UniversesTableTableManager(
-      $_db,
-      $_db.universes,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_universeIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static $CharactersTable _povCharacterIdTable(_$AppDatabase db) =>
-      db.characters.createAlias('scenes__pov_character_id__characters__id');
-
-  $$CharactersTableProcessedTableManager? get povCharacterId {
-    final $_column = $_itemColumn<String>('pov_character_id');
-    if ($_column == null) return null;
-    final manager = $$CharactersTableTableManager(
-      $_db,
-      $_db.characters,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_povCharacterIdTable($_db));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -7447,9 +3824,9 @@ final class $$ScenesTableReferences
   }
 }
 
-class $$ScenesTableFilterComposer
-    extends Composer<_$AppDatabase, $ScenesTable> {
-  $$ScenesTableFilterComposer({
+class $$CustomSectionsTableFilterComposer
+    extends Composer<_$AppDatabase, $CustomSectionsTable> {
+  $$CustomSectionsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7461,33 +3838,13 @@ class $$ScenesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get sceneNumber => $composableBuilder(
-    column: $table.sceneNumber,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get summary => $composableBuilder(
-    column: $table.summary,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get locationName => $composableBuilder(
-    column: $table.locationName,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get tensionLevel => $composableBuilder(
-    column: $table.tensionLevel,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get status => $composableBuilder(
-    column: $table.status,
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7501,71 +3858,20 @@ class $$ScenesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$ChaptersTableFilterComposer get chapterId {
-    final $$ChaptersTableFilterComposer composer = $composerBuilder(
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.chapterId,
-      referencedTable: $db.chapters,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ChaptersTableFilterComposer(
+          }) => $$ProjectsTableFilterComposer(
             $db: $db,
-            $table: $db.chapters,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$UniversesTableFilterComposer get universeId {
-    final $$UniversesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableFilterComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CharactersTableFilterComposer get povCharacterId {
-    final $$CharactersTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.povCharacterId,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableFilterComposer(
-            $db: $db,
-            $table: $db.characters,
+            $table: $db.projects,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7576,9 +3882,9 @@ class $$ScenesTableFilterComposer
   }
 }
 
-class $$ScenesTableOrderingComposer
-    extends Composer<_$AppDatabase, $ScenesTable> {
-  $$ScenesTableOrderingComposer({
+class $$CustomSectionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CustomSectionsTable> {
+  $$CustomSectionsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7590,33 +3896,13 @@ class $$ScenesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get sceneNumber => $composableBuilder(
-    column: $table.sceneNumber,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get summary => $composableBuilder(
-    column: $table.summary,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get locationName => $composableBuilder(
-    column: $table.locationName,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get tensionLevel => $composableBuilder(
-    column: $table.tensionLevel,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get status => $composableBuilder(
-    column: $table.status,
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7630,71 +3916,20 @@ class $$ScenesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$ChaptersTableOrderingComposer get chapterId {
-    final $$ChaptersTableOrderingComposer composer = $composerBuilder(
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.chapterId,
-      referencedTable: $db.chapters,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ChaptersTableOrderingComposer(
+          }) => $$ProjectsTableOrderingComposer(
             $db: $db,
-            $table: $db.chapters,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$UniversesTableOrderingComposer get universeId {
-    final $$UniversesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableOrderingComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CharactersTableOrderingComposer get povCharacterId {
-    final $$CharactersTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.povCharacterId,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableOrderingComposer(
-            $db: $db,
-            $table: $db.characters,
+            $table: $db.projects,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7705,9 +3940,9 @@ class $$ScenesTableOrderingComposer
   }
 }
 
-class $$ScenesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ScenesTable> {
-  $$ScenesTableAnnotationComposer({
+class $$CustomSectionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CustomSectionsTable> {
+  $$CustomSectionsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7717,29 +3952,11 @@ class $$ScenesTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get sceneNumber => $composableBuilder(
-    column: $table.sceneNumber,
-    builder: (column) => column,
-  );
-
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
 
-  GeneratedColumn<String> get summary =>
-      $composableBuilder(column: $table.summary, builder: (column) => column);
-
-  GeneratedColumn<String> get locationName => $composableBuilder(
-    column: $table.locationName,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get tensionLevel => $composableBuilder(
-    column: $table.tensionLevel,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
 
   GeneratedColumn<int> get orderIndex => $composableBuilder(
     column: $table.orderIndex,
@@ -7749,69 +3966,20 @@ class $$ScenesTableAnnotationComposer
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  $$ChaptersTableAnnotationComposer get chapterId {
-    final $$ChaptersTableAnnotationComposer composer = $composerBuilder(
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.chapterId,
-      referencedTable: $db.chapters,
+      getCurrentColumn: (t) => t.projectId,
+      referencedTable: $db.projects,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$ChaptersTableAnnotationComposer(
+          }) => $$ProjectsTableAnnotationComposer(
             $db: $db,
-            $table: $db.chapters,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$UniversesTableAnnotationComposer get universeId {
-    final $$UniversesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$CharactersTableAnnotationComposer get povCharacterId {
-    final $$CharactersTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.povCharacterId,
-      referencedTable: $db.characters,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CharactersTableAnnotationComposer(
-            $db: $db,
-            $table: $db.characters,
+            $table: $db.projects,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7822,537 +3990,79 @@ class $$ScenesTableAnnotationComposer
   }
 }
 
-class $$ScenesTableTableManager
+class $$CustomSectionsTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $ScenesTable,
-          Scene,
-          $$ScenesTableFilterComposer,
-          $$ScenesTableOrderingComposer,
-          $$ScenesTableAnnotationComposer,
-          $$ScenesTableCreateCompanionBuilder,
-          $$ScenesTableUpdateCompanionBuilder,
-          (Scene, $$ScenesTableReferences),
-          Scene,
-          PrefetchHooks Function({
-            bool chapterId,
-            bool universeId,
-            bool povCharacterId,
-          })
+          $CustomSectionsTable,
+          CustomSection,
+          $$CustomSectionsTableFilterComposer,
+          $$CustomSectionsTableOrderingComposer,
+          $$CustomSectionsTableAnnotationComposer,
+          $$CustomSectionsTableCreateCompanionBuilder,
+          $$CustomSectionsTableUpdateCompanionBuilder,
+          (CustomSection, $$CustomSectionsTableReferences),
+          CustomSection,
+          PrefetchHooks Function({bool projectId})
         > {
-  $$ScenesTableTableManager(_$AppDatabase db, $ScenesTable table)
-    : super(
+  $$CustomSectionsTableTableManager(
+    _$AppDatabase db,
+    $CustomSectionsTable table,
+  ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$ScenesTableFilterComposer($db: db, $table: table),
+              $$CustomSectionsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$ScenesTableOrderingComposer($db: db, $table: table),
+              $$CustomSectionsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$ScenesTableAnnotationComposer($db: db, $table: table),
+              $$CustomSectionsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String> chapterId = const Value.absent(),
-                Value<String> universeId = const Value.absent(),
-                Value<int> sceneNumber = const Value.absent(),
+                Value<String> projectId = const Value.absent(),
                 Value<String> title = const Value.absent(),
-                Value<String?> summary = const Value.absent(),
-                Value<String?> povCharacterId = const Value.absent(),
-                Value<String?> locationName = const Value.absent(),
-                Value<int> tensionLevel = const Value.absent(),
-                Value<String> status = const Value.absent(),
+                Value<String> content = const Value.absent(),
                 Value<int> orderIndex = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => ScenesCompanion(
+              }) => CustomSectionsCompanion(
                 id: id,
-                chapterId: chapterId,
-                universeId: universeId,
-                sceneNumber: sceneNumber,
+                projectId: projectId,
                 title: title,
-                summary: summary,
-                povCharacterId: povCharacterId,
-                locationName: locationName,
-                tensionLevel: tensionLevel,
-                status: status,
+                content: content,
                 orderIndex: orderIndex,
                 createdAt: createdAt,
-                updatedAt: updatedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String id,
-                required String chapterId,
-                required String universeId,
-                required int sceneNumber,
+                required String projectId,
                 required String title,
-                Value<String?> summary = const Value.absent(),
-                Value<String?> povCharacterId = const Value.absent(),
-                Value<String?> locationName = const Value.absent(),
-                Value<int> tensionLevel = const Value.absent(),
-                Value<String> status = const Value.absent(),
+                Value<String> content = const Value.absent(),
                 required int orderIndex,
                 required DateTime createdAt,
-                required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
-              }) => ScenesCompanion.insert(
+              }) => CustomSectionsCompanion.insert(
                 id: id,
-                chapterId: chapterId,
-                universeId: universeId,
-                sceneNumber: sceneNumber,
+                projectId: projectId,
                 title: title,
-                summary: summary,
-                povCharacterId: povCharacterId,
-                locationName: locationName,
-                tensionLevel: tensionLevel,
-                status: status,
+                content: content,
                 orderIndex: orderIndex,
                 createdAt: createdAt,
-                updatedAt: updatedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$ScenesTable, Scene>(table),
-                  $$ScenesTableReferences(db, table, e),
+                  e.readTable(table),
+                  $$CustomSectionsTableReferences(db, table, e),
                 ),
               )
               .toList(),
-          prefetchHooksCallback:
-              ({
-                chapterId = false,
-                universeId = false,
-                povCharacterId = false,
-              }) {
-                return PrefetchHooks(
-                  db: db,
-                  explicitlyWatchedTables: [],
-                  addJoins:
-                      <
-                        T extends TableManagerState<
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic
-                        >
-                      >(state) {
-                        if (chapterId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.chapterId,
-                                    referencedTable: $$ScenesTableReferences
-                                        ._chapterIdTable(db),
-                                    referencedColumn: $$ScenesTableReferences
-                                        ._chapterIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
-                        }
-                        if (universeId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.universeId,
-                                    referencedTable: $$ScenesTableReferences
-                                        ._universeIdTable(db),
-                                    referencedColumn: $$ScenesTableReferences
-                                        ._universeIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
-                        }
-                        if (povCharacterId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.povCharacterId,
-                                    referencedTable: $$ScenesTableReferences
-                                        ._povCharacterIdTable(db),
-                                    referencedColumn: $$ScenesTableReferences
-                                        ._povCharacterIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
-                        }
-
-                        return state;
-                      },
-                  getPrefetchedDataCallback: (items) async {
-                    return [];
-                  },
-                );
-              },
-        ),
-      );
-}
-
-typedef $$ScenesTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $ScenesTable,
-      Scene,
-      $$ScenesTableFilterComposer,
-      $$ScenesTableOrderingComposer,
-      $$ScenesTableAnnotationComposer,
-      $$ScenesTableCreateCompanionBuilder,
-      $$ScenesTableUpdateCompanionBuilder,
-      (Scene, $$ScenesTableReferences),
-      Scene,
-      PrefetchHooks Function({
-        bool chapterId,
-        bool universeId,
-        bool povCharacterId,
-      })
-    >;
-typedef $$LoreEntriesTableCreateCompanionBuilder =
-    LoreEntriesCompanion Function({
-      required String id,
-      required String universeId,
-      required String title,
-      required String category,
-      Value<String?> summary,
-      Value<String?> content,
-      Value<String?> tags,
-      required DateTime createdAt,
-      required DateTime updatedAt,
-      Value<int> rowid,
-    });
-typedef $$LoreEntriesTableUpdateCompanionBuilder =
-    LoreEntriesCompanion Function({
-      Value<String> id,
-      Value<String> universeId,
-      Value<String> title,
-      Value<String> category,
-      Value<String?> summary,
-      Value<String?> content,
-      Value<String?> tags,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
-      Value<int> rowid,
-    });
-
-final class $$LoreEntriesTableReferences
-    extends BaseReferences<_$AppDatabase, $LoreEntriesTable, LoreEntry> {
-  $$LoreEntriesTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $UniversesTable _universeIdTable(_$AppDatabase db) =>
-      db.universes.createAlias('lore_entries__universe_id__universes__id');
-
-  $$UniversesTableProcessedTableManager get universeId {
-    final $_column = $_itemColumn<String>('universe_id')!;
-
-    final manager = $$UniversesTableTableManager(
-      $_db,
-      $_db.universes,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_universeIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$LoreEntriesTableFilterComposer
-    extends Composer<_$AppDatabase, $LoreEntriesTable> {
-  $$LoreEntriesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get title => $composableBuilder(
-    column: $table.title,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get category => $composableBuilder(
-    column: $table.category,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get summary => $composableBuilder(
-    column: $table.summary,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get tags => $composableBuilder(
-    column: $table.tags,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$UniversesTableFilterComposer get universeId {
-    final $$UniversesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableFilterComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$LoreEntriesTableOrderingComposer
-    extends Composer<_$AppDatabase, $LoreEntriesTable> {
-  $$LoreEntriesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get title => $composableBuilder(
-    column: $table.title,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get category => $composableBuilder(
-    column: $table.category,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get summary => $composableBuilder(
-    column: $table.summary,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get tags => $composableBuilder(
-    column: $table.tags,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$UniversesTableOrderingComposer get universeId {
-    final $$UniversesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableOrderingComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$LoreEntriesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $LoreEntriesTable> {
-  $$LoreEntriesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get title =>
-      $composableBuilder(column: $table.title, builder: (column) => column);
-
-  GeneratedColumn<String> get category =>
-      $composableBuilder(column: $table.category, builder: (column) => column);
-
-  GeneratedColumn<String> get summary =>
-      $composableBuilder(column: $table.summary, builder: (column) => column);
-
-  GeneratedColumn<String> get content =>
-      $composableBuilder(column: $table.content, builder: (column) => column);
-
-  GeneratedColumn<String> get tags =>
-      $composableBuilder(column: $table.tags, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  $$UniversesTableAnnotationComposer get universeId {
-    final $$UniversesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$LoreEntriesTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $LoreEntriesTable,
-          LoreEntry,
-          $$LoreEntriesTableFilterComposer,
-          $$LoreEntriesTableOrderingComposer,
-          $$LoreEntriesTableAnnotationComposer,
-          $$LoreEntriesTableCreateCompanionBuilder,
-          $$LoreEntriesTableUpdateCompanionBuilder,
-          (LoreEntry, $$LoreEntriesTableReferences),
-          LoreEntry,
-          PrefetchHooks Function({bool universeId})
-        > {
-  $$LoreEntriesTableTableManager(_$AppDatabase db, $LoreEntriesTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$LoreEntriesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$LoreEntriesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$LoreEntriesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> id = const Value.absent(),
-                Value<String> universeId = const Value.absent(),
-                Value<String> title = const Value.absent(),
-                Value<String> category = const Value.absent(),
-                Value<String?> summary = const Value.absent(),
-                Value<String?> content = const Value.absent(),
-                Value<String?> tags = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => LoreEntriesCompanion(
-                id: id,
-                universeId: universeId,
-                title: title,
-                category: category,
-                summary: summary,
-                content: content,
-                tags: tags,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String id,
-                required String universeId,
-                required String title,
-                required String category,
-                Value<String?> summary = const Value.absent(),
-                Value<String?> content = const Value.absent(),
-                Value<String?> tags = const Value.absent(),
-                required DateTime createdAt,
-                required DateTime updatedAt,
-                Value<int> rowid = const Value.absent(),
-              }) => LoreEntriesCompanion.insert(
-                id: id,
-                universeId: universeId,
-                title: title,
-                category: category,
-                summary: summary,
-                content: content,
-                tags: tags,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$LoreEntriesTable, LoreEntry>(table),
-                  $$LoreEntriesTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({universeId = false}) {
+          prefetchHooksCallback: ({projectId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -8372,16 +4082,17 @@ class $$LoreEntriesTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (universeId) {
+                    if (projectId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.universeId,
-                                referencedTable: $$LoreEntriesTableReferences
-                                    ._universeIdTable(db),
-                                referencedColumn: $$LoreEntriesTableReferences
-                                    ._universeIdTable(db)
-                                    .id,
+                                currentColumn: table.projectId,
+                                referencedTable: $$CustomSectionsTableReferences
+                                    ._projectIdTable(db),
+                                referencedColumn:
+                                    $$CustomSectionsTableReferences
+                                        ._projectIdTable(db)
+                                        .id,
                               )
                               as T;
                     }
@@ -8397,396 +4108,31 @@ class $$LoreEntriesTableTableManager
       );
 }
 
-typedef $$LoreEntriesTableProcessedTableManager =
+typedef $$CustomSectionsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $LoreEntriesTable,
-      LoreEntry,
-      $$LoreEntriesTableFilterComposer,
-      $$LoreEntriesTableOrderingComposer,
-      $$LoreEntriesTableAnnotationComposer,
-      $$LoreEntriesTableCreateCompanionBuilder,
-      $$LoreEntriesTableUpdateCompanionBuilder,
-      (LoreEntry, $$LoreEntriesTableReferences),
-      LoreEntry,
-      PrefetchHooks Function({bool universeId})
-    >;
-typedef $$IdeaSparksTableCreateCompanionBuilder =
-    IdeaSparksCompanion Function({
-      required String id,
-      required String universeId,
-      required String content,
-      Value<String> category,
-      Value<bool> isPinned,
-      Value<bool> isConverted,
-      required DateTime createdAt,
-      Value<int> rowid,
-    });
-typedef $$IdeaSparksTableUpdateCompanionBuilder =
-    IdeaSparksCompanion Function({
-      Value<String> id,
-      Value<String> universeId,
-      Value<String> content,
-      Value<String> category,
-      Value<bool> isPinned,
-      Value<bool> isConverted,
-      Value<DateTime> createdAt,
-      Value<int> rowid,
-    });
-
-final class $$IdeaSparksTableReferences
-    extends BaseReferences<_$AppDatabase, $IdeaSparksTable, IdeaSpark> {
-  $$IdeaSparksTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $UniversesTable _universeIdTable(_$AppDatabase db) =>
-      db.universes.createAlias('idea_sparks__universe_id__universes__id');
-
-  $$UniversesTableProcessedTableManager get universeId {
-    final $_column = $_itemColumn<String>('universe_id')!;
-
-    final manager = $$UniversesTableTableManager(
-      $_db,
-      $_db.universes,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_universeIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$IdeaSparksTableFilterComposer
-    extends Composer<_$AppDatabase, $IdeaSparksTable> {
-  $$IdeaSparksTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get category => $composableBuilder(
-    column: $table.category,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get isPinned => $composableBuilder(
-    column: $table.isPinned,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get isConverted => $composableBuilder(
-    column: $table.isConverted,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$UniversesTableFilterComposer get universeId {
-    final $$UniversesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableFilterComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$IdeaSparksTableOrderingComposer
-    extends Composer<_$AppDatabase, $IdeaSparksTable> {
-  $$IdeaSparksTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get content => $composableBuilder(
-    column: $table.content,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get category => $composableBuilder(
-    column: $table.category,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get isPinned => $composableBuilder(
-    column: $table.isPinned,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get isConverted => $composableBuilder(
-    column: $table.isConverted,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$UniversesTableOrderingComposer get universeId {
-    final $$UniversesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableOrderingComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$IdeaSparksTableAnnotationComposer
-    extends Composer<_$AppDatabase, $IdeaSparksTable> {
-  $$IdeaSparksTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get content =>
-      $composableBuilder(column: $table.content, builder: (column) => column);
-
-  GeneratedColumn<String> get category =>
-      $composableBuilder(column: $table.category, builder: (column) => column);
-
-  GeneratedColumn<bool> get isPinned =>
-      $composableBuilder(column: $table.isPinned, builder: (column) => column);
-
-  GeneratedColumn<bool> get isConverted => $composableBuilder(
-    column: $table.isConverted,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  $$UniversesTableAnnotationComposer get universeId {
-    final $$UniversesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.universeId,
-      referencedTable: $db.universes,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UniversesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.universes,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$IdeaSparksTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $IdeaSparksTable,
-          IdeaSpark,
-          $$IdeaSparksTableFilterComposer,
-          $$IdeaSparksTableOrderingComposer,
-          $$IdeaSparksTableAnnotationComposer,
-          $$IdeaSparksTableCreateCompanionBuilder,
-          $$IdeaSparksTableUpdateCompanionBuilder,
-          (IdeaSpark, $$IdeaSparksTableReferences),
-          IdeaSpark,
-          PrefetchHooks Function({bool universeId})
-        > {
-  $$IdeaSparksTableTableManager(_$AppDatabase db, $IdeaSparksTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$IdeaSparksTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$IdeaSparksTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$IdeaSparksTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> id = const Value.absent(),
-                Value<String> universeId = const Value.absent(),
-                Value<String> content = const Value.absent(),
-                Value<String> category = const Value.absent(),
-                Value<bool> isPinned = const Value.absent(),
-                Value<bool> isConverted = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => IdeaSparksCompanion(
-                id: id,
-                universeId: universeId,
-                content: content,
-                category: category,
-                isPinned: isPinned,
-                isConverted: isConverted,
-                createdAt: createdAt,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String id,
-                required String universeId,
-                required String content,
-                Value<String> category = const Value.absent(),
-                Value<bool> isPinned = const Value.absent(),
-                Value<bool> isConverted = const Value.absent(),
-                required DateTime createdAt,
-                Value<int> rowid = const Value.absent(),
-              }) => IdeaSparksCompanion.insert(
-                id: id,
-                universeId: universeId,
-                content: content,
-                category: category,
-                isPinned: isPinned,
-                isConverted: isConverted,
-                createdAt: createdAt,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$IdeaSparksTable, IdeaSpark>(table),
-                  $$IdeaSparksTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({universeId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (universeId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.universeId,
-                                referencedTable: $$IdeaSparksTableReferences
-                                    ._universeIdTable(db),
-                                referencedColumn: $$IdeaSparksTableReferences
-                                    ._universeIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$IdeaSparksTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $IdeaSparksTable,
-      IdeaSpark,
-      $$IdeaSparksTableFilterComposer,
-      $$IdeaSparksTableOrderingComposer,
-      $$IdeaSparksTableAnnotationComposer,
-      $$IdeaSparksTableCreateCompanionBuilder,
-      $$IdeaSparksTableUpdateCompanionBuilder,
-      (IdeaSpark, $$IdeaSparksTableReferences),
-      IdeaSpark,
-      PrefetchHooks Function({bool universeId})
+      $CustomSectionsTable,
+      CustomSection,
+      $$CustomSectionsTableFilterComposer,
+      $$CustomSectionsTableOrderingComposer,
+      $$CustomSectionsTableAnnotationComposer,
+      $$CustomSectionsTableCreateCompanionBuilder,
+      $$CustomSectionsTableUpdateCompanionBuilder,
+      (CustomSection, $$CustomSectionsTableReferences),
+      CustomSection,
+      PrefetchHooks Function({bool projectId})
     >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
-  $$UniversesTableTableManager get universes =>
-      $$UniversesTableTableManager(_db, _db.universes);
-  $$CharactersTableTableManager get characters =>
-      $$CharactersTableTableManager(_db, _db.characters);
-  $$CharacterRelationshipsTableTableManager get characterRelationships =>
-      $$CharacterRelationshipsTableTableManager(
-        _db,
-        _db.characterRelationships,
-      );
+  $$BooksTableTableManager get books =>
+      $$BooksTableTableManager(_db, _db.books);
+  $$ProjectsTableTableManager get projects =>
+      $$ProjectsTableTableManager(_db, _db.projects);
+  $$ArcsTableTableManager get arcs => $$ArcsTableTableManager(_db, _db.arcs);
   $$ChaptersTableTableManager get chapters =>
       $$ChaptersTableTableManager(_db, _db.chapters);
-  $$ScenesTableTableManager get scenes =>
-      $$ScenesTableTableManager(_db, _db.scenes);
-  $$LoreEntriesTableTableManager get loreEntries =>
-      $$LoreEntriesTableTableManager(_db, _db.loreEntries);
-  $$IdeaSparksTableTableManager get ideaSparks =>
-      $$IdeaSparksTableTableManager(_db, _db.ideaSparks);
+  $$CustomSectionsTableTableManager get customSections =>
+      $$CustomSectionsTableTableManager(_db, _db.customSections);
 }

@@ -1,12 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/app_database.dart';
-import '../repositories/universe_repository.dart';
-import '../repositories/project_ink_bridge_repository.dart';
-import '../repositories/outline_repository.dart';
-import '../repositories/character_repository.dart';
-import '../repositories/lore_repository.dart';
-import '../repositories/spark_repository.dart';
-import '../services/export_service.dart';
+import '../repositories/book_repository.dart';
+import '../repositories/project_repository.dart';
+import '../repositories/arc_repository.dart';
+import '../repositories/chapter_repository.dart';
+import '../repositories/custom_section_repository.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -14,112 +12,56 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-final universeRepositoryProvider = Provider<UniverseRepository>((ref) {
-  final db = ref.watch(databaseProvider);
-  return UniverseRepository(db);
+// Repositories
+final bookRepositoryProvider = Provider<BookRepository>((ref) {
+  return BookRepository(ref.watch(databaseProvider));
 });
 
-final projectInkBridgeProvider = Provider<ProjectInkBridgeRepository>((ref) {
-  return ProjectInkBridgeRepository();
+final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
+  return ProjectRepository(ref.watch(databaseProvider));
 });
 
-final allUniversesProvider = StreamProvider<List<Universe>>((ref) {
-  final repo = ref.watch(universeRepositoryProvider);
-  return repo.watchAllUniverses();
+final arcRepositoryProvider = Provider<ArcRepository>((ref) {
+  return ArcRepository(ref.watch(databaseProvider));
 });
 
-final activeUniverseIdProvider = StateProvider<String?>((ref) => null);
-
-final activeUniverseProvider = FutureProvider<Universe?>((ref) async {
-  final activeId = ref.watch(activeUniverseIdProvider);
-  if (activeId == null) return null;
-  final repo = ref.watch(universeRepositoryProvider);
-  return repo.getUniverse(activeId);
+final chapterRepositoryProvider = Provider<ChapterRepository>((ref) {
+  return ChapterRepository(ref.watch(databaseProvider));
 });
 
-final universeStatsProvider =
-    FutureProvider.family<UniverseStats, String>((ref, universeId) async {
-  final repo = ref.watch(universeRepositoryProvider);
-  return repo.getUniverseStats(universeId);
+final customSectionRepositoryProvider = Provider<CustomSectionRepository>((ref) {
+  return CustomSectionRepository(ref.watch(databaseProvider));
 });
 
-final linkedInkBookProvider =
-    FutureProvider.family<ProjectInkBookSummary?, String>((ref, inkBookId) async {
-  final bridge = ref.watch(projectInkBridgeProvider);
-  return bridge.getLinkedBookSummary(inkBookId);
+// Streams
+final allBooksProvider = StreamProvider<List<Book>>((ref) {
+  return ref.watch(bookRepositoryProvider).watchAllBooks();
 });
 
-final outlineRepositoryProvider = Provider<OutlineRepository>((ref) {
-  final db = ref.watch(databaseProvider);
-  return OutlineRepository(db);
+final allProjectsProvider = StreamProvider<List<Project>>((ref) {
+  return ref.watch(projectRepositoryProvider).watchAllProjects();
 });
 
-final universeChaptersProvider =
-    StreamProvider.family<List<Chapter>, String>((ref, universeId) {
-  final repo = ref.watch(outlineRepositoryProvider);
-  return repo.watchChapters(universeId);
+final unassignedProjectsProvider = StreamProvider<List<Project>>((ref) {
+  return ref.watch(projectRepositoryProvider).watchUnassignedProjects();
 });
 
-final chapterScenesProvider =
-    StreamProvider.family<List<Scene>, String>((ref, chapterId) {
-  final repo = ref.watch(outlineRepositoryProvider);
-  return repo.watchScenesForChapter(chapterId);
+final projectsByBookProvider = StreamProvider.family<List<Project>, String>((ref, bookId) {
+  return ref.watch(projectRepositoryProvider).watchProjectsByBook(bookId);
 });
 
-final allUniverseScenesProvider =
-    StreamProvider.family<List<Scene>, String>((ref, universeId) {
-  final repo = ref.watch(outlineRepositoryProvider);
-  return repo.watchAllScenes(universeId);
+final projectDetailProvider = StreamProvider.family<Project?, String>((ref, projectId) {
+  return ref.watch(projectRepositoryProvider).watchProject(projectId);
 });
 
-final characterRepositoryProvider = Provider<CharacterRepository>((ref) {
-  final db = ref.watch(databaseProvider);
-  return CharacterRepository(db);
+final projectArcsProvider = StreamProvider.family<List<Arc>, String>((ref, projectId) {
+  return ref.watch(arcRepositoryProvider).watchArcsByProject(projectId);
 });
 
-final universeCharactersProvider =
-    StreamProvider.family<List<Character>, String>((ref, universeId) {
-  final repo = ref.watch(characterRepositoryProvider);
-  return repo.watchCharacters(universeId);
+final projectChaptersProvider = StreamProvider.family<List<Chapter>, String>((ref, projectId) {
+  return ref.watch(chapterRepositoryProvider).watchChaptersByProject(projectId);
 });
 
-final universeRelationshipsProvider =
-    StreamProvider.family<List<CharacterRelationship>, String>((ref, universeId) {
-  final repo = ref.watch(characterRepositoryProvider);
-  return repo.watchRelationships(universeId);
+final projectCustomSectionsProvider = StreamProvider.family<List<CustomSection>, String>((ref, projectId) {
+  return ref.watch(customSectionRepositoryProvider).watchCustomSectionsByProject(projectId);
 });
-
-final characterRelationshipsDetailProvider =
-    FutureProvider.family<List<CharacterRelationshipWithTarget>, String>((ref, characterId) async {
-  final repo = ref.watch(characterRepositoryProvider);
-  return repo.getRelationshipsForCharacter(characterId);
-});
-
-final loreRepositoryProvider = Provider<LoreRepository>((ref) {
-  final db = ref.watch(databaseProvider);
-  return LoreRepository(db);
-});
-
-final universeLoreEntriesProvider =
-    StreamProvider.family<List<LoreEntry>, String>((ref, universeId) {
-  final repo = ref.watch(loreRepositoryProvider);
-  return repo.watchLoreEntries(universeId);
-});
-
-final sparkRepositoryProvider = Provider<SparkRepository>((ref) {
-  final db = ref.watch(databaseProvider);
-  return SparkRepository(db);
-});
-
-final universeSparksProvider =
-    StreamProvider.family<List<IdeaSpark>, String>((ref, universeId) {
-  final repo = ref.watch(sparkRepositoryProvider);
-  return repo.watchSparks(universeId);
-});
-
-final exportServiceProvider = Provider<ExportService>((ref) {
-  final db = ref.watch(databaseProvider);
-  return ExportService(db);
-});
-
-
