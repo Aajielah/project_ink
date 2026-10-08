@@ -23,6 +23,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
 
   // Scheduling State
   TimeOfDay _selectedTime = TimeOfDay.now();
+  DateTime? _customTargetDateTime;
   int _selectedDuration = 120; // 2 hours default
   bool _isTestMode = false;
   Map<String, dynamic>? _existingSchedule;
@@ -141,22 +142,34 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
     }
 
     final now = DateTime.now();
-    var scheduledDateTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      _selectedTime.hour,
-      _selectedTime.minute,
-    );
+    DateTime scheduledDateTime;
 
-    // If selected time today has already passed, schedule for tomorrow
-    if (scheduledDateTime.isBefore(now)) {
-      scheduledDateTime = scheduledDateTime.add(const Duration(days: 1));
+    if (_customTargetDateTime != null && _customTargetDateTime!.isAfter(now)) {
+      scheduledDateTime = _customTargetDateTime!;
+    } else {
+      scheduledDateTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
+      );
+
+      // If selected time today has already passed:
+      if (scheduledDateTime.isBefore(now)) {
+        if (now.difference(scheduledDateTime).inMinutes <= 10) {
+          // User picked the current minute or just missed the clock tick: start in 1 minute today!
+          scheduledDateTime = now.add(const Duration(minutes: 1));
+        } else {
+          // User picked an hour earlier today, schedule for tomorrow
+          scheduledDateTime = scheduledDateTime.add(const Duration(days: 1));
+        }
+      }
     }
 
-    // Enforce minimum 1-minute buffer for scheduled sessions
-    if (scheduledDateTime.difference(now).inSeconds < 60) {
-      scheduledDateTime = now.add(const Duration(minutes: 1));
+    // Enforce minimum 30-second buffer for scheduled sessions
+    if (scheduledDateTime.difference(now).inSeconds < 30) {
+      scheduledDateTime = now.add(const Duration(seconds: 45));
     }
 
     await SessionConfig.saveSchedule(
@@ -165,7 +178,7 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
       isTestMode: _isTestMode,
     );
 
-    // Schedule the T-30, T-10, T-5 notifications
+    // Schedule the T-30, T-10, T-5 notifications and T=0 alarm takeover
     await NotificationHelper.scheduleRampUpNotifications(
       targetStartTime: scheduledDateTime,
       isTestMode: _isTestMode,
@@ -178,11 +191,14 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
 
     await _checkActiveOrCooldown();
 
+    final isToday = scheduledDateTime.day == now.day && scheduledDateTime.month == now.month;
+    final dayLabel = isToday ? 'Today' : 'Tomorrow';
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Session committed for ${DateFormat.jm().format(scheduledDateTime)} (${_selectedDuration}m). Prepare to write!',
+            'Session committed for $dayLabel at ${DateFormat.jm().format(scheduledDateTime)} (${_selectedDuration}m). Prepare to write!',
           ),
           backgroundColor: SanctumTheme.emeraldReady,
         ),
@@ -365,6 +381,14 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
                         'Start Time',
                         style: TextStyle(color: SanctumTheme.textSecondary, fontSize: 13),
                       ),
+                      subtitle: Text(
+                        _getTargetSummary(),
+                        style: const TextStyle(
+                          color: SanctumTheme.goldAccent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       trailing: Text(
                         _selectedTime.format(context),
                         style: const TextStyle(
@@ -379,9 +403,35 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
                           initialTime: _selectedTime,
                         );
                         if (picked != null) {
-                          setState(() => _selectedTime = picked);
+                          setState(() {
+                            _selectedTime = picked;
+                            _customTargetDateTime = null;
+                          });
                         }
                       },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Quick Prep Presets
+                    const Text(
+                      'QUICK PREP PRESETS (STARTS TODAY)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 1.1,
+                        fontWeight: FontWeight.bold,
+                        color: SanctumTheme.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildQuickPrepChip(1, '+1 Min (Quick Test)'),
+                        _buildQuickPrepChip(5, '+5 Mins (Fast Prep)'),
+                        _buildQuickPrepChip(10, '+10 Mins (Standard)'),
+                        _buildQuickPrepChip(15, '+15 Mins'),
+                      ],
                     ),
                     const SizedBox(height: 16),
 
@@ -487,6 +537,65 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
     );
   }
 
+  Widget _buildQuickPrepChip(int minutes, String label) {
+    return ActionChip(
+      avatar: const Icon(Icons.bolt, size: 16, color: SanctumTheme.goldAccent),
+      label: Text(label),
+      backgroundColor: SanctumTheme.surface,
+      labelStyle: const TextStyle(
+        color: SanctumTheme.textPrimary,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: SanctumTheme.border),
+      ),
+      onPressed: () {
+        final target = DateTime.now().add(Duration(minutes: minutes));
+        setState(() {
+          _customTargetDateTime = target;
+          _selectedTime = TimeOfDay.fromDateTime(target);
+        });
+      },
+    );
+  }
+
+  String _getTargetSummary() {
+    final now = DateTime.now();
+    DateTime target;
+    if (_customTargetDateTime != null && _customTargetDateTime!.isAfter(now)) {
+      target = _customTargetDateTime!;
+    } else {
+      target = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
+      );
+      if (target.isBefore(now)) {
+        if (now.difference(target).inMinutes <= 10) {
+          target = now.add(const Duration(minutes: 1));
+        } else {
+          target = target.add(const Duration(days: 1));
+        }
+      }
+    }
+    final isToday = target.day == now.day && target.month == now.month && target.year == now.year;
+    final prefix = isToday ? 'Today' : 'Tomorrow';
+    final diff = target.difference(now);
+    final inMins = diff.inMinutes;
+    final inSecs = diff.inSeconds % 60;
+    if (inMins < 60) {
+      return '$prefix at ${DateFormat.jm().format(target)} (in ${inMins}m ${inSecs}s)';
+    } else {
+      final hours = inMins ~/ 60;
+      final remMins = inMins % 60;
+      return '$prefix at ${DateFormat.jm().format(target)} (in ${hours}h ${remMins}m)';
+    }
+  }
+
   Widget _buildCooldownBanner() {
     final diff = _cooldownExpiry!.difference(DateTime.now());
     final m = diff.inMinutes;
@@ -549,6 +658,9 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
         ? '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}'
         : '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
 
+    final isToday = scheduledStart.day == now.day && scheduledStart.month == now.month && scheduledStart.year == now.year;
+    final dayLabel = isToday ? 'Today' : 'Tomorrow';
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -584,15 +696,15 @@ class _HomeSchedulerScreenState extends State<HomeSchedulerScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            DateFormat.jm().format(scheduledStart),
+            '$dayLabel at ${DateFormat.jm().format(scheduledStart)}',
             style: const TextStyle(
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
               color: SanctumTheme.textPrimary,
             ),
           ),
           Text(
-            'Duration: $duration minutes • Overseer will take over on time',
+            'Duration: $duration minutes • Focus Sanctum will take over on time',
             style: const TextStyle(color: SanctumTheme.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 12),

@@ -72,6 +72,7 @@ object SessionStateHolder {
     // Tier 1: Writing Sanctuary (Unlimited 24/7)
     val tier1Packages: MutableSet<String> = mutableSetOf(
         PKG_OVERSEER,
+        PKG_PURE_WRITER,
         "com.android.systemui"
     )
 
@@ -87,6 +88,7 @@ object SessionStateHolder {
     // Combined allowed packages
     val allowedPackages: MutableSet<String> = mutableSetOf(
         PKG_OVERSEER,
+        PKG_PURE_WRITER,
         "com.android.systemui"
     )
 
@@ -104,6 +106,7 @@ object SessionStateHolder {
 
         tier1Packages.clear()
         tier1Packages.add(PKG_OVERSEER)
+        tier1Packages.add(PKG_PURE_WRITER)
         tier1Packages.add("com.android.systemui")
         val savedT1 = prefs.getStringSet("tier1_packages_set", null)
         if (savedT1 != null) tier1Packages.addAll(savedT1)

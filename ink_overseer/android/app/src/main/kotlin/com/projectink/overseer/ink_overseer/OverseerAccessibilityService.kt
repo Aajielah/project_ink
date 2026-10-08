@@ -40,13 +40,29 @@ class OverseerAccessibilityService : AccessibilityService() {
         Log.d("OverseerA11y", "Overseer Accessibility Service connected and running.")
     }
 
+    private fun isInputMethodOrSystemOverlay(pkg: String): Boolean {
+        if (pkg == "com.android.systemui") return true
+        val lower = pkg.lowercase()
+        return lower.contains("inputmethod") ||
+                lower.contains("keyboard") ||
+                lower.contains("kika") ||
+                lower.contains("ime") ||
+                lower.contains("swiftkey") ||
+                lower.contains("latin") ||
+                lower.contains("gboard")
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             return
         }
 
         val packageName = event.packageName?.toString() ?: return
-        SessionStateHolder.currentForegroundPackage = packageName
+
+        // If the event is a keyboard or system UI overlay, do NOT overwrite the active app!
+        if (!isInputMethodOrSystemOverlay(packageName)) {
+            SessionStateHolder.currentForegroundPackage = packageName
+        }
 
         // If no active session, ensure lock is hidden and exit immediately
         if (!SessionStateHolder.isSessionActive) {
@@ -73,14 +89,34 @@ class OverseerAccessibilityService : AccessibilityService() {
             return
         }
 
-        // If the foreground app is permitted, let the user interact freely!
+        // If the foreground app is permitted, ensure lock is hidden and let user interact freely!
         if (isAppAllowed(packageName)) {
+            mainHandler.post {
+                lockWindowManager.hideLock()
+            }
             return
         }
 
-        // Unauthorized app, blacklisted social media, or Home Launcher!
-        // Immediately redirect to Overseer Sanctum with zero flashing
+        // Unauthorized app, blacklisted social media, expired allowance, or Home Launcher!
         mainHandler.post {
+            // 1. Physically eject the forbidden app by triggering Android Home action
+            performGlobalAction(GLOBAL_ACTION_HOME)
+
+            // 2. Display the full-screen LockWindowManager shield immediately over the screen
+            val appLabel = try {
+                val pm = packageManager
+                val appInfo = pm.getApplicationInfo(packageName, 0)
+                pm.getApplicationLabel(appInfo).toString()
+            } catch (_: Exception) {
+                packageName
+            }
+            lockWindowManager.showLock(
+                appLabel,
+                "Access blocked by Focus Sanctum.",
+                "Writing session is active. Stay inside Pure Writer."
+            )
+
+            // 3. Bring MainActivity to the front
             val intent = Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
@@ -89,21 +125,27 @@ class OverseerAccessibilityService : AccessibilityService() {
                 putExtra("from_lockout", true)
                 putExtra("blocked_pkg", packageName)
             }
-            startActivity(intent)
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
-    private fun isAppAllowed(pkg: String): Boolean {
+    fun isAppAllowed(pkg: String): Boolean {
         // 0. Hardcoded Blacklist of Banned Distractions (NEVER ALLOWED)
         if (SessionStateHolder.isBlacklisted(pkg)) {
             return false
         }
 
+        // Always permit software keyboards so user can type inside permitted apps
+        if (isInputMethodOrSystemOverlay(pkg)) {
+            return true
+        }
+
         // Our app
         if (pkg == SessionStateHolder.PKG_OVERSEER) return true
-
-        // Android System UI (Status bar, notifications, keyboard, volume panel)
-        if (pkg == "com.android.systemui") return true
 
         // Emergency phone call in progress
         try {
@@ -117,17 +159,30 @@ class OverseerAccessibilityService : AccessibilityService() {
             }
         } catch (_: Exception) {}
 
+        // Calculate dynamic cycle index from real hardware clock
+        val now = System.currentTimeMillis()
+        val elapsedSec = if (SessionStateHolder.sessionStartTimeMs > 0) {
+            ((now - SessionStateHolder.sessionStartTimeMs) / 1000).toInt()
+        } else {
+            0
+        }
+        val cycleDurationSec = if (SessionStateHolder.isTestMode) 60 else 1800
+        val dynamicCycleIndex = elapsedSec / cycleDurationSec
+        SessionStateHolder.currentCycleIndex = dynamicCycleIndex
+
         // Tier 1: Writing Sanctuary (Unlimited 24/7)
-        if (SessionStateHolder.tier1Packages.contains(pkg)) {
+        if (SessionStateHolder.tier1Packages.contains(pkg) || pkg == SessionStateHolder.PKG_PURE_WRITER) {
             return true
         }
 
         // Tier 2: The Social Leash (The WhatsApp Rule)
         val isTier2 = SessionStateHolder.tier2Packages.contains(pkg) ||
-                (SessionStateHolder.allowedPackages.contains(pkg) && pkg.lowercase().contains("whatsapp"))
+                (SessionStateHolder.allowedPackages.contains(pkg) && pkg.lowercase().contains("whatsapp")) ||
+                SessionStateHolder.WHATSAPP_PACKAGES.contains(pkg) ||
+                pkg.lowercase().contains("whatsapp")
         if (isTier2) {
             // Phase 1 (First 30 minutes in normal mode, or minute 1 in test mode): 100% LOCKED!
-            if (SessionStateHolder.currentCycleIndex == 0) {
+            if (dynamicCycleIndex == 0) {
                 return false
             }
             return SessionStateHolder.whatsappAllowanceRemainingSec > 0
@@ -135,7 +190,9 @@ class OverseerAccessibilityService : AccessibilityService() {
 
         // Tier 3: AI Assistant Pool (5-Minute Pool Throughout)
         val isTier3 = SessionStateHolder.tier3Packages.contains(pkg) ||
-                (SessionStateHolder.allowedPackages.contains(pkg) && (pkg.lowercase().contains("chatgpt") || pkg.lowercase().contains("bard") || pkg.lowercase().contains("claude")))
+                (SessionStateHolder.allowedPackages.contains(pkg) && (pkg.lowercase().contains("chatgpt") || pkg.lowercase().contains("bard") || pkg.lowercase().contains("claude"))) ||
+                SessionStateHolder.AI_PACKAGES.contains(pkg) ||
+                pkg.lowercase().contains("chatgpt") || pkg.lowercase().contains("bard") || pkg.lowercase().contains("claude")
         if (isTier3) {
             return SessionStateHolder.aiAllowanceRemainingSec > 0
         }
@@ -144,7 +201,7 @@ class OverseerAccessibilityService : AccessibilityService() {
         val isTier4 = SessionStateHolder.tier4Packages.contains(pkg)
         if (isTier4) {
             // Phase 1 (First 30 minutes in normal mode, or minute 1 in test mode): 100% LOCKED!
-            if (SessionStateHolder.currentCycleIndex == 0) {
+            if (dynamicCycleIndex == 0) {
                 return false
             }
             // Phase 2: Fully unlocked for writing secondary tools/docs
@@ -161,11 +218,5 @@ class OverseerAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {
         Log.w("OverseerA11y", "Accessibility service interrupted.")
-    }
-
-    private fun formatTime(seconds: Int): String {
-        val m = seconds / 60
-        val s = seconds % 60
-        return String.format("%02d:%02d", m, s)
     }
 }

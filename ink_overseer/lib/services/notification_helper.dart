@@ -35,12 +35,26 @@ class NotificationHelper {
           scheduledDate: testWarnTime,
         );
       }
+
+      // T=0 Lockdown Engaged
+      if (targetStartTime.isAfter(DateTime.now())) {
+        await _scheduleNotification(
+          id: 100,
+          title: "🛡️ Focus Sanctum Lockdown Engaged!",
+          body: "Test session started. Pure Writer is now active.",
+          scheduledDate: targetStartTime,
+          fullScreen: true,
+        );
+      }
       return;
     }
 
+    final now = DateTime.now();
+    final leadTimeMinutes = targetStartTime.difference(now).inMinutes;
+
     // T-30 minutes warning
     final t30 = targetStartTime.subtract(const Duration(minutes: 30));
-    if (t30.isAfter(DateTime.now())) {
+    if (t30.isAfter(now)) {
       await _scheduleNotification(
         id: 101,
         title: "⏳ 30 Minutes Until Writing Session",
@@ -51,7 +65,7 @@ class NotificationHelper {
 
     // T-10 minutes warning
     final t10 = targetStartTime.subtract(const Duration(minutes: 10));
-    if (t10.isAfter(DateTime.now())) {
+    if (t10.isAfter(now)) {
       await _scheduleNotification(
         id: 102,
         title: "⚠️ 10 Minutes Remaining",
@@ -62,12 +76,36 @@ class NotificationHelper {
 
     // T-5 minutes warning
     final t5 = targetStartTime.subtract(const Duration(minutes: 5));
-    if (t5.isAfter(DateTime.now())) {
+    if (t5.isAfter(now)) {
       await _scheduleNotification(
         id: 103,
         title: "🚨 5 Minutes Left!",
         body: "Final warning. Head into Pure Writer before the lockdown engages.",
         scheduledDate: t5,
+      );
+    }
+
+    // If scheduled with short lead time (< 10 minutes), schedule T-1 minute warning
+    if (leadTimeMinutes < 10) {
+      final t1 = targetStartTime.subtract(const Duration(minutes: 1));
+      if (t1.isAfter(now)) {
+        await _scheduleNotification(
+          id: 104,
+          title: "🚨 1 Minute Remaining!",
+          body: "Takeover begins in 60 seconds. Entering Pure Writer.",
+          scheduledDate: t1,
+        );
+      }
+    }
+
+    // T=0 Full Phone Takeover Alarm Notification
+    if (targetStartTime.isAfter(now)) {
+      await _scheduleNotification(
+        id: 100,
+        title: "🛡️ Focus Sanctum Lockdown Engaged!",
+        body: "Your writing session has begun. Pure Writer is now active.",
+        scheduledDate: targetStartTime,
+        fullScreen: true,
       );
     }
   }
@@ -77,6 +115,7 @@ class NotificationHelper {
     required String title,
     required String body,
     required DateTime scheduledDate,
+    bool fullScreen = false,
   }) async {
     final tz.TZDateTime tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
 
@@ -85,7 +124,7 @@ class NotificationHelper {
       title,
       body,
       tzDate,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           'overseer_ramp_up',
           'Ramp-Up Warning Chimes',
@@ -94,6 +133,8 @@ class NotificationHelper {
           priority: Priority.high,
           playSound: true,
           enableVibration: true,
+          fullScreenIntent: fullScreen,
+          category: AndroidNotificationCategory.alarm,
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,

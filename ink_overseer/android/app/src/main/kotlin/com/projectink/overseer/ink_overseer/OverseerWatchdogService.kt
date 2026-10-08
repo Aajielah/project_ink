@@ -71,6 +71,9 @@ class OverseerWatchdogService : Service() {
                     SessionStateHolder.WHATSAPP_PACKAGES.contains(currentPkg) ||
                     lowerPkg.contains("whatsapp")
 
+            val isTier4 = SessionStateHolder.tier4Packages.contains(currentPkg) ||
+                    SessionStateHolder.UTILITY_PACKAGES.contains(currentPkg)
+
             if (isAi) {
                 if (SessionStateHolder.aiAllowanceRemainingSec > 0) {
                     SessionStateHolder.aiAllowanceRemainingSec--
@@ -80,6 +83,9 @@ class OverseerWatchdogService : Service() {
                     if (SessionStateHolder.aiAllowanceRemainingSec <= 0) {
                         OverseerAccessibilityService.instance?.evaluateForegroundApp(currentPkg)
                     }
+                } else {
+                    // Allowance is 0 and user is STILL in AI app: continuously enforce ejection!
+                    OverseerAccessibilityService.instance?.evaluateForegroundApp(currentPkg)
                 }
             } else if (isWhatsApp) {
                 if (SessionStateHolder.whatsappAllowanceRemainingSec > 0) {
@@ -90,7 +96,13 @@ class OverseerWatchdogService : Service() {
                     if (SessionStateHolder.whatsappAllowanceRemainingSec <= 0) {
                         OverseerAccessibilityService.instance?.evaluateForegroundApp(currentPkg)
                     }
+                } else {
+                    // Allowance is 0 (or in Phase 1) and user is in WhatsApp: continuously enforce ejection!
+                    OverseerAccessibilityService.instance?.evaluateForegroundApp(currentPkg)
                 }
+            } else if (newCycleIndex == 0 && isTier4) {
+                // In Phase 1, Tier 4 secondary tools are strictly locked!
+                OverseerAccessibilityService.instance?.evaluateForegroundApp(currentPkg)
             }
 
             // Update notification
@@ -175,7 +187,27 @@ class OverseerWatchdogService : Service() {
     private fun onSessionCompleted() {
         SessionStateHolder.isSessionActive = false
         SessionStateHolder.saveToPrefs(this)
+
+        // Trigger celebratory vibration chime
+        triggerWarning("Writing session completed! Time for mandatory break.")
+
+        // Eject any open lock screen
         OverseerAccessibilityService.instance?.evaluateForegroundApp(SessionStateHolder.currentForegroundPackage)
+
+        // Bring Focus Sanctum back to the front to display break/cooldown state
+        val completionIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("session_completed", true)
+        }
+        try {
+            startActivity(completionIntent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
