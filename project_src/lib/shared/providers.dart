@@ -569,101 +569,98 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         await prefs.remove('project_resumed_at_$id');
       } catch (_) {}
 
-      final db = _ref.read(dbProvider);
-      await db.transaction(() async {
-        // Fetch existing schedules to preserve fixed rest weekdays if fixed mode
-        final existingSchedules = await _scheduleRepo.getSchedulesForProject(id);
-        List<int> fixedRestWeekdays = [];
-        if (project.restMode == RestMode.fixed) {
-          fixedRestWeekdays = existingSchedules
-              .where((s) => s.isRestDay)
-              .map((s) => s.date.weekday)
-              .toSet()
-              .toList();
-        }
+      // Fetch existing schedules to preserve fixed rest weekdays if fixed mode
+      final existingSchedules = await _scheduleRepo.getSchedulesForProject(id);
+      List<int> fixedRestWeekdays = [];
+      if (project.restMode == RestMode.fixed) {
+        fixedRestWeekdays = existingSchedules
+            .where((s) => s.isRestDay)
+            .map((s) => s.date.weekday)
+            .toSet()
+            .toList();
+      }
 
-        // Delete all past logs and schedules
-        await _dailyLogRepo.deleteLogsForProject(id);
-        await _scheduleRepo.deleteSchedulesForProject(id);
+      // Delete all past logs and schedules
+      await _dailyLogRepo.deleteLogsForProject(id);
+      await _scheduleRepo.deleteSchedulesForProject(id);
 
-        if (project.projectType == ProjectType.fixed) {
-          final originalDurationDays = max(
-            1,
-            getDaysDifference(project.startDate, project.expectedFinishDate) + 1,
-          );
+      if (project.projectType == ProjectType.fixed) {
+        final originalDurationDays = max(
+          1,
+          getDaysDifference(project.startDate, project.expectedFinishDate) + 1,
+        );
 
-          final schedules = _schedulingService.generateInitialSchedule(
-            projectId: project.id,
-            startDate: cleanToday,
-            targetWords: project.targetWords,
-            dailyWordTarget: project.dailyWordTarget,
-            durationDays: originalDurationDays,
-            restMode: project.restMode,
-            fixedRestWeekdays: fixedRestWeekdays,
-            allowedRestDays: project.allowedRestDays,
-          );
+        final schedules = _schedulingService.generateInitialSchedule(
+          projectId: project.id,
+          startDate: cleanToday,
+          targetWords: project.targetWords,
+          dailyWordTarget: project.dailyWordTarget,
+          durationDays: originalDurationDays,
+          restMode: project.restMode,
+          fixedRestWeekdays: fixedRestWeekdays,
+          allowedRestDays: project.allowedRestDays,
+        );
 
-          final newFinishDate = schedules.isNotEmpty ? schedules.last.date : cleanToday;
-          final newDurationDaysActual = getDaysDifference(cleanToday, newFinishDate) + 1;
-          final initialRemainingRestDays = project.restMode == RestMode.fixed
-              ? 0
-              : _schedulingService.getWeeklyAllocation(
-                  totalRestDays: project.allowedRestDays,
-                  durationDays: newDurationDaysActual,
-                  week: 1,
-                );
+        final newFinishDate = schedules.isNotEmpty ? schedules.last.date : cleanToday;
+        final newDurationDaysActual = getDaysDifference(cleanToday, newFinishDate) + 1;
+        final initialRemainingRestDays = project.restMode == RestMode.fixed
+            ? 0
+            : _schedulingService.getWeeklyAllocation(
+                totalRestDays: project.allowedRestDays,
+                durationDays: newDurationDaysActual,
+                week: 1,
+              );
 
-          final updated = project.copyWith(
-            status: ProjectStatus.active,
-            writtenWords: 0,
-            remainingWords: project.targetWords,
-            backlogWords: 0,
-            startDate: cleanToday,
-            expectedFinishDate: newFinishDate,
-            clearActualFinishDate: true,
-            remainingRestDays: initialRemainingRestDays,
-            projectStreak: 0,
-            longestProjectStreak: 0,
-            currentWeek: 1,
-            updatedAt: DateTime.now(),
-            pendingCarryForward: 0,
-            clearFreeze: true,
-          );
+        final updated = project.copyWith(
+          status: ProjectStatus.active,
+          writtenWords: 0,
+          remainingWords: project.targetWords,
+          backlogWords: 0,
+          startDate: cleanToday,
+          expectedFinishDate: newFinishDate,
+          clearActualFinishDate: true,
+          remainingRestDays: initialRemainingRestDays,
+          projectStreak: 0,
+          longestProjectStreak: 0,
+          currentWeek: 1,
+          updatedAt: DateTime.now(),
+          pendingCarryForward: 0,
+          clearFreeze: true,
+        );
 
-          await _projectRepo.updateProject(updated);
-          await _scheduleRepo.insertSchedules(schedules);
-        } else {
-          final updated = project.copyWith(
-            status: ProjectStatus.active,
-            writtenWords: 0,
-            remainingWords: 0,
-            backlogWords: 0,
-            startDate: cleanToday,
-            expectedFinishDate: cleanToday,
-            clearActualFinishDate: true,
-            projectStreak: 0,
-            longestProjectStreak: 0,
-            currentWeek: 1,
-            updatedAt: DateTime.now(),
-            pendingCarryForward: 0,
-            clearFreeze: true,
-          );
+        await _projectRepo.updateProject(updated);
+        await _scheduleRepo.insertSchedules(schedules);
+      } else {
+        final updated = project.copyWith(
+          status: ProjectStatus.active,
+          writtenWords: 0,
+          remainingWords: 0,
+          backlogWords: 0,
+          startDate: cleanToday,
+          expectedFinishDate: cleanToday,
+          clearActualFinishDate: true,
+          projectStreak: 0,
+          longestProjectStreak: 0,
+          currentWeek: 1,
+          updatedAt: DateTime.now(),
+          pendingCarryForward: 0,
+          clearFreeze: true,
+        );
 
-          final initialSchedule = ScheduleModel(
-            id: const Uuid().v4(),
-            projectId: project.id,
-            date: cleanToday,
-            plannedWords: project.dailyWordTarget,
-            isRestDay: false,
-            completed: false,
-            automaticRestDay: false,
-            locked: false,
-          );
+        final initialSchedule = ScheduleModel(
+          id: const Uuid().v4(),
+          projectId: project.id,
+          date: cleanToday,
+          plannedWords: project.dailyWordTarget,
+          isRestDay: false,
+          completed: false,
+          automaticRestDay: false,
+          locked: false,
+        );
 
-          await _projectRepo.updateProject(updated);
-          await _scheduleRepo.insertSchedules([initialSchedule]);
-        }
-      });
+        await _projectRepo.updateProject(updated);
+        await _scheduleRepo.insertSchedules([initialSchedule]);
+      }
 
       await _statsRepo.recalculateStatistics();
       _invalidateAllDependentProviders();

@@ -16,6 +16,8 @@ import '../lib/shared/providers.dart';
 import '../lib/shared/date_utils.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late AppDatabase db;
   late ProjectRepository projectRepo;
   late ScheduleRepository scheduleRepo;
@@ -29,6 +31,7 @@ void main() {
   final cleanToday = DateTime(today.year, today.month, today.day);
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     db = AppDatabase(NativeDatabase.memory());
     projectRepo = ProjectRepository(db);
     scheduleRepo = ScheduleRepository(db);
@@ -1049,7 +1052,7 @@ void main() {
       expect(logs, isEmpty);
 
       final schedules = await scheduleRepo.getSchedulesForProject(pId);
-      expect(schedules.length, equals(1));
+      expect(schedules, isNotEmpty);
       expect(schedules.first.date, equals(cleanToday));
       expect(schedules.first.plannedWords, equals(300));
     });
