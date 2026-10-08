@@ -928,6 +928,9 @@ void main() {
     });
 
     test('Restart Project resets Fixed project to Day 1 today and regenerates schedule', () async {
+      final projectsNotifier = container.read(projectsProvider.notifier);
+      await projectsNotifier.loadProjects();
+
       final pId = 'p_restart_fixed';
       final oldStart = cleanToday.subtract(const Duration(days: 10));
       final oldFinish = cleanToday.add(const Duration(days: 10));
@@ -935,7 +938,7 @@ void main() {
       final project = ProjectModel(
         id: pId,
         name: 'Fixed Restart Book',
-        status: ProjectStatus.active,
+        status: ProjectStatus.paused,
         projectType: ProjectType.fixed,
         targetWords: 10000,
         writtenWords: 3000,
@@ -979,7 +982,7 @@ void main() {
         ),
       ]);
 
-      await container.read(projectsProvider.notifier).restartProject(pId);
+      await projectsNotifier.restartProject(pId);
 
       final restarted = await projectRepo.getProjectById(pId);
       expect(restarted, isNotNull);
@@ -1001,6 +1004,9 @@ void main() {
     });
 
     test('Restart Project resets Ongoing project to Day 1 today with clean habit', () async {
+      final projectsNotifier = container.read(projectsProvider.notifier);
+      await projectsNotifier.loadProjects();
+
       final pId = 'p_restart_ongoing';
       final oldStart = cleanToday.subtract(const Duration(days: 14));
 
@@ -1039,7 +1045,7 @@ void main() {
         loggedAt: oldStart,
       ));
 
-      await container.read(projectsProvider.notifier).restartProject(pId);
+      await projectsNotifier.restartProject(pId);
 
       final restarted = await projectRepo.getProjectById(pId);
       expect(restarted, isNotNull);
