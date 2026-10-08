@@ -5,8 +5,9 @@ on:
     branches:
       - main
       - master
-    paths-ignore:
-      - 'Daily_Counter/**'
+    paths:
+      - 'project_src/**'
+      - '.github/workflows/build_apk.yml'
   workflow_dispatch: # Allows you to manually trigger the build from the GitHub website
 
 jobs:
