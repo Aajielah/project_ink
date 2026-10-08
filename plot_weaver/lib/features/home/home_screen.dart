@@ -140,13 +140,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.amberGold.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 28,
+                height: 28,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.amberGold.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.auto_stories, color: AppColors.amberGold, size: 20),
+                ),
               ),
-              child: const Icon(Icons.auto_stories, color: AppColors.amberGold, size: 20),
             ),
             const SizedBox(width: 10),
             const Text(
@@ -414,14 +423,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.amberGold.withOpacity(0.16),
-                  shape: BoxShape.circle,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/icon/app_icon.png',
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: AppColors.amberGold.withOpacity(0.16),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.auto_stories, size: 40, color: AppColors.amberGold),
+                  ),
                 ),
-                child: const Icon(Icons.auto_stories, size: 40, color: AppColors.amberGold),
               ),
               const SizedBox(height: 24),
               const Text(
