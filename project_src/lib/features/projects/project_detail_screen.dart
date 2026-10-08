@@ -2413,6 +2413,46 @@ class _ManageTab extends ConsumerWidget {
                 ),
               const Divider(height: 1),
               ListTile(
+                leading: const Icon(Icons.restart_alt, color: Colors.orange),
+                title: const Text('Restart Project'),
+                subtitle: const Text('Reset start date to today, clear past history, and generate a fresh schedule.'),
+                onTap: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Restart Project?'),
+                      content: Text(
+                        'Are you sure you want to restart "${project.name}" back to Day 1 starting today? '
+                        'All previous daily logs and calendar history for this book will be permanently cleared. '
+                        'This action cannot be undone.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Restart'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true && context.mounted) {
+                    Navigator.pop(context); // Close bottom sheet
+                    await ref.read(projectsProvider.notifier).restartProject(project.id);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Project "${project.name}" has been restarted from today!')),
+                      );
+                    }
+                  }
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
                 leading: Icon(Icons.delete_forever, color: theme.colorScheme.error),
                 title: Text(
                   'Delete Project',

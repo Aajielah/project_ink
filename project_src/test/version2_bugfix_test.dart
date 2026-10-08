@@ -923,5 +923,135 @@ void main() {
       expect(logMon.actualWords, equals(500));
       expect(logMon.plannedWords, equals(2000));
     });
+
+    test('Restart Project resets Fixed project to Day 1 today and regenerates schedule', () async {
+      final pId = 'p_restart_fixed';
+      final oldStart = cleanToday.subtract(const Duration(days: 10));
+      final oldFinish = cleanToday.add(const Duration(days: 10));
+
+      final project = ProjectModel(
+        id: pId,
+        name: 'Fixed Restart Book',
+        status: ProjectStatus.active,
+        projectType: ProjectType.fixed,
+        targetWords: 10000,
+        writtenWords: 3000,
+        remainingWords: 7000,
+        dailyWordTarget: 500,
+        backlogWords: 500,
+        startDate: oldStart,
+        expectedFinishDate: oldFinish,
+        restMode: RestMode.flexible,
+        allowedRestDays: 4,
+        remainingRestDays: 2,
+        projectStreak: 3,
+        longestProjectStreak: 3,
+        currentWeek: 2,
+        createdAt: oldStart,
+        updatedAt: oldStart,
+      );
+      await projectRepo.insertProject(project);
+
+      await dailyLogRepo.insertLog(DailyLogModel(
+        id: 'log_old',
+        projectId: pId,
+        date: oldStart,
+        plannedWords: 500,
+        actualWords: 500,
+        carryForwardWords: 0,
+        backlogCreated: 0,
+        completed: true,
+        loggedAt: oldStart,
+      ));
+      await scheduleRepo.insertSchedules([
+        ScheduleModel(
+          id: 's_old',
+          projectId: pId,
+          date: oldStart,
+          plannedWords: 500,
+          isRestDay: false,
+          completed: true,
+          automaticRestDay: false,
+          locked: true,
+        ),
+      ]);
+
+      await container.read(projectsProvider.notifier).restartProject(pId);
+
+      final restarted = await projectRepo.getProjectById(pId);
+      expect(restarted, isNotNull);
+      expect(restarted!.startDate, equals(cleanToday));
+      expect(restarted.writtenWords, equals(0));
+      expect(restarted.remainingWords, equals(10000));
+      expect(restarted.backlogWords, equals(0));
+      expect(restarted.projectStreak, equals(0));
+      expect(restarted.currentWeek, equals(1));
+      expect(restarted.status, equals(ProjectStatus.active));
+      expect(restarted.expectedFinishDate.isAfter(cleanToday), isTrue);
+
+      final logs = await dailyLogRepo.getLogsForProject(pId);
+      expect(logs, isEmpty);
+
+      final schedules = await scheduleRepo.getSchedulesForProject(pId);
+      expect(schedules, isNotEmpty);
+      expect(schedules.first.date, equals(cleanToday));
+    });
+
+    test('Restart Project resets Ongoing project to Day 1 today with clean habit', () async {
+      final pId = 'p_restart_ongoing';
+      final oldStart = cleanToday.subtract(const Duration(days: 14));
+
+      final project = ProjectModel(
+        id: pId,
+        name: 'Ongoing Restart Book',
+        status: ProjectStatus.paused,
+        projectType: ProjectType.ongoing,
+        targetWords: 0,
+        writtenWords: 5000,
+        remainingWords: 0,
+        dailyWordTarget: 300,
+        backlogWords: 300,
+        startDate: oldStart,
+        expectedFinishDate: oldStart,
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 5,
+        longestProjectStreak: 5,
+        currentWeek: 3,
+        createdAt: oldStart,
+        updatedAt: oldStart,
+      );
+      await projectRepo.insertProject(project);
+
+      await dailyLogRepo.insertLog(DailyLogModel(
+        id: 'log_ongoing_old',
+        projectId: pId,
+        date: oldStart,
+        plannedWords: 300,
+        actualWords: 300,
+        carryForwardWords: 0,
+        backlogCreated: 0,
+        completed: true,
+        loggedAt: oldStart,
+      ));
+
+      await container.read(projectsProvider.notifier).restartProject(pId);
+
+      final restarted = await projectRepo.getProjectById(pId);
+      expect(restarted, isNotNull);
+      expect(restarted!.startDate, equals(cleanToday));
+      expect(restarted.writtenWords, equals(0));
+      expect(restarted.projectStreak, equals(0));
+      expect(restarted.status, equals(ProjectStatus.active));
+
+      final logs = await dailyLogRepo.getLogsForProject(pId);
+      expect(logs, isEmpty);
+
+      final schedules = await scheduleRepo.getSchedulesForProject(pId);
+      expect(schedules.length, equals(1));
+      expect(schedules.first.date, equals(cleanToday));
+      expect(schedules.first.plannedWords, equals(300));
+    });
   });
 }

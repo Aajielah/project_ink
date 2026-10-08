@@ -108,6 +108,7 @@ class ProjectModel {
     DateTime? frozenDate,
     DateTime? freezeActivatedAt,
     bool clearFreeze = false,
+    bool clearActualFinishDate = false,
     String? groupId,
   }) {
     return ProjectModel(
@@ -123,7 +124,7 @@ class ProjectModel {
       backlogWords: backlogWords ?? this.backlogWords,
       startDate: startDate ?? this.startDate,
       expectedFinishDate: expectedFinishDate ?? this.expectedFinishDate,
-      actualFinishDate: actualFinishDate ?? this.actualFinishDate,
+      actualFinishDate: clearActualFinishDate ? null : (actualFinishDate ?? this.actualFinishDate),
       restMode: restMode ?? this.restMode,
       allowedRestDays: allowedRestDays ?? this.allowedRestDays,
       remainingRestDays: remainingRestDays ?? this.remainingRestDays,
