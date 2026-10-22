@@ -1062,5 +1062,147 @@ void main() {
       expect(schedules.first.date, equals(cleanToday));
       expect(schedules.first.plannedWords, equals(300));
     });
+
+    test('Restart Project in Rhythm Mode preserves today as Recovery Day if today was Recovery Day', () async {
+      final projectsNotifier = container.read(projectsProvider.notifier);
+      await projectsNotifier.loadProjects();
+
+      final pId = 'p_restart_rhythm_recovery';
+      final oldStart = cleanToday.subtract(const Duration(days: 5));
+
+      final project = ProjectModel(
+        id: pId,
+        name: 'Rhythm Recovery Restart Book',
+        status: ProjectStatus.paused,
+        projectType: ProjectType.ongoing,
+        ongoingStyle: 'rhythm',
+        targetWords: 0,
+        writtenWords: 2000,
+        remainingWords: 0,
+        dailyWordTarget: 500,
+        backlogWords: 500,
+        startDate: oldStart,
+        expectedFinishDate: oldStart,
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 4,
+        longestProjectStreak: 4,
+        currentWeek: 1,
+        createdAt: oldStart,
+        updatedAt: oldStart,
+      );
+      await projectRepo.insertProject(project);
+
+      final todaySched = ScheduleModel(
+        id: 's_rhythm_today_rec',
+        projectId: pId,
+        date: cleanToday,
+        plannedWords: 0,
+        isRestDay: false,
+        isRecoveryDay: true,
+        completed: true,
+        automaticRestDay: false,
+        locked: false,
+      );
+      await scheduleRepo.insertSchedules([todaySched]);
+
+      await dailyLogRepo.insertLog(DailyLogModel(
+        id: 'log_rhythm_old',
+        projectId: pId,
+        date: oldStart,
+        plannedWords: 500,
+        actualWords: 500,
+        carryForwardWords: 0,
+        backlogCreated: 0,
+        completed: true,
+        loggedAt: oldStart,
+      ));
+
+      await projectsNotifier.restartProject(pId);
+
+      final restarted = await projectRepo.getProjectById(pId);
+      expect(restarted, isNotNull);
+      expect(restarted!.startDate, equals(cleanToday.subtract(const Duration(days: 1))));
+      expect(restarted.writtenWords, equals(0));
+      expect(restarted.projectStreak, equals(0));
+      expect(restarted.status, equals(ProjectStatus.active));
+
+      final logs = await dailyLogRepo.getLogsForProject(pId);
+      expect(logs, isEmpty);
+
+      final schedToday = await scheduleRepo.getScheduleForDate(pId, cleanToday);
+      expect(schedToday, isNotNull);
+      expect(schedToday!.isRecoveryDay, isTrue);
+      expect(schedToday.plannedWords, equals(0));
+
+      final tomorrow = cleanToday.add(const Duration(days: 1));
+      final schedTomorrow = await scheduleRepo.getScheduleForDate(pId, tomorrow);
+      expect(schedTomorrow, isNotNull);
+      expect(schedTomorrow!.isRecoveryDay, isFalse);
+      expect(schedTomorrow.plannedWords, equals(500));
+    });
+
+    test('Restart Project in Rhythm Mode starts Day 1 today if today was a writing day', () async {
+      final projectsNotifier = container.read(projectsProvider.notifier);
+      await projectsNotifier.loadProjects();
+
+      final pId = 'p_restart_rhythm_writing';
+      final oldStart = cleanToday.subtract(const Duration(days: 4));
+
+      final project = ProjectModel(
+        id: pId,
+        name: 'Rhythm Writing Restart Book',
+        status: ProjectStatus.paused,
+        projectType: ProjectType.ongoing,
+        ongoingStyle: 'rhythm',
+        targetWords: 0,
+        writtenWords: 1500,
+        remainingWords: 0,
+        dailyWordTarget: 400,
+        backlogWords: 0,
+        startDate: oldStart,
+        expectedFinishDate: oldStart,
+        restMode: RestMode.flexible,
+        allowedRestDays: 0,
+        remainingRestDays: 0,
+        projectStreak: 3,
+        longestProjectStreak: 3,
+        currentWeek: 1,
+        createdAt: oldStart,
+        updatedAt: oldStart,
+      );
+      await projectRepo.insertProject(project);
+
+      final todaySched = ScheduleModel(
+        id: 's_rhythm_today_write',
+        projectId: pId,
+        date: cleanToday,
+        plannedWords: 400,
+        isRestDay: false,
+        isRecoveryDay: false,
+        completed: false,
+        automaticRestDay: false,
+        locked: false,
+      );
+      await scheduleRepo.insertSchedules([todaySched]);
+
+      await projectsNotifier.restartProject(pId);
+
+      final restarted = await projectRepo.getProjectById(pId);
+      expect(restarted, isNotNull);
+      expect(restarted!.startDate, equals(cleanToday));
+      expect(restarted.writtenWords, equals(0));
+      expect(restarted.projectStreak, equals(0));
+      expect(restarted.status, equals(ProjectStatus.active));
+
+      final logs = await dailyLogRepo.getLogsForProject(pId);
+      expect(logs, isEmpty);
+
+      final schedToday = await scheduleRepo.getScheduleForDate(pId, cleanToday);
+      expect(schedToday, isNotNull);
+      expect(schedToday!.isRecoveryDay, isFalse);
+      expect(schedToday.plannedWords, equals(400));
+    });
   });
 }

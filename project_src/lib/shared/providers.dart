@@ -569,7 +569,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         await prefs.remove('project_resumed_at_$id');
       } catch (_) {}
 
-      // Fetch existing schedules to preserve fixed rest weekdays if fixed mode
+      // Fetch existing schedules to check today's state and preserve fixed rest weekdays
       final existingSchedules = await _scheduleRepo.getSchedulesForProject(id);
       List<int> fixedRestWeekdays = [];
       if (project.restMode == RestMode.fixed) {
@@ -579,6 +579,21 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
             .toSet()
             .toList();
       }
+
+      ScheduleModel? todayExisting;
+      for (final s in existingSchedules) {
+        if (s.date.year == cleanToday.year &&
+            s.date.month == cleanToday.month &&
+            s.date.day == cleanToday.day) {
+          todayExisting = s;
+          break;
+        }
+      }
+
+      final isRhythm = project.projectType == ProjectType.ongoing && project.ongoingStyle == 'rhythm';
+      final bool isTodayRestOrRecovery = todayExisting != null
+          ? (todayExisting.isRestDay || todayExisting.isRecoveryDay)
+          : (isRhythm && getDaysDifference(project.startDate, cleanToday) % 2 != 0);
 
       // Delete all past logs and schedules
       await _dailyLogRepo.deleteLogsForProject(id);
@@ -590,7 +605,7 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           getDaysDifference(project.startDate, project.expectedFinishDate) + 1,
         );
 
-        final schedules = _schedulingService.generateInitialSchedule(
+        List<ScheduleModel> schedules = _schedulingService.generateInitialSchedule(
           projectId: project.id,
           startDate: cleanToday,
           targetWords: project.targetWords,
@@ -601,15 +616,47 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           allowedRestDays: project.allowedRestDays,
         );
 
-        final newFinishDate = schedules.isNotEmpty ? schedules.last.date : cleanToday;
-        final newDurationDaysActual = getDaysDifference(cleanToday, newFinishDate) + 1;
-        final initialRemainingRestDays = project.restMode == RestMode.fixed
+        int initialRemainingRestDays = project.restMode == RestMode.fixed
             ? 0
             : _schedulingService.getWeeklyAllocation(
                 totalRestDays: project.allowedRestDays,
-                durationDays: newDurationDaysActual,
+                durationDays: originalDurationDays,
                 week: 1,
               );
+
+        // If today was previously a rest day, preserve it in the new schedule
+        if (isTodayRestOrRecovery &&
+            project.restMode != RestMode.fixed &&
+            project.allowedRestDays > 0 &&
+            schedules.isNotEmpty &&
+            !schedules.first.isRestDay) {
+          final todaySchedule = schedules.first.copyWith(
+            isRestDay: true,
+            plannedWords: 0,
+            locked: true,
+            completed: false,
+          );
+          final tempSchedules = [todaySchedule, ...schedules.skip(1)];
+          final tomorrow = cleanToday.add(const Duration(days: 1));
+          final futurePlanned = schedules.skip(1).fold<int>(0, (sum, s) => sum + s.plannedWords) + schedules.first.plannedWords;
+
+          schedules = _schedulingService.recalculateFutureSchedule(
+            existingSchedules: tempSchedules,
+            recalculateFromDate: tomorrow,
+            newDailyTarget: project.dailyWordTarget,
+            totalRemainingWords: futurePlanned,
+            fixedRestWeekdays: fixedRestWeekdays,
+            restMode: project.restMode,
+            allowedRestDaysBudget: project.allowedRestDays,
+            restDaysUsed: 1,
+          );
+
+          if (initialRemainingRestDays > 0) {
+            initialRemainingRestDays -= 1;
+          }
+        }
+
+        final newFinishDate = schedules.isNotEmpty ? schedules.last.date : cleanToday;
 
         final updated = project.copyWith(
           status: ProjectStatus.active,
@@ -631,12 +678,16 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
         await _projectRepo.updateProject(updated);
         await _scheduleRepo.insertSchedules(schedules);
       } else {
+        final newStartDate = (isRhythm && isTodayRestOrRecovery)
+            ? cleanToday.subtract(const Duration(days: 1))
+            : cleanToday;
+
         final updated = project.copyWith(
           status: ProjectStatus.active,
           writtenWords: 0,
           remainingWords: 0,
           backlogWords: 0,
-          startDate: cleanToday,
+          startDate: newStartDate,
           expectedFinishDate: cleanToday,
           clearActualFinishDate: true,
           projectStreak: 0,
@@ -647,19 +698,63 @@ class ProjectsNotifier extends StateNotifier<AsyncValue<List<ProjectModel>>> {
           clearFreeze: true,
         );
 
-        final initialSchedule = ScheduleModel(
-          id: const Uuid().v4(),
-          projectId: project.id,
-          date: cleanToday,
-          plannedWords: project.dailyWordTarget,
-          isRestDay: false,
-          completed: false,
-          automaticRestDay: false,
-          locked: false,
-        );
+        final List<ScheduleModel> initialSchedules = [];
+
+        if (isRhythm && isTodayRestOrRecovery) {
+          // Locked placeholder for yesterday so sync never treats it as missing/missed
+          initialSchedules.add(ScheduleModel(
+            id: const Uuid().v4(),
+            projectId: project.id,
+            date: newStartDate,
+            plannedWords: 0,
+            isRestDay: true,
+            isRecoveryDay: false,
+            completed: true,
+            automaticRestDay: false,
+            locked: true,
+          ));
+
+          // Today is preserved as a Recovery Day with 0 planned words
+          initialSchedules.add(ScheduleModel(
+            id: const Uuid().v4(),
+            projectId: project.id,
+            date: cleanToday,
+            plannedWords: 0,
+            isRestDay: false,
+            isRecoveryDay: true,
+            completed: true,
+            automaticRestDay: false,
+            locked: false,
+          ));
+        } else if (isTodayRestOrRecovery) {
+          // Non-rhythm ongoing preserved as Rest Day for today
+          initialSchedules.add(ScheduleModel(
+            id: const Uuid().v4(),
+            projectId: project.id,
+            date: cleanToday,
+            plannedWords: 0,
+            isRestDay: true,
+            isRecoveryDay: false,
+            completed: true,
+            automaticRestDay: false,
+            locked: true,
+          ));
+        } else {
+          // Normal writing day
+          initialSchedules.add(ScheduleModel(
+            id: const Uuid().v4(),
+            projectId: project.id,
+            date: cleanToday,
+            plannedWords: project.dailyWordTarget,
+            isRestDay: false,
+            completed: false,
+            automaticRestDay: false,
+            locked: false,
+          ));
+        }
 
         await _projectRepo.updateProject(updated);
-        await _scheduleRepo.insertSchedules([initialSchedule]);
+        await _scheduleRepo.insertSchedules(initialSchedules);
       }
 
       await _statsRepo.recalculateStatistics();

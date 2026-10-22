@@ -16,3 +16,14 @@ Thumbs.db
 **/.pub/
 *.iml
 
+# Decoupled Apps (Independent projects)
+/ink_overseer/
+/Daily_Counter/
+/daily_notes/
+
+# Working documents & loose files
+*.docx
+*.html
+Untitled.txt
+
+
