@@ -35,15 +35,46 @@ class StorageManager {
 
   async createProject(name, year = new Date().getFullYear()) {
     const projects = await this.getProjects();
+    const currentMonthIndex = new Date().getMonth();
     const newProject = {
       id: 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
       name: name.trim(),
       year: parseInt(year, 10) || new Date().getFullYear(),
+      createdMonthIndex: currentMonthIndex,
       createdAt: new Date().toISOString(),
     };
     projects.push(newProject);
     await AsyncStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+
+    // Automatically generate the active current month folder for this project
+    await this.createMonthFolder(newProject.id, newProject.year, currentMonthIndex);
+
     return newProject;
+  }
+
+  /**
+   * Ensures the current month folder exists and returns visible months:
+   * Only returns months from project creation month up to currentMonthIndex.
+   * If a new month has arrived, automatically generates it!
+   */
+  async ensureAndGetActiveMonths(project) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonthIndex = now.getMonth();
+
+    if (project.year === currentYear) {
+      // Auto-create current month folder if not present
+      await this.createMonthFolder(project.id, project.year, currentMonthIndex);
+    }
+
+    const allMonths = await this.getMonthFolders(project.id);
+    const startMonth = typeof project.createdMonthIndex === 'number'
+      ? project.createdMonthIndex
+      : currentMonthIndex;
+
+    return allMonths
+      .filter((m) => m.monthIndex >= startMonth && m.monthIndex <= currentMonthIndex)
+      .sort((a, b) => a.monthIndex - b.monthIndex);
   }
 
   async deleteProject(projectId) {

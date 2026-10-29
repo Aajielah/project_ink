@@ -5,6 +5,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -29,6 +30,20 @@ function MainApp() {
     };
     initApp();
   }, []);
+
+  // ROOT ANDROID BACK HANDLER: Return to 'home' tab before exiting
+  useEffect(() => {
+    const onBackPress = () => {
+      if (activeTab !== 'home') {
+        setActiveTab('home');
+        return true;
+      }
+      return false; // Exit app
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backHandler.remove();
+  }, [activeTab]);
 
   return (
     <SafeAreaView

@@ -11,6 +11,7 @@ import {
   Alert,
   ScrollView,
   Switch,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -39,6 +40,32 @@ export default function SettingsScreen() {
   useEffect(() => {
     loadTrash();
   }, []);
+
+  // ANDROID HARDWARE BACK HANDLER
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showExportResultModal) {
+        setShowExportResultModal(false);
+        return true;
+      }
+      if (showExportPasswordModal) {
+        setShowExportPasswordModal(false);
+        return true;
+      }
+      if (showImportModal) {
+        setShowImportModal(false);
+        return true;
+      }
+      if (currentView === 'trash') {
+        setCurrentView('menu');
+        return true;
+      }
+      return false; // Root menu: lets parent tab or Android handle
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backHandler.remove();
+  }, [currentView, showExportPasswordModal, showExportResultModal, showImportModal]);
 
   const loadTrash = async () => {
     const list = await storage.purgeExpiredTrash();

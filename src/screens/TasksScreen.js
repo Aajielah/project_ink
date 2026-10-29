@@ -9,6 +9,7 @@ import {
   TextInput,
   StyleSheet,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -35,6 +36,24 @@ export default function TasksScreen() {
     loadTasks();
     storage.runMidnightTaskReset().then(() => loadTasks());
   }, []);
+
+  // ANDROID HARDWARE BACK HANDLER
+  useEffect(() => {
+    const onBackPress = () => {
+      if (editingTask) {
+        setEditingTask(null);
+        return true;
+      }
+      if (showModal) {
+        setShowModal(false);
+        return true;
+      }
+      return false; // Root tasks: lets parent tab or Android handle
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backHandler.remove();
+  }, [editingTask, showModal]);
 
   const loadTasks = async () => {
     const list = await storage.getTasks();

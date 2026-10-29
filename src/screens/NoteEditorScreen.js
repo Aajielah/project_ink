@@ -23,11 +23,19 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
   const [cursorPos, setCursorPos] = useState({ start: 0, end: 0 });
   const saveTimeoutRef = useRef(null);
   const inputRef = useRef(null);
+  const contentRef = useRef('');
+
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
 
   useEffect(() => {
     loadNote();
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (noteId && contentRef.current !== undefined) {
+        storage.updateNote(noteId, contentRef.current);
+      }
     };
   }, [noteId]);
 

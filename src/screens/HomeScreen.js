@@ -9,12 +9,12 @@ import {
   TextInput,
   StyleSheet,
   Alert,
-  ScrollView,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { storage } from '../storage/storageManager';
-import { MONTH_NAMES, isWeekActive, isWeekExpired } from '../utils/dateUtils';
+import { isWeekActive, isWeekExpired } from '../utils/dateUtils';
 import WeekNotesScreen from './WeekNotesScreen';
 import NoteEditorScreen from './NoteEditorScreen';
 
@@ -36,8 +36,40 @@ export default function HomeScreen() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [projectNameInput, setProjectNameInput] = useState('');
 
-  const [showMonthModal, setShowMonthModal] = useState(false);
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(new Date().getMonth());
+  // ANDROID HARDWARE BACK HANDLER
+  useEffect(() => {
+    const backAction = () => {
+      if (showProjectModal) {
+        setShowProjectModal(false);
+        return true;
+      }
+      if (currentLevel === 'noteEditor') {
+        setCurrentLevel('weekNotes');
+        setSelectedNoteId(null);
+        return true;
+      }
+      if (currentLevel === 'weekNotes') {
+        setCurrentLevel('weeks');
+        return true;
+      }
+      if (currentLevel === 'weeks') {
+        setCurrentLevel('months');
+        return true;
+      }
+      if (currentLevel === 'months') {
+        setCurrentLevel('projects');
+        return true;
+      }
+      return false; // Root level: lets Android handle exit
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [currentLevel, showProjectModal]);
 
   useEffect(() => {
     loadProjects();
@@ -52,7 +84,7 @@ export default function HomeScreen() {
   };
 
   const loadMonths = async (proj) => {
-    const list = await storage.getMonthFolders(proj.id);
+    const list = await storage.ensureAndGetActiveMonths(proj);
     setMonthFolders(list);
   };
 
@@ -99,25 +131,6 @@ export default function HomeScreen() {
         },
       ]
     );
-  };
-
-  // ---- MONTH CREATION ----
-  const handleCreateMonth = async () => {
-    if (!selectedProject) return;
-
-    const result = await storage.createMonthFolder(
-      selectedProject.id,
-      selectedProject.year,
-      selectedMonthIndex
-    );
-
-    setShowMonthModal(false);
-
-    if (result.alreadyExisted) {
-      Alert.alert('Notice', `${result.month.monthName} folder already exists for this project.`);
-    }
-
-    await loadMonths(selectedProject);
   };
 
   const openMonth = async (month) => {
@@ -247,7 +260,7 @@ export default function HomeScreen() {
   }
 
   // -------------------------------------------------------------
-  // RENDER LEVEL: Months inside a Project
+  // RENDER LEVEL: Months inside a Project (Strictly active months)
   // -------------------------------------------------------------
   if (currentLevel === 'months') {
     return (
@@ -262,7 +275,7 @@ export default function HomeScreen() {
           <View style={styles.headerTitles}>
             <Text style={[styles.headerTitle, { color: theme.text }]}>{selectedProject?.name}</Text>
             <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-              Year {selectedProject?.year} • Months
+              Year {selectedProject?.year} • Active Months
             </Text>
           </View>
         </View>
@@ -271,104 +284,51 @@ export default function HomeScreen() {
           data={monthFolders}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
-              activeOpacity={0.7}
-              onPress={() => openMonth(item)}
-            >
-              <View style={styles.cardHeader}>
-                <View style={[styles.iconCircle, { backgroundColor: theme.surfaceHover }]}>
-                  <Ionicons name="calendar" size={24} color={theme.primary} />
+          renderItem={({ item }) => {
+            const currentMonthIdx = new Date().getMonth();
+            const isCurrent = item.monthIndex === currentMonthIdx;
+
+            return (
+              <TouchableOpacity
+                style={[
+                  styles.card,
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                  isCurrent && { borderColor: theme.secondary, borderWidth: 1.5 },
+                ]}
+                activeOpacity={0.7}
+                onPress={() => openMonth(item)}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={[styles.iconCircle, { backgroundColor: theme.surfaceHover }]}>
+                    <Ionicons
+                      name="calendar"
+                      size={24}
+                      color={isCurrent ? theme.secondary : theme.primary}
+                    />
+                  </View>
+                  <View style={styles.cardMainInfo}>
+                    <Text style={[styles.cardTitle, { color: theme.text }]}>{item.monthName}</Text>
+                    <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
+                      {isCurrent ? 'Current Active Month' : 'Completed Month'}
+                    </Text>
+                  </View>
+                  {isCurrent && (
+                    <View style={[styles.badgeActive, { backgroundColor: theme.secondaryLight }]}>
+                      <Text style={[styles.badgeActiveText, { color: theme.secondary }]}>Active</Text>
+                    </View>
+                  )}
+                  <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
                 </View>
-                <View style={styles.cardMainInfo}>
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>{item.monthName}</Text>
-                  <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>Tap to view weeks</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
-              </View>
-            </TouchableOpacity>
-          )}
+              </TouchableOpacity>
+            );
+          }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="calendar-outline" size={48} color={theme.textMuted} />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>No month folders yet</Text>
-              <Text style={[styles.emptySub, { color: theme.textMuted }]}>
-                Tap the big + button below to pick a month and generate weeks.
-              </Text>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>No active months found</Text>
             </View>
           }
         />
-
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: theme.primary }]}
-          activeOpacity={0.8}
-          onPress={() => setShowMonthModal(true)}
-        >
-          <Ionicons name="add" size={32} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        <Modal
-          visible={showMonthModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowMonthModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Text style={[styles.modalTitle, { color: theme.text }]}>Select Month</Text>
-              <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
-                Week folders will automatically be generated for this month.
-              </Text>
-
-              <ScrollView style={styles.monthScroll} showsVerticalScrollIndicator={false}>
-                {MONTH_NAMES.map((mName, idx) => (
-                  <TouchableOpacity
-                    key={mName}
-                    style={[
-                      styles.monthOption,
-                      { backgroundColor: theme.card, borderColor: theme.border },
-                      selectedMonthIndex === idx && {
-                        backgroundColor: theme.primaryLight,
-                        borderColor: theme.primary,
-                        borderWidth: 1,
-                      },
-                    ]}
-                    onPress={() => setSelectedMonthIndex(idx)}
-                  >
-                    <Text
-                      style={[
-                        styles.monthOptionText,
-                        { color: selectedMonthIndex === idx ? theme.primary : theme.text },
-                        selectedMonthIndex === idx && { fontWeight: '700' },
-                      ]}
-                    >
-                      {mName}
-                    </Text>
-                    {selectedMonthIndex === idx && (
-                      <Ionicons name="checkmark-circle" size={20} color={theme.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.modalCancelBtn}
-                  onPress={() => setShowMonthModal(false)}
-                >
-                  <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
-                  onPress={handleCreateMonth}
-                >
-                  <Text style={styles.modalConfirmText}>Create</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
       </View>
     );
   }
@@ -441,7 +401,9 @@ export default function HomeScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>New Project</Text>
-            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>Enter your project name to get started.</Text>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+              Enter your project name (e.g. 2026). The active month will be generated automatically.
+            </Text>
 
             <TextInput
               style={[
@@ -613,6 +575,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
     marginBottom: 16,
+    lineHeight: 18,
   },
   modalInput: {
     borderRadius: 8,
@@ -621,23 +584,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     borderWidth: 1,
     marginBottom: 20,
-  },
-  monthScroll: {
-    maxHeight: 250,
-    marginBottom: 16,
-  },
-  monthOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    marginBottom: 6,
-    borderWidth: 1,
-  },
-  monthOptionText: {
-    fontSize: 15,
   },
   modalButtons: {
     flexDirection: 'row',

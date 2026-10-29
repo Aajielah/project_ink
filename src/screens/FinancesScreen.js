@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -55,6 +56,39 @@ export default function FinancesScreen() {
       setUnlockedMonths(months);
     }
   };
+
+  const handleBackFromSheet = async () => {
+    if (selectedMonth) {
+      const summary = await financeManager.getMonthDaysSummary(
+        selectedYear,
+        selectedMonth.index
+      );
+      setDaysSummary(summary);
+    }
+    setLevel('days');
+  };
+
+  // ANDROID HARDWARE BACK HANDLER
+  useEffect(() => {
+    const onBackPress = () => {
+      if (level === 'sheet') {
+        handleBackFromSheet();
+        return true;
+      }
+      if (level === 'days') {
+        setLevel('months');
+        return true;
+      }
+      if (level === 'months') {
+        setLevel('year');
+        return true;
+      }
+      return false; // Year root: lets parent tab or Android handle
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backHandler.remove();
+  }, [level, selectedYear, selectedMonth]);
 
   // ---- INITIAL ONE-TIME CREATION ----
   const handleCreateYearFolder = async () => {
@@ -197,14 +231,7 @@ export default function FinancesScreen() {
         >
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={async () => {
-              const summary = await financeManager.getMonthDaysSummary(
-                selectedYear,
-                selectedMonth.index
-              );
-              setDaysSummary(summary);
-              setLevel('days');
-            }}
+            onPress={handleBackFromSheet}
           >
             <Ionicons name="arrow-back" size={24} color={totals.isNegative ? '#FFFFFF' : theme.text} />
           </TouchableOpacity>
