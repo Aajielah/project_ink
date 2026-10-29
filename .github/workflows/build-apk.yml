@@ -38,15 +38,15 @@ jobs:
       - name: 🔨 Generate Android Native Project
         run: npx expo prebuild --platform android --clean
 
-      - name: 🚀 Build APK with Gradle
+      - name: 🚀 Build Release APK with Gradle
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon -x lint -x lintVitalRelease
 
       - name: 📤 Upload Downloadable APK
         uses: actions/upload-artifact@v4
         with:
           name: DailyNotes-App-APK
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: android/app/build/outputs/apk/release/*.apk
           retention-days: 30
