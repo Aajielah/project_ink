@@ -13,11 +13,11 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { financeManager } from '../storage/financeManager';
-import { MONTH_NAMES } from '../utils/dateUtils';
 
 export default function FinancesScreen() {
+  const { theme } = useTheme();
   const [level, setLevel] = useState('year'); // 'year' | 'months' | 'days' | 'sheet'
   const [config, setConfig] = useState(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -49,7 +49,8 @@ export default function FinancesScreen() {
     if (cfg && cfg.yearFolderCreated) {
       setSelectedYear(cfg.createdYear || new Date().getFullYear());
       const months = financeManager.getUnlockedMonths(
-        cfg.createdYear || new Date().getFullYear()
+        cfg.createdYear || new Date().getFullYear(),
+        cfg
       );
       setUnlockedMonths(months);
     }
@@ -61,7 +62,7 @@ export default function FinancesScreen() {
     const created = await financeManager.createYearFolder(currentYear);
     setConfig(created);
     setSelectedYear(currentYear);
-    const months = financeManager.getUnlockedMonths(currentYear);
+    const months = financeManager.getUnlockedMonths(currentYear, created);
     setUnlockedMonths(months);
     setLevel('months');
   };
@@ -111,7 +112,6 @@ export default function FinancesScreen() {
     const updated = [...incomes];
     updated[index] = { ...updated[index], [field]: value };
 
-    // Auto-generate extra row if editing last row
     if (index === updated.length - 1 && value.trim() !== '') {
       updated.push({
         id: `inc_${Date.now()}_${updated.length}`,
@@ -130,7 +130,6 @@ export default function FinancesScreen() {
     const updated = [...expenses];
     updated[index] = { ...updated[index], [field]: value };
 
-    // Auto-generate extra row if editing last row
     if (index === updated.length - 1 && value.trim() !== '') {
       updated.push({
         id: `exp_${Date.now()}_${updated.length}`,
@@ -186,10 +185,16 @@ export default function FinancesScreen() {
     return (
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
+        style={[styles.container, { backgroundColor: theme.background }]}
       >
         {/* Header */}
-        <View style={[styles.header, totals.isNegative && styles.headerNegative]}>
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: theme.surface, borderBottomColor: theme.border },
+            totals.isNegative && { backgroundColor: theme.danger },
+          ]}
+        >
           <TouchableOpacity
             style={styles.backBtn}
             onPress={async () => {
@@ -201,13 +206,13 @@ export default function FinancesScreen() {
               setLevel('days');
             }}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={totals.isNegative ? '#FFFFFF' : theme.text} />
           </TouchableOpacity>
           <View style={styles.headerTitles}>
-            <Text style={styles.headerTitle}>
+            <Text style={[styles.headerTitle, { color: totals.isNegative ? '#FFFFFF' : theme.text }]}>
               {selectedMonth?.name} {selectedDay}, {selectedYear}
             </Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerSubtitle, { color: totals.isNegative ? 'rgba(255,255,255,0.85)' : theme.textSecondary }]}>
               Financial Ledger • Day {selectedDay}
             </Text>
           </View>
@@ -215,8 +220,8 @@ export default function FinancesScreen() {
 
         {/* Negative Balance Alert Banner */}
         {totals.isNegative && (
-          <View style={styles.alertBanner}>
-            <Ionicons name="alert-circle" size={22} color={colors.white} />
+          <View style={[styles.alertBanner, { backgroundColor: theme.danger }]}>
+            <Ionicons name="alert-circle" size={22} color="#FFFFFF" />
             <Text style={styles.alertBannerText}>
               Expenses exceed Income! You likely forgot an income transaction because you don't buy on credit. Please add the missing income.
             </Text>
@@ -226,53 +231,68 @@ export default function FinancesScreen() {
         {/* Table Content */}
         <ScrollView style={styles.tableScroll} keyboardShouldPersistTaps="handled">
           {/* Table Headers */}
-          <View style={styles.tableHeaderRow}>
-            <View style={[styles.columnHeader, { borderRightWidth: 1, borderRightColor: colors.border }]}>
-              <Ionicons name="arrow-down-circle" size={16} color={colors.secondary} />
-              <Text style={[styles.columnHeaderText, { color: colors.secondary }]}>
+          <View style={[styles.tableHeaderRow, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+            <View style={[styles.columnHeader, { borderRightWidth: 1, borderRightColor: theme.border }]}>
+              <Ionicons name="arrow-down-circle" size={16} color={theme.secondary} />
+              <Text style={[styles.columnHeaderText, { color: theme.secondary }]}>
                 INCOME
               </Text>
             </View>
             <View style={styles.columnHeader}>
-              <Ionicons name="arrow-up-circle" size={16} color={colors.warning} />
-              <Text style={[styles.columnHeaderText, { color: colors.warning }]}>
+              <Ionicons name="arrow-up-circle" size={16} color={theme.warning} />
+              <Text style={[styles.columnHeaderText, { color: theme.warning }]}>
                 EXPENSE
               </Text>
             </View>
           </View>
 
-          {/* Table Subheaders (Item | Amount) */}
-          <View style={styles.subHeaderRow}>
+          {/* Table Subheaders (Item | Amount) - Font increased by 1px */}
+          <View style={[styles.subHeaderRow, { backgroundColor: theme.surfaceHover, borderBottomColor: theme.border }]}>
             <View style={styles.halfRow}>
-              <Text style={styles.subHeaderText}>Item / Service</Text>
-              <Text style={styles.subHeaderAmount}>Amount (₦)</Text>
+              <Text style={[styles.subHeaderText, { color: theme.textSecondary }]}>Item / Service</Text>
+              <Text style={[styles.subHeaderAmount, { color: theme.textSecondary }]}>Amount (₦)</Text>
             </View>
             <View style={styles.halfRow}>
-              <Text style={styles.subHeaderText}>Item / Service</Text>
-              <Text style={styles.subHeaderAmount}>Amount (₦)</Text>
+              <Text style={[styles.subHeaderText, { color: theme.textSecondary }]}>Item / Service</Text>
+              <Text style={[styles.subHeaderAmount, { color: theme.textSecondary }]}>Amount (₦)</Text>
             </View>
           </View>
 
-          {/* Rows */}
+          {/* Rows - Font increased by 1px (14px) */}
           {Array.from({ length: maxRows }).map((_, index) => {
             const inc = incomes[index] || { description: '', amount: '', isRollover: false };
             const exp = expenses[index] || { description: '', amount: '' };
 
             return (
-              <View key={`row_${index}`} style={[styles.tableRow, index % 2 === 1 && styles.rowAlt]}>
+              <View
+                key={`row_${index}`}
+                style={[
+                  styles.tableRow,
+                  { borderBottomColor: theme.border },
+                  index % 2 === 1 && { backgroundColor: theme.surfaceHover },
+                ]}
+              >
                 {/* Income Item */}
-                <View style={[styles.halfRowInput, { borderRightWidth: 1, borderRightColor: colors.border }]}>
+                <View style={[styles.halfRowInput, { borderRightWidth: 1, borderRightColor: theme.border }]}>
                   <TextInput
-                    style={[styles.descInput, inc.isRollover && styles.rolloverText]}
+                    style={[
+                      styles.descInput,
+                      { color: theme.text },
+                      inc.isRollover && { color: theme.secondary, fontWeight: '700' },
+                    ]}
                     placeholder={index === 0 && !inc.isRollover ? 'e.g. Salary' : 'Item...'}
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={theme.textMuted}
                     value={inc.description}
                     onChangeText={(val) => handleIncomeChange(index, 'description', val)}
                   />
                   <TextInput
-                    style={[styles.amountInput, inc.isRollover && styles.rolloverAmount]}
+                    style={[
+                      styles.amountInput,
+                      { color: theme.text },
+                      inc.isRollover && { color: theme.secondary, fontWeight: '700' },
+                    ]}
                     placeholder="0.00"
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={theme.textMuted}
                     keyboardType="numeric"
                     value={inc.amount ? String(inc.amount) : ''}
                     onChangeText={(val) => handleIncomeChange(index, 'amount', val)}
@@ -282,16 +302,16 @@ export default function FinancesScreen() {
                 {/* Expense Item */}
                 <View style={styles.halfRowInput}>
                   <TextInput
-                    style={styles.descInput}
+                    style={[styles.descInput, { color: theme.text }]}
                     placeholder="Item..."
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={theme.textMuted}
                     value={exp.description}
                     onChangeText={(val) => handleExpenseChange(index, 'description', val)}
                   />
                   <TextInput
-                    style={styles.amountInput}
+                    style={[styles.amountInput, { color: theme.text }]}
                     placeholder="0.00"
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={theme.textMuted}
                     keyboardType="numeric"
                     value={exp.amount ? String(exp.amount) : ''}
                     onChangeText={(val) => handleExpenseChange(index, 'amount', val)}
@@ -301,37 +321,49 @@ export default function FinancesScreen() {
             );
           })}
 
-          {/* Add Row Button */}
           <TouchableOpacity style={styles.addRowBtn} onPress={addManualRow}>
-            <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-            <Text style={styles.addRowText}>Add More Rows</Text>
+            <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
+            <Text style={[styles.addRowText, { color: theme.primary }]}>Add More Rows</Text>
           </TouchableOpacity>
         </ScrollView>
 
         {/* Bottom Totals Footer */}
-        <View style={[styles.footerTotals, totals.isNegative && styles.footerTotalsNegative]}>
+        <View
+          style={[
+            styles.footerTotals,
+            { backgroundColor: theme.surface, borderTopColor: theme.border },
+            totals.isNegative && { backgroundColor: theme.dangerLight, borderTopColor: theme.danger },
+          ]}
+        >
           <View style={styles.totalBlock}>
-            <Text style={styles.totalLabel}>TOTAL INCOME</Text>
-            <Text style={styles.totalIncomeVal}>
+            <Text style={[styles.totalLabel, { color: theme.textMuted }]}>TOTAL INCOME</Text>
+            <Text style={[styles.totalIncomeVal, { color: theme.secondary }]}>
               +₦{totals.totalIncome.toFixed(2)}
             </Text>
           </View>
 
           <View style={styles.totalBlock}>
-            <Text style={styles.totalLabel}>TOTAL EXPENSE</Text>
-            <Text style={styles.totalExpenseVal}>
+            <Text style={[styles.totalLabel, { color: theme.textMuted }]}>TOTAL EXPENSE</Text>
+            <Text style={[styles.totalExpenseVal, { color: theme.warning }]}>
               -₦{totals.totalExpense.toFixed(2)}
             </Text>
           </View>
 
-          <View style={[styles.totalBlock, styles.netBlock, totals.isNegative && styles.netBlockNegative]}>
-            <Text style={[styles.totalLabel, totals.isNegative && styles.negativeText]}>
+          <View
+            style={[
+              styles.totalBlock,
+              styles.netBlock,
+              { backgroundColor: theme.card, borderColor: theme.border },
+              totals.isNegative && { borderColor: theme.danger, backgroundColor: theme.dangerLight },
+            ]}
+          >
+            <Text style={[styles.totalLabel, { color: totals.isNegative ? theme.danger : theme.textMuted }]}>
               REMAINING
             </Text>
             <Text
               style={[
                 styles.totalNetVal,
-                totals.isNegative && styles.totalNetValNegative,
+                { color: totals.isNegative ? theme.danger : theme.text },
               ]}
             >
               ₦{totals.netBalance.toFixed(2)}
@@ -347,14 +379,14 @@ export default function FinancesScreen() {
   // -------------------------------------------------------------
   if (level === 'days') {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => setLevel('months')}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerTitles}>
-            <Text style={styles.headerTitle}>{selectedMonth?.name} {selectedYear}</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>{selectedMonth?.name} {selectedYear}</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
               Daily Financial Sheets (Numbered 1 to {daysSummary.length})
             </Text>
           </View>
@@ -368,9 +400,10 @@ export default function FinancesScreen() {
             <TouchableOpacity
               style={[
                 styles.dayCard,
-                item.isLocked && styles.dayCardLocked,
-                item.isToday && styles.dayCardToday,
-                item.isNegative && styles.dayCardNegative,
+                { backgroundColor: theme.card, borderColor: theme.border },
+                item.isLocked && { opacity: 0.45, backgroundColor: theme.surfaceHover },
+                item.isToday && { borderColor: theme.primary, borderWidth: 1.5 },
+                item.isNegative && { borderColor: theme.danger, borderWidth: 1.5, backgroundColor: theme.dangerLight },
               ]}
               activeOpacity={item.isLocked ? 1 : 0.7}
               onPress={() => openDaySheet(item)}
@@ -379,28 +412,27 @@ export default function FinancesScreen() {
                 <Text
                   style={[
                     styles.dayNumberText,
-                    item.isLocked && styles.dayNumberLocked,
-                    item.isNegative && styles.negativeText,
+                    { color: item.isNegative ? theme.danger : item.isLocked ? theme.textMuted : theme.text },
                   ]}
                 >
                   Day {item.dayNumber}
                 </Text>
                 {item.isLocked ? (
-                  <Ionicons name="lock-closed" size={16} color={colors.textMuted} />
+                  <Ionicons name="lock-closed" size={16} color={theme.textMuted} />
                 ) : item.isNegative ? (
-                  <Ionicons name="alert-circle" size={18} color={colors.danger} />
+                  <Ionicons name="alert-circle" size={18} color={theme.danger} />
                 ) : item.isToday ? (
-                  <View style={styles.todayPill}>
-                    <Text style={styles.todayPillText}>Today</Text>
+                  <View style={[styles.todayPill, { backgroundColor: theme.primaryLight }]}>
+                    <Text style={[styles.todayPillText, { color: theme.primary }]}>Today</Text>
                   </View>
                 ) : (
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
                 )}
               </View>
 
               {!item.isLocked && (
                 <View style={styles.dayCardBody}>
-                  <Text style={styles.daySubInfo}>
+                  <Text style={[styles.daySubInfo, { color: item.isNegative ? theme.danger : theme.textSecondary }]}>
                     Remaining: ₦{item.netBalance.toFixed(2)}
                   </Text>
                 </View>
@@ -413,18 +445,18 @@ export default function FinancesScreen() {
   }
 
   // -------------------------------------------------------------
-  // LEVEL: MONTHS IN YEAR
+  // LEVEL: MONTHS IN YEAR (Strictly starting from creation month)
   // -------------------------------------------------------------
   if (level === 'months') {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => setLevel('year')}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerTitles}>
-            <Text style={styles.headerTitle}>Finances • {selectedYear}</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>Finances • {selectedYear}</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
               Active & passed months (reveals 1 month at a time)
             </Text>
           </View>
@@ -436,30 +468,34 @@ export default function FinancesScreen() {
           contentContainerStyle={styles.listContainer}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={[styles.card, item.isCurrent && styles.activeCard]}
+              style={[
+                styles.card,
+                { backgroundColor: theme.card, borderColor: theme.border },
+                item.isCurrent && { borderColor: theme.secondary, borderWidth: 1.5 },
+              ]}
               activeOpacity={0.7}
               onPress={() => openMonth(item)}
             >
               <View style={styles.cardHeader}>
-                <View style={styles.iconCircle}>
+                <View style={[styles.iconCircle, { backgroundColor: theme.surfaceHover }]}>
                   <Ionicons
                     name="calendar"
                     size={24}
-                    color={item.isCurrent ? colors.secondary : colors.primary}
+                    color={item.isCurrent ? theme.secondary : theme.primary}
                   />
                 </View>
                 <View style={styles.cardMainInfo}>
-                  <Text style={styles.cardTitle}>{item.name}</Text>
-                  <Text style={styles.cardSubtitle}>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>{item.name}</Text>
+                  <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
                     {item.isCurrent ? 'Current Active Month' : 'Completed Month'}
                   </Text>
                 </View>
                 {item.isCurrent && (
-                  <View style={styles.activeBadge}>
-                    <Text style={styles.activeBadgeText}>Active</Text>
+                  <View style={[styles.activeBadge, { backgroundColor: theme.secondaryLight }]}>
+                    <Text style={[styles.activeBadgeText, { color: theme.secondary }]}>Active</Text>
                   </View>
                 )}
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
               </View>
             </TouchableOpacity>
           )}
@@ -474,51 +510,51 @@ export default function FinancesScreen() {
   const hasYearFolder = config && config.yearFolderCreated;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={styles.headerTitles}>
-          <Text style={styles.headerTitle}>Finances</Text>
-          <Text style={styles.headerSubtitle}>Daily Income & Expense Ledger</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Finances</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Daily Income & Expense Ledger</Text>
         </View>
       </View>
 
       {hasYearFolder ? (
         <ScrollView contentContainerStyle={styles.listContainer}>
           <TouchableOpacity
-            style={styles.card}
+            style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
             activeOpacity={0.7}
             onPress={() => setLevel('months')}
           >
             <View style={styles.cardHeader}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="wallet" size={26} color={colors.primary} />
+              <View style={[styles.iconCircle, { backgroundColor: theme.surfaceHover }]}>
+                <Ionicons name="wallet" size={26} color={theme.primary} />
               </View>
               <View style={styles.cardMainInfo}>
-                <Text style={styles.cardTitle}>{selectedYear} Finances</Text>
-                <Text style={styles.cardSubtitle}>
+                <Text style={[styles.cardTitle, { color: theme.text }]}>{selectedYear} Finances</Text>
+                <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
                   {unlockedMonths.length} Active Month(s) Available
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
             </View>
           </TouchableOpacity>
         </ScrollView>
       ) : (
         <View style={styles.emptyContainer}>
-          <Ionicons name="wallet-outline" size={64} color={colors.primary} />
-          <Text style={styles.emptyTitle}>Start Your Finances</Text>
-          <Text style={styles.emptySub}>
+          <Ionicons name="wallet-outline" size={64} color={theme.primary} />
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>Start Your Finances</Text>
+          <Text style={[styles.emptySub, { color: theme.textSecondary }]}>
             Tap the + button below to generate your {new Date().getFullYear()} Finance folder.
-            The system will automatically manage months and daily sheets for you.
+            It will start from {new Date().toLocaleString('default', { month: 'long' })} and manage months and daily sheets for you.
           </Text>
 
           {/* One-Time Plus Button */}
           <TouchableOpacity
-            style={styles.fab}
+            style={[styles.fab, { backgroundColor: theme.primary }]}
             activeOpacity={0.8}
             onPress={handleCreateYearFolder}
           >
-            <Ionicons name="add" size={32} color={colors.white} />
+            <Ionicons name="add" size={32} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       )}
@@ -529,7 +565,6 @@ export default function FinancesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -537,11 +572,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  headerNegative: {
-    backgroundColor: colors.danger,
   },
   backBtn: {
     padding: 6,
@@ -553,24 +583,21 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.text,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   alertBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.danger,
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 10,
   },
   alertBannerText: {
     flex: 1,
-    color: colors.white,
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 18,
@@ -579,15 +606,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  activeCard: {
-    borderColor: colors.secondary,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -597,7 +619,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -608,22 +629,18 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.text,
   },
   cardSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   activeBadge: {
-    backgroundColor: colors.secondaryLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
     marginRight: 8,
   },
   activeBadgeText: {
-    color: colors.secondary,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -636,12 +653,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
     marginTop: 16,
   },
   emptySub: {
     fontSize: 14,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 22,
@@ -652,12 +667,11 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
     shadowColor: '#000',
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
   },
@@ -667,25 +681,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayCard: {
-    backgroundColor: colors.card,
     borderRadius: 10,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  dayCardLocked: {
-    opacity: 0.45,
-    backgroundColor: colors.surface,
-  },
-  dayCardToday: {
-    borderColor: colors.primary,
-    borderWidth: 1.5,
-  },
-  dayCardNegative: {
-    borderColor: colors.danger,
-    borderWidth: 1.5,
-    backgroundColor: colors.dangerLight,
   },
   dayCardHeader: {
     flexDirection: 'row',
@@ -695,19 +694,13 @@ const styles = StyleSheet.create({
   dayNumberText: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.text,
-  },
-  dayNumberLocked: {
-    color: colors.textMuted,
   },
   todayPill: {
-    backgroundColor: colors.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
   },
   todayPillText: {
-    color: colors.primary,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -716,21 +709,14 @@ const styles = StyleSheet.create({
   },
   daySubInfo: {
     fontSize: 12,
-    color: colors.textSecondary,
   },
-  negativeText: {
-    color: colors.danger,
-    fontWeight: '700',
-  },
-  // Table Spreadsheet
+  // Table Spreadsheet - Font sizes increased by 1px
   tableScroll: {
     flex: 1,
   },
   tableHeaderRow: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   columnHeader: {
     flex: 1,
@@ -741,28 +727,24 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   columnHeaderText: {
-    fontSize: 13,
+    fontSize: 14, // increased
     fontWeight: '700',
     letterSpacing: 1,
   },
   subHeaderRow: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceHover,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
   subHeaderText: {
     flex: 1,
-    fontSize: 10,
-    color: colors.textMuted,
+    fontSize: 11, // increased by 1px
     fontWeight: '600',
   },
   subHeaderAmount: {
-    width: 65,
-    fontSize: 10,
-    color: colors.textMuted,
+    width: 75,
+    fontSize: 11, // increased by 1px
     fontWeight: '600',
     textAlign: 'right',
   },
@@ -774,11 +756,7 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    minHeight: 44,
-  },
-  rowAlt: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    minHeight: 46,
   },
   halfRowInput: {
     flex: 1,
@@ -789,25 +767,14 @@ const styles = StyleSheet.create({
   },
   descInput: {
     flex: 1,
-    color: colors.text,
-    fontSize: 13,
+    fontSize: 14, // increased by 1px
     paddingVertical: 6,
   },
   amountInput: {
-    width: 65,
-    color: colors.text,
-    fontSize: 13,
+    width: 75,
+    fontSize: 14, // increased by 1px
     textAlign: 'right',
     paddingVertical: 6,
-  },
-  rolloverText: {
-    color: colors.secondary,
-    fontStyle: 'italic',
-    fontWeight: '600',
-  },
-  rolloverAmount: {
-    color: colors.secondary,
-    fontWeight: '700',
   },
   addRowBtn: {
     flexDirection: 'row',
@@ -817,65 +784,44 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addRowText: {
-    color: colors.primary,
     fontSize: 13,
     fontWeight: '600',
   },
   // Totals Footer
   footerTotals: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
     justifyContent: 'space-between',
-  },
-  footerTotalsNegative: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderTopColor: colors.danger,
   },
   totalBlock: {
     alignItems: 'center',
     flex: 1,
   },
   netBlock: {
-    backgroundColor: colors.card,
     borderRadius: 8,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  netBlockNegative: {
-    borderColor: colors.danger,
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
   },
   totalLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: colors.textMuted,
     letterSpacing: 0.5,
   },
   totalIncomeVal: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.secondary,
     marginTop: 2,
   },
   totalExpenseVal: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.warning,
     marginTop: 2,
   },
   totalNetVal: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.text,
     marginTop: 2,
-  },
-  totalNetValNegative: {
-    color: colors.danger,
-    fontWeight: '800',
   },
 });

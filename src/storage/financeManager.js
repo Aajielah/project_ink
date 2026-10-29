@@ -29,9 +29,11 @@ class FinanceManager {
       return existing;
     }
 
+    const currentMonthIndex = new Date().getMonth();
     const config = {
       yearFolderCreated: true,
       createdYear: year,
+      createdMonthIndex: currentMonthIndex, // strictly starts from creation month (e.g. October)
       createdAt: new Date().toISOString(),
     };
 
@@ -42,17 +44,19 @@ class FinanceManager {
   // ---- MONTHS UNLOCK RULE ----
   /**
    * Returns unlocked months for the year:
-   * Rule: Only shows the current active month, plus any passed months of this year.
-   * Future months (e.g. November when in October) remain hidden until that month arrives.
+   * Rule: Strictly starts from the month the user created the folder (e.g. October).
+   * Past months before creation month (e.g. January - September) are never shown.
+   * Future months unlock one at a time when their calendar month arrives.
    */
-  getUnlockedMonths(year, now = new Date()) {
+  getUnlockedMonths(year, config = null, now = new Date()) {
     const currentYear = now.getFullYear();
     const currentMonthIndex = now.getMonth();
 
     if (year < currentYear) {
-      // Past year: all 12 months unlocked
-      return MONTH_NAMES.map((name, index) => ({
-        index,
+      // Past year
+      const start = (config && typeof config.createdMonthIndex === 'number') ? config.createdMonthIndex : 0;
+      return MONTH_NAMES.slice(start).map((name, idx) => ({
+        index: start + idx,
         name,
         year,
         isCurrent: false,
@@ -60,13 +64,16 @@ class FinanceManager {
     }
 
     if (year > currentYear) {
-      // Future year: none unlocked yet
       return [];
     }
 
-    // Same year: months 0 up to currentMonthIndex
+    // Same year: strictly start from createdMonthIndex up to currentMonthIndex
+    const startMonth = (config && typeof config.createdMonthIndex === 'number')
+      ? config.createdMonthIndex
+      : currentMonthIndex; // Fallback to current month
+
     const months = [];
-    for (let i = 0; i <= currentMonthIndex; i++) {
+    for (let i = startMonth; i <= currentMonthIndex; i++) {
       months.push({
         index: i,
         name: MONTH_NAMES[i],

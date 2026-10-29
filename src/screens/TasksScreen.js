@@ -11,20 +11,28 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { storage } from '../storage/storageManager';
 import { DAY_NAMES } from '../utils/dateUtils';
 
 export default function TasksScreen() {
+  const { theme } = useTheme();
   const [tasks, setTasks] = useState([]);
+
+  // Create Modal State
   const [showModal, setShowModal] = useState(false);
   const [taskText, setTaskText] = useState('');
   const [repeatMode, setRepeatMode] = useState('none'); // 'none' | 'daily' | 'weekly'
   const [weeklyDay, setWeeklyDay] = useState(1); // 1 = Monday
 
+  // Edit Modal State
+  const [editingTask, setEditingTask] = useState(null);
+  const [editText, setEditText] = useState('');
+  const [editRepeatMode, setEditRepeatMode] = useState('none');
+  const [editWeeklyDay, setEditWeeklyDay] = useState(1);
+
   useEffect(() => {
     loadTasks();
-    // Midnight reset check
     storage.runMidnightTaskReset().then(() => loadTasks());
   }, []);
 
@@ -51,6 +59,29 @@ export default function TasksScreen() {
     await loadTasks();
   };
 
+  const openEditModal = (task) => {
+    setEditingTask(task);
+    setEditText(task.text);
+    setEditRepeatMode(task.repeat || 'none');
+    setEditWeeklyDay(task.weeklyDay !== null ? task.weeklyDay : 1);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editText.trim()) {
+      Alert.alert('Required', 'Please enter task description.');
+      return;
+    }
+
+    await storage.updateTask(editingTask.id, {
+      text: editText,
+      repeat: editRepeatMode,
+      weeklyDay: editRepeatMode === 'weekly' ? editWeeklyDay : null,
+    });
+
+    setEditingTask(null);
+    await loadTasks();
+  };
+
   const handleToggle = async (taskId) => {
     await storage.toggleTask(taskId);
     await loadTasks();
@@ -65,7 +96,16 @@ export default function TasksScreen() {
     const isCompleted = item.completed;
 
     return (
-      <View style={[styles.taskCard, isCompleted && styles.taskCardCompleted]}>
+      <View
+        style={[
+          styles.taskCard,
+          {
+            backgroundColor: isCompleted ? theme.surfaceHover : theme.card,
+            borderColor: theme.border,
+          },
+          isCompleted && styles.taskCardCompleted,
+        ]}
+      >
         <TouchableOpacity
           style={styles.checkboxTouch}
           onPress={() => handleToggle(item.id)}
@@ -73,60 +113,73 @@ export default function TasksScreen() {
           <Ionicons
             name={isCompleted ? 'checkbox' : 'square-outline'}
             size={24}
-            color={isCompleted ? colors.secondary : colors.textSecondary}
+            color={isCompleted ? theme.secondary : theme.textSecondary}
           />
         </TouchableOpacity>
 
-        <View style={styles.taskContent}>
+        <TouchableOpacity
+          style={styles.taskContent}
+          activeOpacity={0.7}
+          onPress={() => openEditModal(item)}
+        >
           <Text
             style={[
               styles.taskText,
+              { color: isCompleted ? theme.textMuted : theme.text },
               isCompleted && styles.taskTextCompleted,
             ]}
           >
             {item.text}
           </Text>
 
-          {/* Repeat badges */}
           <View style={styles.badgeRow}>
             {item.repeat === 'daily' && (
-              <View style={styles.repeatBadge}>
-                <Ionicons name="repeat" size={12} color={colors.primary} />
-                <Text style={styles.repeatBadgeText}>Daily Repeat</Text>
+              <View style={[styles.repeatBadge, { backgroundColor: theme.surfaceHover, borderColor: theme.border }]}>
+                <Ionicons name="repeat" size={12} color={theme.primary} />
+                <Text style={[styles.repeatBadgeText, { color: theme.primary }]}>Daily Repeat</Text>
               </View>
             )}
             {item.repeat === 'weekly' && (
-              <View style={styles.repeatBadge}>
-                <Ionicons name="calendar-outline" size={12} color={colors.warning} />
-                <Text style={styles.repeatBadgeText}>
+              <View style={[styles.repeatBadge, { backgroundColor: theme.surfaceHover, borderColor: theme.border }]}>
+                <Ionicons name="calendar-outline" size={12} color={theme.warning} />
+                <Text style={[styles.repeatBadgeText, { color: theme.warning }]}>
                   Weekly ({DAY_NAMES[item.weeklyDay]?.slice(0, 3)})
                 </Text>
               </View>
             )}
             {item.repeat === 'none' && (
-              <Text style={styles.oneOffText}>Clears at 12 AM</Text>
+              <Text style={[styles.oneOffText, { color: theme.textMuted }]}>Clears at 12 AM</Text>
             )}
           </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={() => handleDelete(item.id)}
-        >
-          <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
         </TouchableOpacity>
+
+        <View style={styles.actionBtns}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => openEditModal(item)}
+          >
+            <Ionicons name="pencil-outline" size={18} color={theme.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => handleDelete(item.id)}
+          >
+            <Ionicons name="close-circle-outline" size={20} color={theme.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={styles.headerTitles}>
-          <Text style={styles.headerTitle}>Tasks</Text>
-          <Text style={styles.headerSubtitle}>
-            Completed tasks clear automatically at 12:00 AM midnight
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Tasks</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+            Tap pencil or task text to edit name and recurrence
           </Text>
         </View>
       </View>
@@ -139,9 +192,9 @@ export default function TasksScreen() {
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="checkbox-outline" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No tasks yet</Text>
-            <Text style={styles.emptySub}>
+            <Ionicons name="checkbox-outline" size={48} color={theme.textMuted} />
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>No tasks yet</Text>
+            <Text style={[styles.emptySub, { color: theme.textMuted }]}>
               Tap the big + button below to add your daily or recurring tasks.
             </Text>
           </View>
@@ -150,14 +203,14 @@ export default function TasksScreen() {
 
       {/* Floating Plus Button */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: theme.primary }]}
         activeOpacity={0.8}
         onPress={() => setShowModal(true)}
       >
-        <Ionicons name="add" size={32} color={colors.white} />
+        <Ionicons name="add" size={32} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* Create Task Modal */}
+      {/* CREATE TASK MODAL */}
       <Modal
         visible={showModal}
         transparent
@@ -165,31 +218,35 @@ export default function TasksScreen() {
         onRequestClose={() => setShowModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>New Task</Text>
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>New Task</Text>
 
             <TextInput
-              style={styles.modalInput}
+              style={[
+                styles.modalInput,
+                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
+              ]}
               placeholder="What do you need to do?"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={theme.textMuted}
               value={taskText}
               onChangeText={setTaskText}
               autoFocus
             />
 
-            <Text style={styles.repeatLabel}>Repeat Schedule:</Text>
+            <Text style={[styles.repeatLabel, { color: theme.textSecondary }]}>Repeat Schedule:</Text>
             <View style={styles.repeatTabs}>
               <TouchableOpacity
                 style={[
                   styles.repeatTab,
-                  repeatMode === 'none' && styles.repeatTabSelected,
+                  { backgroundColor: theme.background, borderColor: theme.border },
+                  repeatMode === 'none' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
                 ]}
                 onPress={() => setRepeatMode('none')}
               >
                 <Text
                   style={[
                     styles.repeatTabText,
-                    repeatMode === 'none' && styles.repeatTabTextSelected,
+                    { color: repeatMode === 'none' ? theme.primary : theme.textSecondary },
                   ]}
                 >
                   Once (Clear at 12 AM)
@@ -199,14 +256,15 @@ export default function TasksScreen() {
               <TouchableOpacity
                 style={[
                   styles.repeatTab,
-                  repeatMode === 'daily' && styles.repeatTabSelected,
+                  { backgroundColor: theme.background, borderColor: theme.border },
+                  repeatMode === 'daily' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
                 ]}
                 onPress={() => setRepeatMode('daily')}
               >
                 <Text
                   style={[
                     styles.repeatTabText,
-                    repeatMode === 'daily' && styles.repeatTabTextSelected,
+                    { color: repeatMode === 'daily' ? theme.primary : theme.textSecondary },
                   ]}
                 >
                   Daily Repeat
@@ -216,14 +274,15 @@ export default function TasksScreen() {
               <TouchableOpacity
                 style={[
                   styles.repeatTab,
-                  repeatMode === 'weekly' && styles.repeatTabSelected,
+                  { backgroundColor: theme.background, borderColor: theme.border },
+                  repeatMode === 'weekly' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
                 ]}
                 onPress={() => setRepeatMode('weekly')}
               >
                 <Text
                   style={[
                     styles.repeatTabText,
-                    repeatMode === 'weekly' && styles.repeatTabTextSelected,
+                    { color: repeatMode === 'weekly' ? theme.primary : theme.textSecondary },
                   ]}
                 >
                   Weekly Repeat
@@ -231,24 +290,24 @@ export default function TasksScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Weekly Day Picker if Weekly Repeat */}
             {repeatMode === 'weekly' && (
               <View style={styles.weeklyPicker}>
-                <Text style={styles.subLabel}>Choose Day to Respawn:</Text>
+                <Text style={[styles.subLabel, { color: theme.textSecondary }]}>Choose Day to Respawn:</Text>
                 <View style={styles.daysRow}>
                   {DAY_NAMES.map((dName, dIdx) => (
                     <TouchableOpacity
                       key={dName}
                       style={[
                         styles.dayCircle,
-                        weeklyDay === dIdx && styles.dayCircleSelected,
+                        { backgroundColor: theme.background, borderColor: theme.border },
+                        weeklyDay === dIdx && { backgroundColor: theme.primary, borderColor: theme.primary },
                       ]}
                       onPress={() => setWeeklyDay(dIdx)}
                     >
                       <Text
                         style={[
                           styles.dayCircleText,
-                          weeklyDay === dIdx && styles.dayCircleTextSelected,
+                          { color: weeklyDay === dIdx ? '#FFFFFF' : theme.text },
                         ]}
                       >
                         {dName[0]}
@@ -264,13 +323,138 @@ export default function TasksScreen() {
                 style={styles.modalCancelBtn}
                 onPress={() => setShowModal(false)}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.modalConfirmBtn}
+                style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
                 onPress={handleCreateTask}
               >
                 <Text style={styles.modalConfirmText}>Add Task</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* EDIT TASK MODAL */}
+      <Modal
+        visible={!!editingTask}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingTask(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Task</Text>
+
+            <TextInput
+              style={[
+                styles.modalInput,
+                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
+              ]}
+              placeholder="Task description"
+              placeholderTextColor={theme.textMuted}
+              value={editText}
+              onChangeText={setEditText}
+            />
+
+            <Text style={[styles.repeatLabel, { color: theme.textSecondary }]}>Edit Recurrence Schedule:</Text>
+            <View style={styles.repeatTabs}>
+              <TouchableOpacity
+                style={[
+                  styles.repeatTab,
+                  { backgroundColor: theme.background, borderColor: theme.border },
+                  editRepeatMode === 'none' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+                ]}
+                onPress={() => setEditRepeatMode('none')}
+              >
+                <Text
+                  style={[
+                    styles.repeatTabText,
+                    { color: editRepeatMode === 'none' ? theme.primary : theme.textSecondary },
+                  ]}
+                >
+                  Once (Clear at 12 AM)
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.repeatTab,
+                  { backgroundColor: theme.background, borderColor: theme.border },
+                  editRepeatMode === 'daily' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+                ]}
+                onPress={() => setEditRepeatMode('daily')}
+              >
+                <Text
+                  style={[
+                    styles.repeatTabText,
+                    { color: editRepeatMode === 'daily' ? theme.primary : theme.textSecondary },
+                  ]}
+                >
+                  Daily Repeat
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.repeatTab,
+                  { backgroundColor: theme.background, borderColor: theme.border },
+                  editRepeatMode === 'weekly' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+                ]}
+                onPress={() => setEditRepeatMode('weekly')}
+              >
+                <Text
+                  style={[
+                    styles.repeatTabText,
+                    { color: editRepeatMode === 'weekly' ? theme.primary : theme.textSecondary },
+                  ]}
+                >
+                  Weekly Repeat
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {editRepeatMode === 'weekly' && (
+              <View style={styles.weeklyPicker}>
+                <Text style={[styles.subLabel, { color: theme.textSecondary }]}>Choose Day to Respawn:</Text>
+                <View style={styles.daysRow}>
+                  {DAY_NAMES.map((dName, dIdx) => (
+                    <TouchableOpacity
+                      key={dName}
+                      style={[
+                        styles.dayCircle,
+                        { backgroundColor: theme.background, borderColor: theme.border },
+                        editWeeklyDay === dIdx && { backgroundColor: theme.primary, borderColor: theme.primary },
+                      ]}
+                      onPress={() => setEditWeeklyDay(dIdx)}
+                    >
+                      <Text
+                        style={[
+                          styles.dayCircleText,
+                          { color: editWeeklyDay === dIdx ? '#FFFFFF' : theme.text },
+                        ]}
+                      >
+                        {dName[0]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setEditingTask(null)}
+              >
+                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.modalConfirmText}>Save Changes</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -283,14 +467,11 @@ export default function TasksScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
   },
   headerTitles: {
     flex: 1,
@@ -298,11 +479,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   listContainer: {
@@ -312,16 +491,13 @@ const styles = StyleSheet.create({
   taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   taskCardCompleted: {
     opacity: 0.65,
-    backgroundColor: colors.surface,
   },
   checkboxTouch: {
     padding: 4,
@@ -332,12 +508,10 @@ const styles = StyleSheet.create({
   },
   taskText: {
     fontSize: 15,
-    color: colors.text,
     lineHeight: 22,
   },
   taskTextCompleted: {
     textDecorationLine: 'line-through',
-    color: colors.textMuted,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -349,23 +523,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.surface,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   repeatBadgeText: {
     fontSize: 10,
-    color: colors.textSecondary,
     fontWeight: '600',
   },
   oneOffText: {
     fontSize: 10,
-    color: colors.textMuted,
   },
-  deleteBtn: {
+  actionBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  iconBtn: {
     padding: 6,
   },
   emptyContainer: {
@@ -376,12 +551,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
     marginTop: 12,
   },
   emptySub: {
     fontSize: 13,
-    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 6,
     paddingHorizontal: 30,
@@ -393,50 +566,42 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
     shadowColor: '#000',
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 3 },
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   modalBox: {
     width: '100%',
-    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.text,
     marginBottom: 16,
   },
   modalInput: {
-    backgroundColor: colors.card,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: colors.text,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: colors.border,
     marginBottom: 16,
   },
   repeatLabel: {
     fontSize: 13,
-    color: colors.textSecondary,
     marginBottom: 8,
     fontWeight: '600',
   },
@@ -449,29 +614,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 8,
-    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  repeatTabSelected: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
   },
   repeatTabText: {
     fontSize: 13,
-    color: colors.textSecondary,
     fontWeight: '600',
-  },
-  repeatTabTextSelected: {
-    color: colors.primary,
-    fontWeight: '700',
   },
   weeklyPicker: {
     marginBottom: 16,
   },
   subLabel: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginBottom: 8,
   },
   daysRow: {
@@ -482,24 +635,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  dayCircleSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   dayCircleText: {
     fontSize: 13,
-    color: colors.text,
     fontWeight: '600',
-  },
-  dayCircleTextSelected: {
-    color: colors.white,
-    fontWeight: '700',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -513,17 +655,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   modalCancelText: {
-    color: colors.textSecondary,
     fontWeight: '600',
   },
   modalConfirmBtn: {
-    backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
   modalConfirmText: {
-    color: colors.white,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
 });

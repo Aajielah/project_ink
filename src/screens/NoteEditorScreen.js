@@ -12,10 +12,11 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { storage } from '../storage/storageManager';
 
 export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
+  const { theme } = useTheme();
   const [note, setNote] = useState(null);
   const [content, setContent] = useState('');
   const [saveStatus, setSaveStatus] = useState('Saved');
@@ -58,11 +59,9 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
     let newCursorPos = start;
 
     if (prefix === '• ' || prefix === '[ ] ' || prefix === '1. ' || prefix === '> ') {
-      // Line prefix
       replacement = `\n${prefix}${selected}`;
       newCursorPos = start + prefix.length + 1;
     } else {
-      // Inline wrap (bold, italic)
       replacement = `${prefix}${selected || 'text'}${suffix}`;
       newCursorPos = selected ? end + prefix.length + suffix.length : start + prefix.length + 4;
     }
@@ -92,8 +91,8 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
 
   if (!note) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading note...</Text>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading note...</Text>
       </View>
     );
   }
@@ -101,25 +100,25 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
     >
       {/* Top Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <TouchableOpacity style={styles.iconBtn} onPress={onBack}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{note.title}</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>{note.title}</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
             {note.dateStr} • {note.timeStr}
           </Text>
         </View>
 
         <View style={styles.headerRight}>
-          <Text style={styles.statusText}>{saveStatus}</Text>
+          <Text style={[styles.statusText, { color: theme.textMuted }]}>{saveStatus}</Text>
           <TouchableOpacity style={styles.iconBtn} onPress={handleDelete}>
-            <Ionicons name="trash-outline" size={22} color={colors.danger} />
+            <Ionicons name="trash-outline" size={22} color={theme.danger} />
           </TouchableOpacity>
         </View>
       </View>
@@ -128,10 +127,10 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
       <ScrollView style={styles.scrollBody} keyboardShouldPersistTaps="handled">
         <TextInput
           ref={inputRef}
-          style={styles.textInput}
+          style={[styles.textInput, { color: theme.text }]}
           multiline
           placeholder="Start writing your thoughts for today..."
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={theme.textMuted}
           value={content}
           onChangeText={handleContentChange}
           onSelectionChange={(e) => setCursorPos(e.nativeEvent.selection)}
@@ -141,36 +140,54 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
       </ScrollView>
 
       {/* Rich Formatting Toolbar */}
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarScroll}>
-          <TouchableOpacity style={styles.toolBtn} onPress={() => insertFormatting('**', '**')}>
-            <Ionicons name="text" size={18} color={colors.text} />
-            <Text style={styles.toolLabel}>Bold</Text>
+          <TouchableOpacity
+            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={() => insertFormatting('**', '**')}
+          >
+            <Ionicons name="text" size={18} color={theme.text} />
+            <Text style={[styles.toolLabel, { color: theme.text }]}>Bold</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.toolBtn} onPress={() => insertFormatting('*', '*')}>
-            <Ionicons name="pencil" size={18} color={colors.text} />
-            <Text style={styles.toolLabel}>Italic</Text>
+          <TouchableOpacity
+            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={() => insertFormatting('*', '*')}
+          >
+            <Ionicons name="pencil" size={18} color={theme.text} />
+            <Text style={[styles.toolLabel, { color: theme.text }]}>Italic</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.toolBtn} onPress={() => insertFormatting('• ')}>
-            <Ionicons name="list" size={18} color={colors.text} />
-            <Text style={styles.toolLabel}>Bullet</Text>
+          <TouchableOpacity
+            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={() => insertFormatting('• ')}
+          >
+            <Ionicons name="list" size={18} color={theme.text} />
+            <Text style={[styles.toolLabel, { color: theme.text }]}>Bullet</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.toolBtn} onPress={() => insertFormatting('[ ] ')}>
-            <Ionicons name="checkbox-outline" size={18} color={colors.text} />
-            <Text style={styles.toolLabel}>To-Do</Text>
+          <TouchableOpacity
+            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={() => insertFormatting('[ ] ')}
+          >
+            <Ionicons name="checkbox-outline" size={18} color={theme.text} />
+            <Text style={[styles.toolLabel, { color: theme.text }]}>To-Do</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.toolBtn} onPress={() => insertFormatting('1. ')}>
-            <Ionicons name="reorder-four" size={18} color={colors.text} />
-            <Text style={styles.toolLabel}>Numbered</Text>
+          <TouchableOpacity
+            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={() => insertFormatting('1. ')}
+          >
+            <Ionicons name="reorder-four" size={18} color={theme.text} />
+            <Text style={[styles.toolLabel, { color: theme.text }]}>Numbered</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.toolBtn} onPress={() => insertFormatting('> ')}>
-            <Ionicons name="chatbox-ellipses-outline" size={18} color={colors.text} />
-            <Text style={styles.toolLabel}>Quote</Text>
+          <TouchableOpacity
+            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={() => insertFormatting('> ')}
+          >
+            <Ionicons name="chatbox-ellipses-outline" size={18} color={theme.text} />
+            <Text style={[styles.toolLabel, { color: theme.text }]}>Quote</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -181,7 +198,6 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -189,8 +205,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
   },
   headerCenter: {
     flex: 1,
@@ -199,11 +213,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.text,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   headerRight: {
@@ -213,7 +225,6 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    color: colors.textMuted,
   },
   iconBtn: {
     padding: 6,
@@ -224,15 +235,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   textInput: {
-    color: colors.text,
     fontSize: 16,
     lineHeight: 26,
     minHeight: 300,
   },
   toolbar: {
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.surface,
     paddingVertical: 8,
   },
   toolbarScroll: {
@@ -242,21 +250,17 @@ const styles = StyleSheet.create({
   toolBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     gap: 6,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   toolLabel: {
-    color: colors.text,
     fontSize: 12,
     fontWeight: '600',
   },
   loadingText: {
-    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 40,
     fontSize: 15,

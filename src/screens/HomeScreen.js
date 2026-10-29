@@ -12,13 +12,14 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { storage } from '../storage/storageManager';
 import { MONTH_NAMES, isWeekActive, isWeekExpired } from '../utils/dateUtils';
 import WeekNotesScreen from './WeekNotesScreen';
 import NoteEditorScreen from './NoteEditorScreen';
 
 export default function HomeScreen() {
+  const { theme } = useTheme();
   // Navigation stack state: 'projects' | 'months' | 'weeks' | 'weekNotes' | 'noteEditor'
   const [currentLevel, setCurrentLevel] = useState('projects');
   const [selectedProject, setSelectedProject] = useState(null);
@@ -40,7 +41,6 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadProjects();
-    // Daily background checks
     storage.ensureDailyNotesGenerated();
     storage.purgeExpiredTrash();
     storage.runMidnightTaskReset();
@@ -68,13 +68,11 @@ export default function HomeScreen() {
       return;
     }
     const name = projectNameInput.trim();
-    // Use year from name if numeric (e.g., "2026"), else current year
     const extractedYear = parseInt(name, 10) || new Date().getFullYear();
     const created = await storage.createProject(name, extractedYear);
     setProjectNameInput('');
     setShowProjectModal(false);
     await loadProjects();
-    // Immediately open the newly created project
     openProject(created);
   };
 
@@ -177,17 +175,17 @@ export default function HomeScreen() {
   // -------------------------------------------------------------
   if (currentLevel === 'weeks') {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => setCurrentLevel('months')}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerTitles}>
-            <Text style={styles.headerTitle}>{selectedMonth?.monthName}</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>{selectedMonth?.monthName}</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
               {selectedProject?.name} • {weekFolders.length} Week Folders
             </Text>
           </View>
@@ -203,40 +201,44 @@ export default function HomeScreen() {
 
             return (
               <TouchableOpacity
-                style={[styles.card, active && styles.activeCard]}
+                style={[
+                  styles.card,
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                  active && { borderColor: theme.secondary, borderWidth: 1.5 },
+                ]}
                 activeOpacity={0.7}
                 onPress={() => openWeek(item)}
               >
                 <View style={styles.cardHeader}>
-                  <View style={styles.iconCircle}>
+                  <View style={[styles.iconCircle, { backgroundColor: theme.surfaceHover }]}>
                     <Ionicons
                       name="folder"
                       size={24}
-                      color={active ? colors.secondary : colors.primary}
+                      color={active ? theme.secondary : theme.primary}
                     />
                   </View>
                   <View style={styles.cardMainInfo}>
-                    <Text style={styles.cardTitle}>{item.label}</Text>
-                    <Text style={styles.cardSubtitle}>{item.dateRange}</Text>
+                    <Text style={[styles.cardTitle, { color: theme.text }]}>{item.label}</Text>
+                    <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>{item.dateRange}</Text>
                   </View>
                   {active ? (
-                    <View style={styles.badgeActive}>
-                      <Text style={styles.badgeActiveText}>Active</Text>
+                    <View style={[styles.badgeActive, { backgroundColor: theme.secondaryLight }]}>
+                      <Text style={[styles.badgeActiveText, { color: theme.secondary }]}>Active</Text>
                     </View>
                   ) : expired ? (
-                    <View style={styles.badgeExpired}>
-                      <Text style={styles.badgeExpiredText}>Ended</Text>
+                    <View style={[styles.badgeExpired, { backgroundColor: theme.surfaceHover }]}>
+                      <Text style={[styles.badgeExpiredText, { color: theme.textMuted }]}>Ended</Text>
                     </View>
                   ) : null}
-                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
                 </View>
               </TouchableOpacity>
             );
           }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>No remaining weeks in this month</Text>
+              <Ionicons name="calendar-outline" size={48} color={theme.textMuted} />
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>No remaining weeks in this month</Text>
             </View>
           }
         />
@@ -249,17 +251,17 @@ export default function HomeScreen() {
   // -------------------------------------------------------------
   if (currentLevel === 'months') {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => setCurrentLevel('projects')}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerTitles}>
-            <Text style={styles.headerTitle}>{selectedProject?.name}</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>{selectedProject?.name}</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
               Year {selectedProject?.year} • Months
             </Text>
           </View>
@@ -271,43 +273,41 @@ export default function HomeScreen() {
           contentContainerStyle={styles.listContainer}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.card}
+              style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
               activeOpacity={0.7}
               onPress={() => openMonth(item)}
             >
               <View style={styles.cardHeader}>
-                <View style={styles.iconCircle}>
-                  <Ionicons name="calendar" size={24} color={colors.primary} />
+                <View style={[styles.iconCircle, { backgroundColor: theme.surfaceHover }]}>
+                  <Ionicons name="calendar" size={24} color={theme.primary} />
                 </View>
                 <View style={styles.cardMainInfo}>
-                  <Text style={styles.cardTitle}>{item.monthName}</Text>
-                  <Text style={styles.cardSubtitle}>Tap to view weeks</Text>
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>{item.monthName}</Text>
+                  <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>Tap to view weeks</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
               </View>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>No month folders yet</Text>
-              <Text style={styles.emptySub}>
+              <Ionicons name="calendar-outline" size={48} color={theme.textMuted} />
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>No month folders yet</Text>
+              <Text style={[styles.emptySub, { color: theme.textMuted }]}>
                 Tap the big + button below to pick a month and generate weeks.
               </Text>
             </View>
           }
         />
 
-        {/* Big Plus Button for Months */}
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { backgroundColor: theme.primary }]}
           activeOpacity={0.8}
           onPress={() => setShowMonthModal(true)}
         >
-          <Ionicons name="add" size={32} color={colors.white} />
+          <Ionicons name="add" size={32} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Pick Month Modal */}
         <Modal
           visible={showMonthModal}
           transparent
@@ -315,9 +315,9 @@ export default function HomeScreen() {
           onRequestClose={() => setShowMonthModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-              <Text style={styles.modalTitle}>Select Month</Text>
-              <Text style={styles.modalSubtitle}>
+            <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Select Month</Text>
+              <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
                 Week folders will automatically be generated for this month.
               </Text>
 
@@ -327,20 +327,26 @@ export default function HomeScreen() {
                     key={mName}
                     style={[
                       styles.monthOption,
-                      selectedMonthIndex === idx && styles.monthOptionSelected,
+                      { backgroundColor: theme.card, borderColor: theme.border },
+                      selectedMonthIndex === idx && {
+                        backgroundColor: theme.primaryLight,
+                        borderColor: theme.primary,
+                        borderWidth: 1,
+                      },
                     ]}
                     onPress={() => setSelectedMonthIndex(idx)}
                   >
                     <Text
                       style={[
                         styles.monthOptionText,
-                        selectedMonthIndex === idx && styles.monthOptionTextSelected,
+                        { color: selectedMonthIndex === idx ? theme.primary : theme.text },
+                        selectedMonthIndex === idx && { fontWeight: '700' },
                       ]}
                     >
                       {mName}
                     </Text>
                     {selectedMonthIndex === idx && (
-                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                      <Ionicons name="checkmark-circle" size={20} color={theme.primary} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -351,10 +357,10 @@ export default function HomeScreen() {
                   style={styles.modalCancelBtn}
                   onPress={() => setShowMonthModal(false)}
                 >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.modalConfirmBtn}
+                  style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
                   onPress={handleCreateMonth}
                 >
                   <Text style={styles.modalConfirmText}>Create</Text>
@@ -371,11 +377,11 @@ export default function HomeScreen() {
   // RENDER LEVEL: Projects (Main Home View)
   // -------------------------------------------------------------
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={styles.headerTitles}>
-          <Text style={styles.headerTitle}>Daily Notes</Text>
-          <Text style={styles.headerSubtitle}>Projects</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Daily Notes</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Projects</Text>
         </View>
       </View>
 
@@ -385,49 +391,47 @@ export default function HomeScreen() {
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.card}
+            style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
             activeOpacity={0.7}
             onPress={() => openProject(item)}
           >
             <View style={styles.cardHeader}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="folder-open" size={24} color={colors.primary} />
+              <View style={[styles.iconCircle, { backgroundColor: theme.surfaceHover }]}>
+                <Ionicons name="folder-open" size={24} color={theme.primary} />
               </View>
               <View style={styles.cardMainInfo}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardSubtitle}>Year {item.year}</Text>
+                <Text style={[styles.cardTitle, { color: theme.text }]}>{item.name}</Text>
+                <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>Year {item.year}</Text>
               </View>
               <TouchableOpacity
                 style={styles.cardDeleteBtn}
                 onPress={(e) => handleDeleteProject(item.id, e)}
               >
-                <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+                <Ionicons name="trash-outline" size={18} color={theme.textMuted} />
               </TouchableOpacity>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
             </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="folder-outline" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No projects created yet</Text>
-            <Text style={styles.emptySub}>
+            <Ionicons name="folder-outline" size={48} color={theme.textMuted} />
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>No projects created yet</Text>
+            <Text style={[styles.emptySub, { color: theme.textMuted }]}>
               Tap the big + button below and name your project (e.g. 2026).
             </Text>
           </View>
         }
       />
 
-      {/* Big Plus Button for Projects */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: theme.primary }]}
         activeOpacity={0.8}
         onPress={() => setShowProjectModal(true)}
       >
-        <Ionicons name="add" size={32} color={colors.white} />
+        <Ionicons name="add" size={32} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* Create Project Modal */}
       <Modal
         visible={showProjectModal}
         transparent
@@ -435,14 +439,17 @@ export default function HomeScreen() {
         onRequestClose={() => setShowProjectModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>New Project</Text>
-            <Text style={styles.modalSubtitle}>Enter your project name to get started.</Text>
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>New Project</Text>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>Enter your project name to get started.</Text>
 
             <TextInput
-              style={styles.modalInput}
+              style={[
+                styles.modalInput,
+                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
+              ]}
               placeholder="e.g. 2026"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={theme.textMuted}
               value={projectNameInput}
               onChangeText={setProjectNameInput}
               autoFocus
@@ -456,10 +463,10 @@ export default function HomeScreen() {
                   setShowProjectModal(false);
                 }}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.modalConfirmBtn}
+                style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
                 onPress={handleCreateProject}
               >
                 <Text style={styles.modalConfirmText}>Create</Text>
@@ -475,7 +482,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -483,8 +489,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
   },
   backBtn: {
     padding: 6,
@@ -496,11 +500,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   listContainer: {
@@ -508,15 +510,10 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
   },
   card: {
-    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  activeCard: {
-    borderColor: colors.secondary,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -526,7 +523,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -537,11 +533,9 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.text,
   },
   cardSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   cardDeleteBtn: {
@@ -549,26 +543,22 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   badgeActive: {
-    backgroundColor: colors.secondaryLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
     marginRight: 8,
   },
   badgeActiveText: {
-    color: colors.secondary,
     fontSize: 11,
     fontWeight: '600',
   },
   badgeExpired: {
-    backgroundColor: colors.surface,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
     marginRight: 8,
   },
   badgeExpiredText: {
-    color: colors.textMuted,
     fontSize: 11,
   },
   emptyContainer: {
@@ -579,12 +569,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
     marginTop: 12,
   },
   emptySub: {
     fontSize: 13,
-    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 6,
     paddingHorizontal: 30,
@@ -596,50 +584,42 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
     shadowColor: '#000',
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 3 },
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   modalBox: {
     width: '100%',
-    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.text,
   },
   modalSubtitle: {
     fontSize: 13,
-    color: colors.textSecondary,
     marginTop: 4,
     marginBottom: 16,
   },
   modalInput: {
-    backgroundColor: colors.card,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: colors.text,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: colors.border,
     marginBottom: 20,
   },
   monthScroll: {
@@ -654,20 +634,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
     marginBottom: 6,
-    backgroundColor: colors.card,
-  },
-  monthOptionSelected: {
-    backgroundColor: colors.primaryLight,
     borderWidth: 1,
-    borderColor: colors.primary,
   },
   monthOptionText: {
     fontSize: 15,
-    color: colors.text,
-  },
-  monthOptionTextSelected: {
-    color: colors.primary,
-    fontWeight: '700',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -680,17 +650,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   modalCancelText: {
-    color: colors.textSecondary,
     fontWeight: '600',
   },
   modalConfirmBtn: {
-    backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
   modalConfirmText: {
-    color: colors.white,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
 });

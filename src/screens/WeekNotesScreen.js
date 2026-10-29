@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { storage } from '../storage/storageManager';
 import { isWeekExpired, isWeekActive } from '../utils/dateUtils';
 
@@ -20,6 +20,7 @@ export default function WeekNotesScreen({
   onBack,
   onSelectNote,
 }) {
+  const { theme } = useTheme();
   const [notes, setNotes] = useState([]);
   const [expired, setExpired] = useState(false);
   const [active, setActive] = useState(false);
@@ -95,29 +96,32 @@ export default function WeekNotesScreen({
 
   const renderNoteCard = ({ item }) => (
     <TouchableOpacity
-      style={styles.noteCard}
+      style={[
+        styles.noteCard,
+        { backgroundColor: theme.card, borderColor: theme.border },
+      ]}
       activeOpacity={0.7}
       onPress={() => onSelectNote(item.id)}
     >
       <View style={styles.noteCardHeader}>
         <View style={styles.titleRow}>
-          <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-          <Text style={styles.noteTitle}>{item.title}</Text>
+          <Ionicons name="document-text-outline" size={20} color={theme.primary} />
+          <Text style={[styles.noteTitle, { color: theme.text }]}>{item.title}</Text>
         </View>
         <TouchableOpacity
           style={styles.trashBtn}
           onPress={(e) => handleDeleteNote(item.id, e)}
         >
-          <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+          <Ionicons name="trash-outline" size={18} color={theme.textMuted} />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.noteSnippet} numberOfLines={2}>
+      <Text style={[styles.noteSnippet, { color: theme.textSecondary }]} numberOfLines={2}>
         {item.content ? item.content.trim() : 'Tap to write notes for today...'}
       </Text>
 
-      <View style={styles.cardFooter}>
-        <Text style={styles.dateTimeText}>
+      <View style={[styles.cardFooter, { borderTopColor: theme.border }]}>
+        <Text style={[styles.dateTimeText, { color: theme.textMuted }]}>
           {item.dateStr} • {item.timeStr}
         </Text>
       </View>
@@ -131,26 +135,25 @@ export default function WeekNotesScreen({
   const currentDayNumber = now.getDate();
   const hasTodayNote =
     isCurrentMonthAndYear && notes.some((n) => n.dayNumber === currentDayNumber);
-  
-  // Can only create if this week is active, not expired, today doesn't have a note yet, and under limit
+
   const canCreateNote = active && !expired && !hasTodayNote && notes.length < maxNotes;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Top Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
-          <Text style={styles.headerTitle}>{week.label}</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>{week.label}</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
             {month.monthName} {month.year} • {week.dateRange}
           </Text>
         </View>
         {active && (
-          <View style={styles.activePill}>
-            <Text style={styles.activePillText}>
+          <View style={[styles.activePill, { backgroundColor: theme.secondaryLight, borderColor: theme.secondary }]}>
+            <Text style={[styles.activePillText, { color: theme.secondary }]}>
               {hasTodayNote ? "Today's Note Done" : 'Active Week'}
             </Text>
           </View>
@@ -159,9 +162,9 @@ export default function WeekNotesScreen({
 
       {/* Week Expired Banner */}
       {expired && (
-        <View style={styles.expiredBanner}>
-          <Ionicons name="lock-closed" size={18} color={colors.warning} />
-          <Text style={styles.expiredText}>
+        <View style={[styles.expiredBanner, { backgroundColor: theme.warningLight, borderBottomColor: theme.border }]}>
+          <Ionicons name="lock-closed" size={18} color={theme.warning} />
+          <Text style={[styles.expiredText, { color: theme.warning }]}>
             This week has ended. No new notes can be created, but you can view, edit, or delete existing notes.
           </Text>
         </View>
@@ -175,9 +178,9 @@ export default function WeekNotesScreen({
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No notes for this week yet</Text>
-            <Text style={styles.emptySub}>
+            <Ionicons name="calendar-outline" size={48} color={theme.textMuted} />
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>No notes for this week yet</Text>
+            <Text style={[styles.emptySub, { color: theme.textMuted }]}>
               {expired
                 ? 'This week ended with no notes.'
                 : hasTodayNote
@@ -191,11 +194,11 @@ export default function WeekNotesScreen({
       {/* Floating Plus Button (Strict rule: Hidden as long as today has a note, or week is expired/full) */}
       {canCreateNote && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { backgroundColor: theme.primary }]}
           activeOpacity={0.8}
           onPress={handleCreateNote}
         >
-          <Ionicons name="add" size={32} color={colors.white} />
+          <Ionicons name="add" size={32} color="#FFFFFF" />
         </TouchableOpacity>
       )}
     </View>
@@ -205,7 +208,6 @@ export default function WeekNotesScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -213,8 +215,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
   },
   backBtn: {
     padding: 6,
@@ -226,40 +226,32 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.text,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   activePill: {
-    backgroundColor: colors.secondaryLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.secondary,
   },
   activePillText: {
-    color: colors.secondary,
     fontSize: 11,
     fontWeight: '600',
   },
   expiredBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.warningLight,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     gap: 10,
   },
   expiredText: {
     flex: 1,
     fontSize: 12,
-    color: colors.warning,
     lineHeight: 18,
   },
   listContainer: {
@@ -267,12 +259,10 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
   },
   noteCard: {
-    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   noteCardHeader: {
     flexDirection: 'row',
@@ -288,25 +278,21 @@ const styles = StyleSheet.create({
   noteTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.text,
   },
   trashBtn: {
     padding: 6,
   },
   noteSnippet: {
     fontSize: 14,
-    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
   },
   cardFooter: {
     borderTopWidth: 1,
-    borderTopColor: colors.border,
     paddingTop: 8,
   },
   dateTimeText: {
     fontSize: 11,
-    color: colors.textMuted,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -316,12 +302,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
     marginTop: 12,
   },
   emptySub: {
     fontSize: 13,
-    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 6,
     paddingHorizontal: 30,
@@ -333,12 +317,11 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
     shadowColor: '#000',
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 3 },
   },

@@ -10,23 +10,31 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import * as Clipboard from 'expo-clipboard';
+import { useTheme } from '../theme/ThemeContext';
 import { storage } from '../storage/storageManager';
+import { BackupService } from '../services/backupService';
 import { getTrashDaysRemaining } from '../utils/dateUtils';
 
 export default function SettingsScreen() {
+  const { theme, isDarkMode, toggleTheme } = useTheme();
   const [currentView, setCurrentView] = useState('menu'); // 'menu' | 'trash'
   const [trashNotes, setTrashNotes] = useState([]);
 
-  // Modals for Export / Import
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportDataString, setExportDataString] = useState('');
-  const [copyFeedback, setCopyFeedback] = useState(false);
+  // Export State
+  const [showExportPasswordModal, setShowExportPasswordModal] = useState(false);
+  const [exportPassword, setExportPassword] = useState('');
+  const [showExportResultModal, setShowExportResultModal] = useState(false);
+  const [encryptedExportPayload, setEncryptedExportPayload] = useState('');
+  const [copiedFeedback, setCopiedFeedback] = useState(false);
 
+  // Import State
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importInput, setImportInput] = useState('');
+  const [importPayloadInput, setImportPayloadInput] = useState('');
+  const [importPasswordInput, setImportPasswordInput] = useState('');
 
   useEffect(() => {
     loadTrash();
@@ -79,26 +87,55 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleExport = async () => {
-    const data = await storage.exportAllData();
-    setExportDataString(data);
-    setShowExportModal(true);
+  // ---- EXPORT (Daily_Counter Style) ----
+  const startExport = () => {
+    setExportPassword('');
+    setShowExportPasswordModal(true);
   };
 
-  const handleImport = async () => {
-    if (!importInput.trim()) {
-      Alert.alert('Required', 'Please paste the backup JSON data.');
+  const generateEncryptedBackup = async () => {
+    if (!exportPassword.trim()) {
+      Alert.alert('Required', 'Please enter a password to encrypt your backup.');
       return;
     }
 
-    const res = await storage.importAllData(importInput.trim());
+    const payload = await BackupService.exportEncryptedBackup(exportPassword.trim());
+    setEncryptedExportPayload(payload);
+    setShowExportPasswordModal(false);
+    setCopiedFeedback(false);
+    setShowExportResultModal(true);
+  };
+
+  const copyToClipboard = async () => {
+    await Clipboard.setStringAsync(encryptedExportPayload);
+    setCopiedFeedback(true);
+    Alert.alert('Copied!', 'Encrypted backup payload has been copied to your clipboard.');
+  };
+
+  // ---- IMPORT (Daily_Counter Style) ----
+  const handleImport = async () => {
+    if (!importPayloadInput.trim()) {
+      Alert.alert('Required', 'Please paste the encrypted backup payload.');
+      return;
+    }
+    if (!importPasswordInput.trim()) {
+      Alert.alert('Required', 'Please enter the decryption password.');
+      return;
+    }
+
+    const res = await BackupService.importEncryptedBackup(
+      importPayloadInput.trim(),
+      importPasswordInput.trim()
+    );
+
     if (res.success) {
       setShowImportModal(false);
-      setImportInput('');
+      setImportPayloadInput('');
+      setImportPasswordInput('');
       await loadTrash();
-      Alert.alert('Success', 'Daily Notes data imported successfully!');
+      Alert.alert('Success', 'Backup restored successfully! All notes, tasks, and finances have been recovered.');
     } else {
-      Alert.alert('Import Failed', res.error || 'Invalid backup format.');
+      Alert.alert('Import Failed', res.error || 'Incorrect password or corrupt backup payload.');
     }
   };
 
@@ -107,23 +144,26 @@ export default function SettingsScreen() {
   // -------------------------------------------------------------
   if (currentView === 'trash') {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => setCurrentView('menu')}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <View style={styles.headerTitles}>
-            <Text style={styles.headerTitle}>Trash Bin</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>Trash Bin</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
               Notes stay for 30 days before permanent deletion
             </Text>
           </View>
           {trashNotes.length > 0 && (
-            <TouchableOpacity onPress={handleEmptyTrash} style={styles.emptyTrashBtn}>
-              <Text style={styles.emptyTrashText}>Empty</Text>
+            <TouchableOpacity
+              onPress={handleEmptyTrash}
+              style={[styles.emptyTrashBtn, { backgroundColor: theme.dangerLight }]}
+            >
+              <Text style={[styles.emptyTrashText, { color: theme.danger }]}>Empty</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -136,34 +176,34 @@ export default function SettingsScreen() {
             const daysLeft = getTrashDaysRemaining(item.deletedAt);
 
             return (
-              <View style={styles.trashCard}>
+              <View style={[styles.trashCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <View style={styles.trashCardHeader}>
-                  <Text style={styles.trashTitle}>{item.title}</Text>
-                  <View style={styles.daysBadge}>
-                    <Ionicons name="time-outline" size={13} color={colors.warning} />
-                    <Text style={styles.daysText}>{daysLeft} days left</Text>
+                  <Text style={[styles.trashTitle, { color: theme.text }]}>{item.title}</Text>
+                  <View style={[styles.daysBadge, { backgroundColor: theme.warningLight }]}>
+                    <Ionicons name="time-outline" size={13} color={theme.warning} />
+                    <Text style={[styles.daysText, { color: theme.warning }]}>{daysLeft} days left</Text>
                   </View>
                 </View>
 
-                <Text style={styles.trashSnippet} numberOfLines={2}>
+                <Text style={[styles.trashSnippet, { color: theme.textSecondary }]} numberOfLines={2}>
                   {item.content || '(Empty note)'}
                 </Text>
 
-                <View style={styles.trashActions}>
+                <View style={[styles.trashActions, { borderTopColor: theme.border }]}>
                   <TouchableOpacity
-                    style={styles.restoreBtn}
+                    style={[styles.restoreBtn, { backgroundColor: theme.secondaryLight }]}
                     onPress={() => handleRestore(item.id)}
                   >
-                    <Ionicons name="refresh" size={16} color={colors.secondary} />
-                    <Text style={styles.restoreBtnText}>Restore</Text>
+                    <Ionicons name="refresh" size={16} color={theme.secondary} />
+                    <Text style={[styles.restoreBtnText, { color: theme.secondary }]}>Restore</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.permDeleteBtn}
+                    style={[styles.permDeleteBtn, { backgroundColor: theme.dangerLight }]}
                     onPress={() => handlePermanentDelete(item.id)}
                   >
-                    <Ionicons name="trash" size={16} color={colors.danger} />
-                    <Text style={styles.permDeleteBtnText}>Delete Forever</Text>
+                    <Ionicons name="trash" size={16} color={theme.danger} />
+                    <Text style={[styles.permDeleteBtnText, { color: theme.danger }]}>Delete Forever</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -171,9 +211,9 @@ export default function SettingsScreen() {
           }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="trash-outline" size={48} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>Trash is empty</Text>
-              <Text style={styles.emptySub}>
+              <Ionicons name="trash-outline" size={48} color={theme.textMuted} />
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>Trash is empty</Text>
+              <Text style={[styles.emptySub, { color: theme.textMuted }]}>
                 Any deleted notes will be kept here safely for 30 days.
               </Text>
             </View>
@@ -187,110 +227,206 @@ export default function SettingsScreen() {
   // SETTINGS MAIN MENU
   // -------------------------------------------------------------
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={styles.headerTitles}>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <Text style={styles.headerSubtitle}>App management, trash & data</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Settings</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+            App theme, trash & encrypted backup
+          </Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.listContainer}>
-        {/* Trash Option */}
-        <Text style={styles.sectionTitle}>STORAGE & RECOVERY</Text>
+        {/* APPEARANCE / THEME TOGGLE */}
+        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>APPEARANCE</Text>
+        <View style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <View style={[styles.menuIconCircle, { backgroundColor: theme.surfaceHover }]}>
+            <Ionicons
+              name={isDarkMode ? 'moon' : 'sunny'}
+              size={22}
+              color={isDarkMode ? theme.primary : '#F59E0B'}
+            />
+          </View>
+          <View style={styles.menuInfo}>
+            <Text style={[styles.menuTitle, { color: theme.text }]}>
+              {isDarkMode ? 'Refined Dark Mode' : 'Clean Light Mode'}
+            </Text>
+            <Text style={[styles.menuSub, { color: theme.textSecondary }]}>
+              {isDarkMode ? 'Rich midnight slate aesthetic' : 'Crisp, high-contrast modern light theme'}
+            </Text>
+          </View>
+          <Switch
+            value={isDarkMode}
+            onValueChange={toggleTheme}
+            trackColor={{ false: '#CBD5E1', true: theme.primary }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+
+        {/* TRASH */}
+        <Text style={[styles.sectionTitle, { color: theme.textMuted, marginTop: 20 }]}>STORAGE & RECOVERY</Text>
         <TouchableOpacity
-          style={styles.menuItem}
+          style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}
           onPress={() => {
             loadTrash();
             setCurrentView('trash');
           }}
         >
-          <View style={styles.menuIconCircle}>
-            <Ionicons name="trash" size={22} color={colors.danger} />
+          <View style={[styles.menuIconCircle, { backgroundColor: theme.surfaceHover }]}>
+            <Ionicons name="trash" size={22} color={theme.danger} />
           </View>
           <View style={styles.menuInfo}>
-            <Text style={styles.menuTitle}>Trash Bin</Text>
-            <Text style={styles.menuSub}>
+            <Text style={[styles.menuTitle, { color: theme.text }]}>Trash Bin</Text>
+            <Text style={[styles.menuSub, { color: theme.textSecondary }]}>
               {trashNotes.length} notes (auto-purged after 30 days)
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
 
-        {/* Data Backup & Restore */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>DATA BACKUP & RESTORE</Text>
-        <TouchableOpacity style={styles.menuItem} onPress={handleExport}>
-          <View style={styles.menuIconCircle}>
-            <Ionicons name="cloud-upload" size={22} color={colors.primary} />
+        {/* DATA BACKUP & RESTORE (Daily_Counter Style) */}
+        <Text style={[styles.sectionTitle, { color: theme.textMuted, marginTop: 20 }]}>
+          DATA BACKUP & RESTORE (ENCRYPTED)
+        </Text>
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}
+          onPress={startExport}
+        >
+          <View style={[styles.menuIconCircle, { backgroundColor: theme.surfaceHover }]}>
+            <Ionicons name="lock-closed" size={22} color={theme.primary} />
           </View>
           <View style={styles.menuInfo}>
-            <Text style={styles.menuTitle}>Export Notes & Tasks</Text>
-            <Text style={styles.menuSub}>Backup your projects, notes, and tasks</Text>
+            <Text style={[styles.menuTitle, { color: theme.text }]}>Export Encrypted Backup</Text>
+            <Text style={[styles.menuSub, { color: theme.textSecondary }]}>
+              Secured with password & copy to clipboard
+            </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => setShowImportModal(true)}
+          style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}
+          onPress={() => {
+            setImportPayloadInput('');
+            setImportPasswordInput('');
+            setShowImportModal(true);
+          }}
         >
-          <View style={styles.menuIconCircle}>
-            <Ionicons name="cloud-download" size={22} color={colors.secondary} />
+          <View style={[styles.menuIconCircle, { backgroundColor: theme.surfaceHover }]}>
+            <Ionicons name="cloud-download" size={22} color={theme.secondary} />
           </View>
           <View style={styles.menuInfo}>
-            <Text style={styles.menuTitle}>Import Backup</Text>
-            <Text style={styles.menuSub}>Restore from a previous backup file</Text>
+            <Text style={[styles.menuTitle, { color: theme.text }]}>Restore from Backup</Text>
+            <Text style={[styles.menuSub, { color: theme.textSecondary }]}>
+              Paste payload & decrypt with password
+            </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
 
-        {/* App Info */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>ABOUT</Text>
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Daily Notes</Text>
-          <Text style={styles.infoVersion}>Version 1.0.0</Text>
-          <Text style={styles.infoDescription}>
-            Organized weekly note-taking with daily auto-generation, midnight task resets, and 30-day trash retention.
+        {/* ABOUT */}
+        <Text style={[styles.sectionTitle, { color: theme.textMuted, marginTop: 20 }]}>ABOUT</Text>
+        <View style={[styles.infoCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Text style={[styles.infoTitle, { color: theme.text }]}>Daily Notes & Finances</Text>
+          <Text style={[styles.infoVersion, { color: theme.primary }]}>Version 1.1.0</Text>
+          <Text style={[styles.infoDescription, { color: theme.textSecondary }]}>
+            Organized weekly notes, recurring tasks with midnight reset, daily financial ledgers with balance rollover, and encrypted backups.
           </Text>
         </View>
       </ScrollView>
 
-      {/* Export Modal */}
+      {/* EXPORT STEP 1: PASSWORD MODAL */}
       <Modal
-        visible={showExportModal}
+        visible={showExportPasswordModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowExportModal(false)}
+        onRequestClose={() => setShowExportPasswordModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Backup JSON Data</Text>
-            <Text style={styles.modalSubtitle}>
-              Copy this backup text to keep a safe copy of all your notes and tasks.
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Export Encrypted Backup</Text>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+              Enter a password to encrypt your entire database. You will need this password to restore your data.
             </Text>
 
             <TextInput
-              style={styles.modalTextArea}
-              multiline
-              editable={false}
-              value={exportDataString}
-              selectTextOnFocus
+              style={[
+                styles.modalInput,
+                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
+              ]}
+              placeholder="Encryption Password"
+              placeholderTextColor={theme.textMuted}
+              secureTextEntry
+              value={exportPassword}
+              onChangeText={setExportPassword}
+              autoFocus
             />
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalCancelBtn}
-                onPress={() => setShowExportModal(false)}
+                onPress={() => setShowExportPasswordModal(false)}
               >
-                <Text style={styles.modalCancelText}>Close</Text>
+                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
+                onPress={generateEncryptedBackup}
+              >
+                <Text style={styles.modalConfirmText}>Generate Backup</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Import Modal */}
+      {/* EXPORT STEP 2: RESULT & COPY TO CLIPBOARD MODAL */}
+      <Modal
+        visible={showExportResultModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExportResultModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Encrypted Backup Ready</Text>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+              Your database is secured with password encryption. Copy and save your backup payload:
+            </Text>
+
+            <View style={[styles.payloadContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <Text style={[styles.payloadPreview, { color: theme.textSecondary }]}>
+                {encryptedExportPayload.length > 100
+                  ? `${encryptedExportPayload.substring(0, 100)}... (${encryptedExportPayload.length} chars)`
+                  : encryptedExportPayload}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.copyBtn, { backgroundColor: theme.primary }]}
+              onPress={copyToClipboard}
+            >
+              <Ionicons name="copy-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.copyBtnText}>
+                {copiedFeedback ? 'Copied to Clipboard!' : 'Copy to Clipboard'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={[styles.modalButtons, { marginTop: 14 }]}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowExportResultModal(false)}
+              >
+                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* IMPORT MODAL (Daily_Counter Style) */}
       <Modal
         visible={showImportModal}
         transparent
@@ -298,37 +434,48 @@ export default function SettingsScreen() {
         onRequestClose={() => setShowImportModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Import Backup</Text>
-            <Text style={styles.modalSubtitle}>
-              Paste your exported JSON data below to restore your notes.
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Restore from Backup</Text>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+              Paste your encrypted backup payload and enter the password to decrypt:
             </Text>
 
             <TextInput
-              style={styles.modalTextArea}
+              style={[
+                styles.modalTextArea,
+                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
+              ]}
               multiline
-              placeholder="Paste JSON backup text here..."
-              placeholderTextColor={colors.textMuted}
-              value={importInput}
-              onChangeText={setImportInput}
-              autoFocus
+              placeholder="Paste encrypted base64 payload here..."
+              placeholderTextColor={theme.textMuted}
+              value={importPayloadInput}
+              onChangeText={setImportPayloadInput}
+            />
+
+            <TextInput
+              style={[
+                styles.modalInput,
+                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, marginTop: 10 },
+              ]}
+              placeholder="Decryption Password"
+              placeholderTextColor={theme.textMuted}
+              secureTextEntry
+              value={importPasswordInput}
+              onChangeText={setImportPasswordInput}
             />
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalCancelBtn}
-                onPress={() => {
-                  setImportInput('');
-                  setShowImportModal(false);
-                }}
+                onPress={() => setShowImportModal(false)}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.modalConfirmBtn}
+                style={[styles.modalConfirmBtn, { backgroundColor: theme.secondary }]}
                 onPress={handleImport}
               >
-                <Text style={styles.modalConfirmText}>Restore</Text>
+                <Text style={styles.modalConfirmText}>Decrypt & Restore</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -341,7 +488,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -349,8 +495,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
   },
   backBtn: {
     padding: 6,
@@ -362,21 +506,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   emptyTrashBtn: {
-    backgroundColor: colors.dangerLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   emptyTrashText: {
-    color: colors.danger,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -384,9 +524,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
-    color: colors.textMuted,
     marginBottom: 8,
-    marginTop: 8,
   },
   listContainer: {
     padding: 16,
@@ -395,18 +533,15 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   menuIconCircle: {
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -417,44 +552,35 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.text,
   },
   menuSub: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   infoCard: {
-    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   infoTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.text,
   },
   infoVersion: {
     fontSize: 12,
-    color: colors.primary,
     marginTop: 2,
     fontWeight: '600',
   },
   infoDescription: {
     fontSize: 13,
-    color: colors.textSecondary,
     lineHeight: 20,
     marginTop: 8,
   },
   trashCard: {
-    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   trashCardHeader: {
     flexDirection: 'row',
@@ -465,25 +591,21 @@ const styles = StyleSheet.create({
   trashTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.text,
   },
   daysBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.warningLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   daysText: {
-    color: colors.warning,
     fontSize: 11,
     fontWeight: '600',
   },
   trashSnippet: {
     fontSize: 13,
-    color: colors.textSecondary,
     lineHeight: 18,
     marginBottom: 14,
   },
@@ -492,20 +614,17 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
     paddingTop: 10,
   },
   restoreBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.secondaryLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   restoreBtnText: {
-    color: colors.secondary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -513,13 +632,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.dangerLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   permDeleteBtnText: {
-    color: colors.danger,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -531,54 +648,76 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
     marginTop: 12,
   },
   emptySub: {
     fontSize: 13,
-    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 6,
     paddingHorizontal: 30,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   modalBox: {
     width: '100%',
-    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: colors.border,
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.text,
   },
   modalSubtitle: {
     fontSize: 13,
-    color: colors.textSecondary,
     marginTop: 4,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  modalInput: {
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    borderWidth: 1,
     marginBottom: 16,
   },
   modalTextArea: {
-    backgroundColor: colors.card,
     borderRadius: 8,
     padding: 12,
-    color: colors.text,
-    fontSize: 13,
+    fontSize: 12,
     borderWidth: 1,
-    borderColor: colors.border,
-    height: 180,
+    height: 120,
     textAlignVertical: 'top',
-    marginBottom: 16,
+  },
+  payloadContainer: {
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  payloadPreview: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  copyBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -591,17 +730,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   modalCancelText: {
-    color: colors.textSecondary,
     fontWeight: '600',
   },
   modalConfirmBtn: {
-    backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
   modalConfirmText: {
-    color: colors.white,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
 });

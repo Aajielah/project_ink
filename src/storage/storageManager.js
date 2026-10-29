@@ -475,6 +475,23 @@ class StorageManager {
     return tasks;
   }
 
+  async updateTask(taskId, { text, repeat, weeklyDay }) {
+    const tasks = await this.getTasks();
+    const index = tasks.findIndex((t) => t.id === taskId);
+    if (index === -1) return null;
+
+    tasks[index] = {
+      ...tasks[index],
+      text: text.trim(),
+      repeat,
+      weeklyDay: repeat === 'weekly' ? weeklyDay : null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    return tasks[index];
+  }
+
   /**
    * Midnight Reset logic:
    * Runs whenever the app opens or crosses midnight.
