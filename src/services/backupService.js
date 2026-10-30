@@ -49,35 +49,53 @@ function encryptText(plainText, password) {
 }
 
 function decryptText(base64Payload, password) {
+  // Strip markdown fences, spaces, newlines, and any accidental non-base64 characters
+  const cleanPayload = (base64Payload || '').replace(/[^A-Za-z0-9+/=]/g, '');
+  if (!cleanPayload) {
+    return { error: 'Backup code is empty or contains no valid data.' };
+  }
+
   let jsonStr = '';
   try {
     if (typeof atob !== 'undefined') {
-      jsonStr = decodeURIComponent(escape(atob(base64Payload.trim())));
+      jsonStr = decodeURIComponent(escape(atob(cleanPayload)));
     } else {
-      jsonStr = Buffer.from(base64Payload.trim(), 'base64').toString('utf8');
+      jsonStr = Buffer.from(cleanPayload, 'base64').toString('utf8');
     }
-    const payloadObj = JSON.parse(jsonStr);
-    if (!payloadObj || payloadObj.magic !== 'DN_ENC_V1') {
-      return null;
-    }
-
-    const key = deriveKey(password, payloadObj.salt);
-    const charCodes = [];
-
-    for (let i = 0; i < payloadObj.data.length; i++) {
-      const keyByte = key[i % key.length];
-      charCodes.push(payloadObj.data[i] ^ keyByte);
-    }
-
-    const decrypted = String.fromCharCode(...charCodes);
-    if (simpleHash(decrypted) !== payloadObj.checksum) {
-      return null; // Invalid password
-    }
-
-    return decrypted;
   } catch (e) {
-    return null;
+    return { error: 'Invalid backup encoding. The text was truncated or corrupted during copy/paste.' };
   }
+
+  let payloadObj;
+  try {
+    payloadObj = JSON.parse(jsonStr);
+  } catch (e) {
+    return { error: 'Incomplete backup data. Make sure the entire code was copied.' };
+  }
+
+  if (!payloadObj || payloadObj.magic !== 'DN_ENC_V1') {
+    return { error: 'Unrecognized backup format.' };
+  }
+
+  const key = deriveKey(password, payloadObj.salt);
+  const charCodes = [];
+
+  for (let i = 0; i < payloadObj.data.length; i++) {
+    const keyByte = key[i % key.length];
+    charCodes.push(payloadObj.data[i] ^ keyByte);
+  }
+
+  let decrypted = '';
+  const CHUNK_SIZE = 4096;
+  for (let i = 0; i < charCodes.length; i += CHUNK_SIZE) {
+    decrypted += String.fromCharCode.apply(null, charCodes.slice(i, i + CHUNK_SIZE));
+  }
+
+  if (simpleHash(decrypted) !== payloadObj.checksum) {
+    return { error: 'Incorrect password entered.' };
+  }
+
+  return { success: true, data: decrypted };
 }
 
 function simpleHash(str) {
@@ -127,10 +145,12 @@ export class BackupService {
    */
   static async importEncryptedBackup(encryptedBase64, password) {
     try {
-      const decryptedJson = decryptText(encryptedBase64, password);
-      if (!decryptedJson) {
-        return { success: false, error: 'Incorrect password or corrupted backup payload.' };
+      const decRes = decryptText(encryptedBase64, password);
+      if (decRes.error) {
+        return { success: false, error: decRes.error };
       }
+
+      const decryptedJson = decRes.data;
 
       const parsed = JSON.parse(decryptedJson);
       if (!parsed.data) {

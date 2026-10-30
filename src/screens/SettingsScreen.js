@@ -476,6 +476,37 @@ export default function SettingsScreen() {
                 Paste your encrypted backup payload and enter the password to decrypt:
               </Text>
 
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: theme.textSecondary }}>
+                  Payload Data:
+                </Text>
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    backgroundColor: theme.card,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                  }}
+                  onPress={async () => {
+                    const str = await Clipboard.getStringAsync();
+                    if (str && str.trim()) {
+                      setImportPayloadInput(str.trim());
+                      Alert.alert('Pasted!', `Loaded ${str.trim().length} characters from clipboard.`);
+                    } else {
+                      Alert.alert('Clipboard Empty', 'Your clipboard does not have any text copied.');
+                    }
+                  }}
+                >
+                  <Ionicons name="clipboard-outline" size={14} color={theme.primary} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: theme.primary }}>Paste from Clipboard</Text>
+                </TouchableOpacity>
+              </View>
+
               <TextInput
                 style={[
                   styles.modalTextArea,
