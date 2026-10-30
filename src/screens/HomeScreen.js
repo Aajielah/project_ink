@@ -81,7 +81,16 @@ export default function HomeScreen() {
   }, []);
 
   const loadProjects = async () => {
-    const list = await storage.getProjects();
+    let list = await storage.getProjects();
+    if (list.length === 0) {
+      try {
+        const { restoreRecoveredChapterData } = require('../services/recoveryData');
+        await restoreRecoveredChapterData();
+        list = await storage.getProjects();
+      } catch (e) {
+        console.error('Auto-seed error', e);
+      }
+    }
     setProjects(list);
   };
 

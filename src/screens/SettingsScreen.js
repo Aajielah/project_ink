@@ -355,6 +355,39 @@ export default function SettingsScreen() {
           <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
 
+        {/* 1-TAP INSTANT RECOVERY */}
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}
+          onPress={async () => {
+            Alert.alert(
+              'Restore Recovered Data?',
+              'This will instantly restore your 2026 project, October folder, and Chapter 40 note with zero passwords.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Restore Now',
+                  onPress: async () => {
+                    const { restoreRecoveredChapterData } = require('../services/recoveryData');
+                    await restoreRecoveredChapterData();
+                    Alert.alert('Restored!', '2026 Project, October folder, and Chapter 40 have been restored successfully!');
+                  },
+                },
+              ]
+            );
+          }}
+        >
+          <View style={[styles.menuIconCircle, { backgroundColor: theme.surfaceHover }]}>
+            <Ionicons name="flash" size={22} color="#10B981" />
+          </View>
+          <View style={styles.menuInfo}>
+            <Text style={[styles.menuTitle, { color: theme.text }]}>1-Tap Recover Chapter 40</Text>
+            <Text style={[styles.menuSub, { color: theme.textSecondary }]}>
+              Instantly restore 2026 & Chapter 40 without password
+            </Text>
+          </View>
+          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+        </TouchableOpacity>
+
         {/* ABOUT */}
         <Text style={[styles.sectionTitle, { color: theme.textMuted, marginTop: 20 }]}>ABOUT</Text>
         <View style={[styles.infoCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
