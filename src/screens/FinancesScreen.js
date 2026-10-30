@@ -28,6 +28,7 @@ export default function FinancesScreen() {
   // Month & Day summaries
   const [unlockedMonths, setUnlockedMonths] = useState([]);
   const [daysSummary, setDaysSummary] = useState([]);
+  const [monthSummary, setMonthSummary] = useState(null);
 
   // Active Day Sheet data
   const [sheetData, setSheetData] = useState(null);
@@ -48,12 +49,15 @@ export default function FinancesScreen() {
     const cfg = await financeManager.getConfig();
     setConfig(cfg);
     if (cfg && cfg.yearFolderCreated) {
-      setSelectedYear(cfg.createdYear || new Date().getFullYear());
-      const months = financeManager.getUnlockedMonths(
-        cfg.createdYear || new Date().getFullYear(),
-        cfg
-      );
-      setUnlockedMonths(months);
+      const yr = cfg.createdYear || new Date().getFullYear();
+      setSelectedYear(yr);
+      const months = financeManager.getUnlockedMonths(yr, cfg);
+      const allSheets = await financeManager.getAllSheets();
+      const enriched = months.map((m) => {
+        const s = financeManager.getMonthFinancialSummarySync(allSheets, yr, m.index);
+        return { ...m, summary: s };
+      });
+      setUnlockedMonths(enriched);
     }
   };
 
@@ -63,9 +67,15 @@ export default function FinancesScreen() {
         selectedYear,
         selectedMonth.index
       );
+      const mSummary = await financeManager.getMonthFinancialSummary(
+        selectedYear,
+        selectedMonth.index
+      );
       setDaysSummary(summary);
+      setMonthSummary(mSummary);
     }
     setLevel('days');
+    loadConfig(); // Refresh month list summaries
   };
 
   // ANDROID HARDWARE BACK HANDLER
@@ -97,7 +107,12 @@ export default function FinancesScreen() {
     setConfig(created);
     setSelectedYear(currentYear);
     const months = financeManager.getUnlockedMonths(currentYear, created);
-    setUnlockedMonths(months);
+    const allSheets = await financeManager.getAllSheets();
+    const enriched = months.map((m) => {
+      const s = financeManager.getMonthFinancialSummarySync(allSheets, currentYear, m.index);
+      return { ...m, summary: s };
+    });
+    setUnlockedMonths(enriched);
     setLevel('months');
   };
 
@@ -105,7 +120,9 @@ export default function FinancesScreen() {
   const openMonth = async (m) => {
     setSelectedMonth(m);
     const summary = await financeManager.getMonthDaysSummary(selectedYear, m.index);
+    const mSummary = await financeManager.getMonthFinancialSummary(selectedYear, m.index);
     setDaysSummary(summary);
+    setMonthSummary(mSummary);
     setLevel('days');
   };
 
@@ -218,7 +235,8 @@ export default function FinancesScreen() {
 
     return (
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
         style={[styles.container, { backgroundColor: theme.background }]}
       >
         {/* Header */}
@@ -256,7 +274,12 @@ export default function FinancesScreen() {
         )}
 
         {/* Table Content */}
-        <ScrollView style={styles.tableScroll} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          style={styles.tableScroll}
+          contentContainerStyle={styles.tableScrollContent}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={true}
+        >
           {/* Table Headers */}
           <View style={[styles.tableHeaderRow, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
             <View style={[styles.columnHeader, { borderRightWidth: 1, borderRightColor: theme.border }]}>
@@ -299,31 +322,59 @@ export default function FinancesScreen() {
                   index % 2 === 1 && { backgroundColor: theme.surfaceHover },
                 ]}
               >
-                {/* Income Item */}
-                <View style={[styles.halfRowInput, { borderRightWidth: 1, borderRightColor: theme.border }]}>
-                  <TextInput
-                    style={[
-                      styles.descInput,
-                      { color: theme.text },
-                      inc.isRollover && { color: theme.secondary, fontWeight: '700' },
-                    ]}
-                    placeholder={index === 0 && !inc.isRollover ? 'e.g. Salary' : 'Item...'}
-                    placeholderTextColor={theme.textMuted}
-                    value={inc.description}
-                    onChangeText={(val) => handleIncomeChange(index, 'description', val)}
-                  />
-                  <TextInput
-                    style={[
-                      styles.amountInput,
-                      { color: theme.text },
-                      inc.isRollover && { color: theme.secondary, fontWeight: '700' },
-                    ]}
-                    placeholder="0.00"
-                    placeholderTextColor={theme.textMuted}
-                    keyboardType="numeric"
-                    value={inc.amount ? String(inc.amount) : ''}
-                    onChangeText={(val) => handleIncomeChange(index, 'amount', val)}
-                  />
+                {/* Income Item (Locked if Rollover) */}
+                <View
+                  style={[
+                    styles.halfRowInput,
+                    { borderRightWidth: 1, borderRightColor: theme.border },
+                    inc.isRollover && { backgroundColor: theme.surfaceHover },
+                  ]}
+                >
+                  {inc.isRollover ? (
+                    <TouchableOpacity
+                      style={styles.lockedRowContainer}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Alert.alert(
+                          'Rollover Income Locked',
+                          "This amount is automatically calculated from yesterday's closing balance. To change this value, please edit yesterday's financial sheet."
+                        );
+                      }}
+                    >
+                      <View style={styles.lockedDescRow}>
+                        <Ionicons name="lock-closed" size={12} color={theme.secondary} style={{ marginRight: 4 }} />
+                        <Text
+                          numberOfLines={1}
+                          style={[styles.descInput, { color: theme.secondary, fontWeight: '700', paddingVertical: 10 }]}
+                        >
+                          {inc.description}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[styles.amountInput, { color: theme.secondary, fontWeight: '700', paddingVertical: 10 }]}
+                      >
+                        {inc.amount ? String(inc.amount) : '0.00'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      <TextInput
+                        style={[styles.descInput, { color: theme.text }]}
+                        placeholder={index === 0 ? 'e.g. Salary' : 'Item...'}
+                        placeholderTextColor={theme.textMuted}
+                        value={inc.description}
+                        onChangeText={(val) => handleIncomeChange(index, 'description', val)}
+                      />
+                      <TextInput
+                        style={[styles.amountInput, { color: theme.text }]}
+                        placeholder="0.00"
+                        placeholderTextColor={theme.textMuted}
+                        keyboardType="numeric"
+                        value={inc.amount ? String(inc.amount) : ''}
+                        onChangeText={(val) => handleIncomeChange(index, 'amount', val)}
+                      />
+                    </>
+                  )}
                 </View>
 
                 {/* Expense Item */}
@@ -351,6 +402,8 @@ export default function FinancesScreen() {
           <TouchableOpacity style={styles.addRowBtn} onPress={addManualRow}>
             <Ionicons name="add-circle-outline" size={18} color={theme.primary} />
             <Text style={[styles.addRowText, { color: theme.primary }]}>Add More Rows</Text>
+          </TouchableOpacity>
+        </ScrollView>
           </TouchableOpacity>
         </ScrollView>
 
@@ -419,6 +472,34 @@ export default function FinancesScreen() {
           </View>
         </View>
 
+        {/* Quick Month Overview Strip */}
+        {monthSummary && (
+          <View style={[styles.quickSummaryBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+            <View style={styles.quickSummaryItem}>
+              <Text style={[styles.quickSummaryLabel, { color: theme.textMuted }]}>EARNED</Text>
+              <Text style={[styles.quickSummaryVal, { color: theme.secondary }]}>
+                +₦{monthSummary.totalEarned.toFixed(2)}
+              </Text>
+            </View>
+            <View style={[styles.quickSummaryDivider, { backgroundColor: theme.border }]} />
+            <View style={styles.quickSummaryItem}>
+              <Text style={[styles.quickSummaryLabel, { color: theme.textMuted }]}>SPENT</Text>
+              <Text style={[styles.quickSummaryVal, { color: theme.warning }]}>
+                -₦{monthSummary.totalSpent.toFixed(2)}
+              </Text>
+            </View>
+            <View style={[styles.quickSummaryDivider, { backgroundColor: theme.border }]} />
+            <View style={styles.quickSummaryItem}>
+              <Text style={[styles.quickSummaryLabel, { color: monthSummary.isNegative ? theme.danger : theme.textMuted }]}>
+                BALANCE
+              </Text>
+              <Text style={[styles.quickSummaryVal, { color: monthSummary.isNegative ? theme.danger : theme.primary }]}>
+                ₦{monthSummary.finalBalance.toFixed(2)}
+              </Text>
+            </View>
+          </View>
+        )}
+
         <FlatList
           data={daysSummary}
           keyExtractor={(item) => `day_${item.dayNumber}`}
@@ -466,6 +547,71 @@ export default function FinancesScreen() {
               )}
             </TouchableOpacity>
           )}
+          ListFooterComponent={
+            monthSummary ? (
+              <View
+                style={[
+                  styles.monthSummaryCard,
+                  { backgroundColor: theme.card, borderColor: monthSummary.isNegative ? theme.danger : theme.border },
+                ]}
+              >
+                <View style={styles.monthSummaryHeader}>
+                  <View style={[styles.iconCircleSmall, { backgroundColor: theme.surfaceHover }]}>
+                    <Ionicons name="pie-chart" size={22} color={theme.primary} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={[styles.monthSummaryTitle, { color: theme.text }]}>
+                      End of {selectedMonth?.name} Summary
+                    </Text>
+                    <Text style={[styles.monthSummarySub, { color: theme.textSecondary }]}>
+                      Monthly Overview (Days 1 to {daysSummary.length})
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.monthSummaryGrid, { borderTopColor: theme.border }]}>
+                  <View style={styles.summaryItem}>
+                    <Text style={[styles.summaryItemLabel, { color: theme.textMuted }]}>PREV MONTH CARRIED</Text>
+                    <Text style={[styles.summaryItemVal, { color: theme.text }]}>
+                      ₦{monthSummary.initialRollover.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Text style={[styles.summaryItemLabel, { color: theme.secondary }]}>TOTAL MONEY EARNED</Text>
+                    <Text style={[styles.summaryItemVal, { color: theme.secondary }]}>
+                      +₦{monthSummary.totalEarned.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.monthSummaryGrid, { borderTopColor: theme.border }]}>
+                  <View style={styles.summaryItem}>
+                    <Text style={[styles.summaryItemLabel, { color: theme.warning }]}>TOTAL MONEY SPENT</Text>
+                    <Text style={[styles.summaryItemVal, { color: theme.warning }]}>
+                      -₦{monthSummary.totalSpent.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Text style={[styles.summaryItemLabel, { color: monthSummary.isNegative ? theme.danger : theme.primary }]}>
+                      FINAL MONTH BALANCE
+                    </Text>
+                    <Text style={[styles.summaryItemVal, { color: monthSummary.isNegative ? theme.danger : theme.primary, fontWeight: '800' }]}>
+                      ₦{monthSummary.finalBalance.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.summaryFooterNote, { backgroundColor: theme.surfaceHover }]}>
+                  <Ionicons name="information-circle-outline" size={16} color={theme.textMuted} />
+                  <Text style={[styles.summaryNoteText, { color: theme.textSecondary }]}>
+                    {monthSummary.finalBalance >= 0
+                      ? 'This remaining balance automatically carries over as starting income for next month.'
+                      : 'Alert: Your expenses exceeded your income for this month.'}
+                  </Text>
+                </View>
+              </View>
+            ) : null
+          }
         />
       </View>
     );
@@ -516,6 +662,21 @@ export default function FinancesScreen() {
                   <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
                     {item.isCurrent ? 'Current Active Month' : 'Completed Month'}
                   </Text>
+                  {item.summary && item.summary.hasData && (
+                    <View style={styles.monthCardMetrics}>
+                      <Text style={[styles.monthMetricText, { color: theme.secondary }]}>
+                        Earned: ₦{item.summary.totalEarned.toFixed(2)}
+                      </Text>
+                      <Text style={[styles.monthMetricText, { color: theme.textMuted }]}>•</Text>
+                      <Text style={[styles.monthMetricText, { color: theme.warning }]}>
+                        Spent: ₦{item.summary.totalSpent.toFixed(2)}
+                      </Text>
+                      <Text style={[styles.monthMetricText, { color: theme.textMuted }]}>•</Text>
+                      <Text style={[styles.monthMetricText, { color: item.summary.isNegative ? theme.danger : theme.primary, fontWeight: '700' }]}>
+                        Net: ₦{item.summary.finalBalance.toFixed(2)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 {item.isCurrent && (
                   <View style={[styles.activeBadge, { backgroundColor: theme.secondaryLight }]}>
@@ -741,6 +902,21 @@ const styles = StyleSheet.create({
   tableScroll: {
     flex: 1,
   },
+  tableScrollContent: {
+    paddingBottom: 220,
+  },
+  lockedRowContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  lockedDescRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   tableHeaderRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
@@ -850,5 +1026,99 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     marginTop: 2,
+  },
+  // End of Month Summary Card & Quick Bar
+  quickSummaryBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  quickSummaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  quickSummaryDivider: {
+    width: 1,
+    height: 24,
+  },
+  quickSummaryLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  quickSummaryVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  monthSummaryCard: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 30,
+  },
+  monthSummaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  iconCircleSmall: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthSummaryTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  monthSummarySub: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  monthSummaryGrid: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    paddingVertical: 10,
+  },
+  summaryItem: {
+    flex: 1,
+  },
+  summaryItemLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  summaryItemVal: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  summaryFooterNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    gap: 8,
+  },
+  summaryNoteText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  monthCardMetrics: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  monthMetricText: {
+    fontSize: 11,
   },
 });

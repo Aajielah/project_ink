@@ -107,7 +107,8 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       {/* Top Header */}
@@ -132,7 +133,12 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
       </View>
 
       {/* Editor Body */}
-      <ScrollView style={styles.scrollBody} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.scrollBody}
+        contentContainerStyle={styles.scrollBodyContent}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={true}
+      >
         <TextInput
           ref={inputRef}
           style={[styles.textInput, { color: theme.text }]}
@@ -241,6 +247,9 @@ const styles = StyleSheet.create({
   scrollBody: {
     flex: 1,
     padding: 16,
+  },
+  scrollBodyContent: {
+    paddingBottom: 160,
   },
   textInput: {
     fontSize: 16,

@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.dailynotes.app",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#1E1B4B",
         "foregroundImage": "./assets/android-icon-foreground.png",

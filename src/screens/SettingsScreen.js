@@ -12,6 +12,8 @@ import {
   ScrollView,
   Switch,
   BackHandler,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -371,7 +373,10 @@ export default function SettingsScreen() {
         animationType="fade"
         onRequestClose={() => setShowExportPasswordModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Export Encrypted Backup</Text>
             <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
@@ -406,7 +411,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* EXPORT STEP 2: RESULT & COPY TO CLIPBOARD MODAL */}
@@ -460,53 +465,58 @@ export default function SettingsScreen() {
         animationType="fade"
         onRequestClose={() => setShowImportModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Restore from Backup</Text>
-            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
-              Paste your encrypted backup payload and enter the password to decrypt:
-            </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border, maxHeight: '85%' }]}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Restore from Backup</Text>
+              <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+                Paste your encrypted backup payload and enter the password to decrypt:
+              </Text>
 
-            <TextInput
-              style={[
-                styles.modalTextArea,
-                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
-              ]}
-              multiline
-              placeholder="Paste encrypted base64 payload here..."
-              placeholderTextColor={theme.textMuted}
-              value={importPayloadInput}
-              onChangeText={setImportPayloadInput}
-            />
+              <TextInput
+                style={[
+                  styles.modalTextArea,
+                  { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
+                ]}
+                multiline
+                placeholder="Paste encrypted base64 payload here..."
+                placeholderTextColor={theme.textMuted}
+                value={importPayloadInput}
+                onChangeText={setImportPayloadInput}
+              />
 
-            <TextInput
-              style={[
-                styles.modalInput,
-                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, marginTop: 10 },
-              ]}
-              placeholder="Decryption Password"
-              placeholderTextColor={theme.textMuted}
-              secureTextEntry
-              value={importPasswordInput}
-              onChangeText={setImportPasswordInput}
-            />
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, marginTop: 10 },
+                ]}
+                placeholder="Decryption Password"
+                placeholderTextColor={theme.textMuted}
+                secureTextEntry
+                value={importPasswordInput}
+                onChangeText={setImportPasswordInput}
+              />
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancelBtn}
-                onPress={() => setShowImportModal(false)}
-              >
-                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalConfirmBtn, { backgroundColor: theme.secondary }]}
-                onPress={handleImport}
-              >
-                <Text style={styles.modalConfirmText}>Decrypt & Restore</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setShowImportModal(false)}
+                >
+                  <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalConfirmBtn, { backgroundColor: theme.secondary }]}
+                  onPress={handleImport}
+                >
+                  <Text style={styles.modalConfirmText}>Decrypt & Restore</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

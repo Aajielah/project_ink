@@ -101,42 +101,166 @@ class FinanceManager {
 
   /**
    * Calculate previous day's net remaining balance for Rollover:
-   * If day > 1: looks at previous day of same month.
-   * If day === 1: looks at last day of previous month.
+   * Looks backward to the most recent day in the current month with data.
+   * If day === 1 (or no days in current month have data), looks at the closing balance of the previous month.
    */
-  async getPreviousDayNetBalance(year, monthIndex, dayNumber) {
-    const allSheets = await this.getAllSheets();
+  async getPreviousDayNetBalance(year, monthIndex, dayNumber, sheetsCache = null) {
+    const allSheets = sheetsCache || (await this.getAllSheets());
 
     if (dayNumber > 1) {
-      const prevKey = this.getSheetKey(year, monthIndex, dayNumber - 1);
-      const prevSheet = allSheets[prevKey];
-      if (!prevSheet) return 0;
-      return this.computeSheetTotals(prevSheet).netBalance;
+      for (let p = dayNumber - 1; p >= 1; p--) {
+        const prevKey = this.getSheetKey(year, monthIndex, p);
+        const prevSheet = allSheets[prevKey];
+        if (prevSheet) {
+          return this.computeSheetTotals(prevSheet).netBalance;
+        }
+      }
     }
 
-    // Day 1 of new month: Check previous month
+    // Day 1 of month (or no preceding days in current month): Check previous month closing
     if (monthIndex > 0) {
       const prevMonth = monthIndex - 1;
       const daysInPrevMonth = getDaysInMonth(year, prevMonth);
-      const prevKey = this.getSheetKey(year, prevMonth, daysInPrevMonth);
-      const prevSheet = allSheets[prevKey];
-      if (!prevSheet) return 0;
-      return this.computeSheetTotals(prevSheet).netBalance;
+      for (let p = daysInPrevMonth; p >= 1; p--) {
+        const prevKey = this.getSheetKey(year, prevMonth, p);
+        const prevSheet = allSheets[prevKey];
+        if (prevSheet) {
+          return this.computeSheetTotals(prevSheet).netBalance;
+        }
+      }
     }
 
     return 0;
   }
 
   /**
+   * Automatically cascade rollover balances forward starting from startDay.
+   * If Day 1 changes -> Day 2's rollover row updates -> Day 3 updates -> ... -> Next Month Day 1 updates.
+   */
+  async cascadeRollovers(year, monthIndex, startDay = 1) {
+    const allSheets = await this.getAllSheets();
+    const totalDays = getDaysInMonth(year, monthIndex);
+
+    for (let d = startDay; d < totalDays; d++) {
+      const curKey = this.getSheetKey(year, monthIndex, d);
+      const curSheet = allSheets[curKey];
+      if (!curSheet) continue;
+
+      const curTotals = this.computeSheetTotals(curSheet);
+      const nextKey = this.getSheetKey(year, monthIndex, d + 1);
+      const nextSheet = allSheets[nextKey];
+
+      if (nextSheet && nextSheet.incomes && nextSheet.incomes.length > 0) {
+        const firstInc = nextSheet.incomes[0];
+        if (firstInc.isRollover) {
+          firstInc.amount = curTotals.netBalance.toFixed(2);
+          firstInc.description = 'Yesterday Remaining Income';
+        }
+      }
+    }
+
+    // Check if Day 1 of the NEXT month exists and update its 'Last Month Income' rollover
+    if (monthIndex < 11) {
+      const nextMonthDay1Key = this.getSheetKey(year, monthIndex + 1, 1);
+      const nextMonthDay1 = allSheets[nextMonthDay1Key];
+      if (nextMonthDay1 && nextMonthDay1.incomes && nextMonthDay1.incomes.length > 0) {
+        if (nextMonthDay1.incomes[0].isRollover) {
+          const monthSummary = this.getMonthFinancialSummarySync(allSheets, year, monthIndex);
+          nextMonthDay1.incomes[0].amount = monthSummary.finalBalance.toFixed(2);
+          nextMonthDay1.incomes[0].description = 'Last Month Income';
+        }
+      }
+    }
+
+    await AsyncStorage.setItem(STORAGE_KEYS.FINANCE_SHEETS, JSON.stringify(allSheets));
+  }
+
+  /**
+   * Synchronous helper to calculate Month Financial Summary from loaded sheets.
+   */
+  getMonthFinancialSummarySync(allSheets, year, monthIndex) {
+    const totalDays = getDaysInMonth(year, monthIndex);
+    let initialRollover = 0;
+    let totalEarned = 0;
+    let totalSpent = 0;
+    let hasData = false;
+    let lastActiveDayBalance = 0;
+
+    // Check Day 1 rollover (initial starting money from previous month)
+    const day1Key = this.getSheetKey(year, monthIndex, 1);
+    const day1Sheet = allSheets[day1Key];
+    if (day1Sheet && day1Sheet.incomes && day1Sheet.incomes.length > 0 && day1Sheet.incomes[0].isRollover) {
+      const val = parseFloat(day1Sheet.incomes[0].amount);
+      if (!isNaN(val)) initialRollover = val;
+    }
+
+    for (let d = 1; d <= totalDays; d++) {
+      const key = this.getSheetKey(year, monthIndex, d);
+      const sheet = allSheets[key];
+      if (!sheet) continue;
+
+      hasData = true;
+
+      // Sum only fresh income (do not count daily rollovers to avoid double counting!)
+      (sheet.incomes || []).forEach((item) => {
+        if (!item.isRollover) {
+          const amt = parseFloat(item.amount);
+          if (!isNaN(amt) && amt > 0) {
+            totalEarned += amt;
+          }
+        }
+      });
+
+      // Sum all expenses
+      (sheet.expenses || []).forEach((item) => {
+        const amt = parseFloat(item.amount);
+        if (!isNaN(amt) && amt > 0) {
+          totalSpent += amt;
+        }
+      });
+
+      // Keep track of the latest day's net closing balance
+      const dayTotals = this.computeSheetTotals(sheet);
+      lastActiveDayBalance = dayTotals.netBalance;
+    }
+
+    // Final closing balance: Starting + Total Earned - Total Spent
+    const finalBalance = initialRollover + totalEarned - totalSpent;
+    const isNegative = finalBalance < 0;
+
+    return {
+      year,
+      monthIndex,
+      monthName: MONTH_NAMES[monthIndex],
+      totalDays,
+      initialRollover,
+      totalEarned,
+      totalSpent,
+      finalBalance,
+      isNegative,
+      hasData,
+    };
+  }
+
+  /**
+   * Async method to get full monthly financial summary
+   */
+  async getMonthFinancialSummary(year, monthIndex) {
+    const allSheets = await this.getAllSheets();
+    return this.getMonthFinancialSummarySync(allSheets, year, monthIndex);
+  }
+
+  /**
    * Get or initialize a daily sheet with 10 default rows
    * and auto-inject rollover income (Yesterday Remaining Income or Last Month Income).
+   * ALWAYS keeps the rollover amount synchronized with the preceding day's closing balance.
    */
   async getDaySheet(year, monthIndex, dayNumber) {
     const allSheets = await this.getAllSheets();
     const key = this.getSheetKey(year, monthIndex, dayNumber);
     let sheet = allSheets[key];
 
-    const prevBalance = await this.getPreviousDayNetBalance(year, monthIndex, dayNumber);
+    const prevBalance = await this.getPreviousDayNetBalance(year, monthIndex, dayNumber, allSheets);
     const rolloverLabel = dayNumber === 1 ? 'Last Month Income' : 'Yesterday Remaining Income';
 
     if (!sheet) {
@@ -148,7 +272,7 @@ class FinanceManager {
       defaultIncomes.push({
         id: 'rollover_auto',
         description: rolloverLabel,
-        amount: prevBalance > 0 ? prevBalance.toFixed(2) : '0.00',
+        amount: prevBalance.toFixed(2),
         isRollover: true,
       });
 
@@ -183,24 +307,23 @@ class FinanceManager {
       allSheets[key] = sheet;
       await AsyncStorage.setItem(STORAGE_KEYS.FINANCE_SHEETS, JSON.stringify(allSheets));
     } else {
-      // If sheet exists, verify that the rollover row is kept in sync
+      // If sheet exists, keep rollover row amount and label strictly updated
       if (sheet.incomes && sheet.incomes.length > 0) {
         const first = sheet.incomes[0];
         if (first.isRollover) {
           first.description = rolloverLabel;
-          // Update amount only if not manually edited or if fresh
-          if (prevBalance > 0 && (!first.amount || parseFloat(first.amount) === 0)) {
-            first.amount = prevBalance.toFixed(2);
-          }
+          first.amount = prevBalance.toFixed(2);
         }
       }
+      allSheets[key] = sheet;
+      await AsyncStorage.setItem(STORAGE_KEYS.FINANCE_SHEETS, JSON.stringify(allSheets));
     }
 
     return sheet;
   }
 
   /**
-   * Save changes to a day sheet
+   * Save changes to a day sheet and trigger forward cascade across subsequent days.
    */
   async saveDaySheet(year, monthIndex, dayNumber, incomes, expenses) {
     const allSheets = await this.getAllSheets();
@@ -217,6 +340,10 @@ class FinanceManager {
     };
 
     await AsyncStorage.setItem(STORAGE_KEYS.FINANCE_SHEETS, JSON.stringify(allSheets));
+
+    // Cascade changes forward so tomorrow and future days immediately reflect updated balance
+    await this.cascadeRollovers(year, monthIndex, dayNumber);
+
     return allSheets[key];
   }
 

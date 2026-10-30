@@ -10,6 +10,9 @@ import {
   StyleSheet,
   Alert,
   BackHandler,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -236,123 +239,128 @@ export default function TasksScreen() {
         animationType="fade"
         onRequestClose={() => setShowModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>New Task</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border, maxHeight: '85%' }]}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <Text style={[styles.modalTitle, { color: theme.text }]}>New Task</Text>
 
-            <TextInput
-              style={[
-                styles.modalInput,
-                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
-              ]}
-              placeholder="What do you need to do?"
-              placeholderTextColor={theme.textMuted}
-              value={taskText}
-              onChangeText={setTaskText}
-              autoFocus
-            />
-
-            <Text style={[styles.repeatLabel, { color: theme.textSecondary }]}>Repeat Schedule:</Text>
-            <View style={styles.repeatTabs}>
-              <TouchableOpacity
+              <TextInput
                 style={[
-                  styles.repeatTab,
-                  { backgroundColor: theme.background, borderColor: theme.border },
-                  repeatMode === 'none' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+                  styles.modalInput,
+                  { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
                 ]}
-                onPress={() => setRepeatMode('none')}
-              >
-                <Text
-                  style={[
-                    styles.repeatTabText,
-                    { color: repeatMode === 'none' ? theme.primary : theme.textSecondary },
-                  ]}
-                >
-                  Once (Clear at 12 AM)
-                </Text>
-              </TouchableOpacity>
+                placeholder="What do you need to do?"
+                placeholderTextColor={theme.textMuted}
+                value={taskText}
+                onChangeText={setTaskText}
+                autoFocus
+              />
 
-              <TouchableOpacity
-                style={[
-                  styles.repeatTab,
-                  { backgroundColor: theme.background, borderColor: theme.border },
-                  repeatMode === 'daily' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
-                ]}
-                onPress={() => setRepeatMode('daily')}
-              >
-                <Text
+              <Text style={[styles.repeatLabel, { color: theme.textSecondary }]}>Repeat Schedule:</Text>
+              <View style={styles.repeatTabs}>
+                <TouchableOpacity
                   style={[
-                    styles.repeatTabText,
-                    { color: repeatMode === 'daily' ? theme.primary : theme.textSecondary },
+                    styles.repeatTab,
+                    { backgroundColor: theme.background, borderColor: theme.border },
+                    repeatMode === 'none' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
                   ]}
+                  onPress={() => setRepeatMode('none')}
                 >
-                  Daily Repeat
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.repeatTabText,
+                      { color: repeatMode === 'none' ? theme.primary : theme.textSecondary },
+                    ]}
+                  >
+                    Once (Clear at 12 AM)
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.repeatTab,
-                  { backgroundColor: theme.background, borderColor: theme.border },
-                  repeatMode === 'weekly' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
-                ]}
-                onPress={() => setRepeatMode('weekly')}
-              >
-                <Text
+                <TouchableOpacity
                   style={[
-                    styles.repeatTabText,
-                    { color: repeatMode === 'weekly' ? theme.primary : theme.textSecondary },
+                    styles.repeatTab,
+                    { backgroundColor: theme.background, borderColor: theme.border },
+                    repeatMode === 'daily' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
                   ]}
+                  onPress={() => setRepeatMode('daily')}
                 >
-                  Weekly Repeat
-                </Text>
-              </TouchableOpacity>
-            </View>
+                  <Text
+                    style={[
+                      styles.repeatTabText,
+                      { color: repeatMode === 'daily' ? theme.primary : theme.textSecondary },
+                    ]}
+                  >
+                    Daily Repeat
+                  </Text>
+                </TouchableOpacity>
 
-            {repeatMode === 'weekly' && (
-              <View style={styles.weeklyPicker}>
-                <Text style={[styles.subLabel, { color: theme.textSecondary }]}>Choose Day to Respawn:</Text>
-                <View style={styles.daysRow}>
-                  {DAY_NAMES.map((dName, dIdx) => (
-                    <TouchableOpacity
-                      key={dName}
-                      style={[
-                        styles.dayCircle,
-                        { backgroundColor: theme.background, borderColor: theme.border },
-                        weeklyDay === dIdx && { backgroundColor: theme.primary, borderColor: theme.primary },
-                      ]}
-                      onPress={() => setWeeklyDay(dIdx)}
-                    >
-                      <Text
-                        style={[
-                          styles.dayCircleText,
-                          { color: weeklyDay === dIdx ? '#FFFFFF' : theme.text },
-                        ]}
-                      >
-                        {dName[0]}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.repeatTab,
+                    { backgroundColor: theme.background, borderColor: theme.border },
+                    repeatMode === 'weekly' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+                  ]}
+                  onPress={() => setRepeatMode('weekly')}
+                >
+                  <Text
+                    style={[
+                      styles.repeatTabText,
+                      { color: repeatMode === 'weekly' ? theme.primary : theme.textSecondary },
+                    ]}
+                  >
+                    Weekly Repeat
+                  </Text>
+                </TouchableOpacity>
               </View>
-            )}
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancelBtn}
-                onPress={() => setShowModal(false)}
-              >
-                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
-                onPress={handleCreateTask}
-              >
-                <Text style={styles.modalConfirmText}>Add Task</Text>
-              </TouchableOpacity>
-            </View>
+              {repeatMode === 'weekly' && (
+                <View style={styles.weeklyPicker}>
+                  <Text style={[styles.subLabel, { color: theme.textSecondary }]}>Choose Day to Respawn:</Text>
+                  <View style={styles.daysRow}>
+                    {DAY_NAMES.map((dName, dIdx) => (
+                      <TouchableOpacity
+                        key={dName}
+                        style={[
+                          styles.dayCircle,
+                          { backgroundColor: theme.background, borderColor: theme.border },
+                          weeklyDay === dIdx && { backgroundColor: theme.primary, borderColor: theme.primary },
+                        ]}
+                        onPress={() => setWeeklyDay(dIdx)}
+                      >
+                        <Text
+                          style={[
+                            styles.dayCircleText,
+                            { color: weeklyDay === dIdx ? '#FFFFFF' : theme.text },
+                          ]}
+                        >
+                          {dName[0]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setShowModal(false)}
+                >
+                  <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
+                  onPress={handleCreateTask}
+                >
+                  <Text style={styles.modalConfirmText}>Add Task</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* EDIT TASK MODAL */}
@@ -362,122 +370,127 @@ export default function TasksScreen() {
         animationType="fade"
         onRequestClose={() => setEditingTask(null)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Task</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border, maxHeight: '85%' }]}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Task</Text>
 
-            <TextInput
-              style={[
-                styles.modalInput,
-                { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
-              ]}
-              placeholder="Task description"
-              placeholderTextColor={theme.textMuted}
-              value={editText}
-              onChangeText={setEditText}
-            />
-
-            <Text style={[styles.repeatLabel, { color: theme.textSecondary }]}>Edit Recurrence Schedule:</Text>
-            <View style={styles.repeatTabs}>
-              <TouchableOpacity
+              <TextInput
                 style={[
-                  styles.repeatTab,
-                  { backgroundColor: theme.background, borderColor: theme.border },
-                  editRepeatMode === 'none' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+                  styles.modalInput,
+                  { backgroundColor: theme.background, borderColor: theme.border, color: theme.text },
                 ]}
-                onPress={() => setEditRepeatMode('none')}
-              >
-                <Text
-                  style={[
-                    styles.repeatTabText,
-                    { color: editRepeatMode === 'none' ? theme.primary : theme.textSecondary },
-                  ]}
-                >
-                  Once (Clear at 12 AM)
-                </Text>
-              </TouchableOpacity>
+                placeholder="Task description"
+                placeholderTextColor={theme.textMuted}
+                value={editText}
+                onChangeText={setEditText}
+              />
 
-              <TouchableOpacity
-                style={[
-                  styles.repeatTab,
-                  { backgroundColor: theme.background, borderColor: theme.border },
-                  editRepeatMode === 'daily' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
-                ]}
-                onPress={() => setEditRepeatMode('daily')}
-              >
-                <Text
+              <Text style={[styles.repeatLabel, { color: theme.textSecondary }]}>Edit Recurrence Schedule:</Text>
+              <View style={styles.repeatTabs}>
+                <TouchableOpacity
                   style={[
-                    styles.repeatTabText,
-                    { color: editRepeatMode === 'daily' ? theme.primary : theme.textSecondary },
+                    styles.repeatTab,
+                    { backgroundColor: theme.background, borderColor: theme.border },
+                    editRepeatMode === 'none' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
                   ]}
+                  onPress={() => setEditRepeatMode('none')}
                 >
-                  Daily Repeat
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.repeatTabText,
+                      { color: editRepeatMode === 'none' ? theme.primary : theme.textSecondary },
+                    ]}
+                  >
+                    Once (Clear at 12 AM)
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.repeatTab,
-                  { backgroundColor: theme.background, borderColor: theme.border },
-                  editRepeatMode === 'weekly' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
-                ]}
-                onPress={() => setEditRepeatMode('weekly')}
-              >
-                <Text
+                <TouchableOpacity
                   style={[
-                    styles.repeatTabText,
-                    { color: editRepeatMode === 'weekly' ? theme.primary : theme.textSecondary },
+                    styles.repeatTab,
+                    { backgroundColor: theme.background, borderColor: theme.border },
+                    editRepeatMode === 'daily' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
                   ]}
+                  onPress={() => setEditRepeatMode('daily')}
                 >
-                  Weekly Repeat
-                </Text>
-              </TouchableOpacity>
-            </View>
+                  <Text
+                    style={[
+                      styles.repeatTabText,
+                      { color: editRepeatMode === 'daily' ? theme.primary : theme.textSecondary },
+                    ]}
+                  >
+                    Daily Repeat
+                  </Text>
+                </TouchableOpacity>
 
-            {editRepeatMode === 'weekly' && (
-              <View style={styles.weeklyPicker}>
-                <Text style={[styles.subLabel, { color: theme.textSecondary }]}>Choose Day to Respawn:</Text>
-                <View style={styles.daysRow}>
-                  {DAY_NAMES.map((dName, dIdx) => (
-                    <TouchableOpacity
-                      key={dName}
-                      style={[
-                        styles.dayCircle,
-                        { backgroundColor: theme.background, borderColor: theme.border },
-                        editWeeklyDay === dIdx && { backgroundColor: theme.primary, borderColor: theme.primary },
-                      ]}
-                      onPress={() => setEditWeeklyDay(dIdx)}
-                    >
-                      <Text
-                        style={[
-                          styles.dayCircleText,
-                          { color: editWeeklyDay === dIdx ? '#FFFFFF' : theme.text },
-                        ]}
-                      >
-                        {dName[0]}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.repeatTab,
+                    { backgroundColor: theme.background, borderColor: theme.border },
+                    editRepeatMode === 'weekly' && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+                  ]}
+                  onPress={() => setEditRepeatMode('weekly')}
+                >
+                  <Text
+                    style={[
+                      styles.repeatTabText,
+                      { color: editRepeatMode === 'weekly' ? theme.primary : theme.textSecondary },
+                    ]}
+                  >
+                    Weekly Repeat
+                  </Text>
+                </TouchableOpacity>
               </View>
-            )}
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancelBtn}
-                onPress={() => setEditingTask(null)}
-              >
-                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
-                onPress={handleSaveEdit}
-              >
-                <Text style={styles.modalConfirmText}>Save Changes</Text>
-              </TouchableOpacity>
-            </View>
+              {editRepeatMode === 'weekly' && (
+                <View style={styles.weeklyPicker}>
+                  <Text style={[styles.subLabel, { color: theme.textSecondary }]}>Choose Day to Respawn:</Text>
+                  <View style={styles.daysRow}>
+                    {DAY_NAMES.map((dName, dIdx) => (
+                      <TouchableOpacity
+                        key={dName}
+                        style={[
+                          styles.dayCircle,
+                          { backgroundColor: theme.background, borderColor: theme.border },
+                          editWeeklyDay === dIdx && { backgroundColor: theme.primary, borderColor: theme.primary },
+                        ]}
+                        onPress={() => setEditWeeklyDay(dIdx)}
+                      >
+                        <Text
+                          style={[
+                            styles.dayCircleText,
+                            { color: editWeeklyDay === dIdx ? '#FFFFFF' : theme.text },
+                          ]}
+                        >
+                          {dName[0]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setEditingTask(null)}
+                >
+                  <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
+                  onPress={handleSaveEdit}
+                >
+                  <Text style={styles.modalConfirmText}>Save Changes</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
