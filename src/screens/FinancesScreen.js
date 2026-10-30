@@ -404,8 +404,6 @@ export default function FinancesScreen() {
             <Text style={[styles.addRowText, { color: theme.primary }]}>Add More Rows</Text>
           </TouchableOpacity>
         </ScrollView>
-          </TouchableOpacity>
-        </ScrollView>
 
         {/* Bottom Totals Footer */}
         <View
