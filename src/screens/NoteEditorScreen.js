@@ -10,10 +10,19 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { storage } from '../storage/storageManager';
+import {
+  toggleBold,
+  toggleItalic,
+  formatBoldTimestamp,
+  getCurrentFormattedTime,
+  getNextListNumber,
+  handleSmartListNewline,
+} from '../utils/textStyler';
 
 export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
   const { theme } = useTheme();
@@ -21,6 +30,9 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
   const [content, setContent] = useState('');
   const [saveStatus, setSaveStatus] = useState('Saved');
   const [cursorPos, setCursorPos] = useState({ start: 0, end: 0 });
+  const [showTimestampModal, setShowTimestampModal] = useState(false);
+  const [customTimeInput, setCustomTimeInput] = useState('');
+  const [includeBrackets, setIncludeBrackets] = useState(true);
   const saveTimeoutRef = useRef(null);
   const inputRef = useRef(null);
   const contentRef = useRef('');
@@ -48,14 +60,90 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
   };
 
   const handleContentChange = (newText) => {
-    setContent(newText);
+    // Check if smart newline continuation applies
+    const smart = handleSmartListNewline(content, newText, cursorPos);
+    const finalContent = smart ? smart.updatedText : newText;
+
+    setContent(finalContent);
     setSaveStatus('Saving...');
+
+    if (smart) {
+      setCursorPos({ start: smart.newCursor, end: smart.newCursor });
+    }
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
-      await storage.updateNote(noteId, newText);
+      await storage.updateNote(noteId, finalContent);
       setSaveStatus('Saved');
     }, 400);
+  };
+
+  // ---- REAL BOLD (NO ** SYNTAX) ----
+  const handleToggleBold = () => {
+    const start = cursorPos.start;
+    const end = cursorPos.end;
+    if (start !== end) {
+      const selected = content.substring(start, end);
+      const converted = toggleBold(selected);
+      const updated = content.substring(0, start) + converted + content.substring(end);
+      handleContentChange(updated);
+    } else {
+      // Insert bold placeholder
+      const placeholder = '𝗯𝗼𝗹𝗱';
+      const updated = content.substring(0, start) + placeholder + content.substring(end);
+      handleContentChange(updated);
+    }
+  };
+
+  // ---- REAL ITALIC (NO * SYNTAX) ----
+  const handleToggleItalic = () => {
+    const start = cursorPos.start;
+    const end = cursorPos.end;
+    if (start !== end) {
+      const selected = content.substring(start, end);
+      const converted = toggleItalic(selected);
+      const updated = content.substring(0, start) + converted + content.substring(end);
+      handleContentChange(updated);
+    } else {
+      const placeholder = '𝑖𝑡𝑎𝑙𝑖𝑐';
+      const updated = content.substring(0, start) + placeholder + content.substring(end);
+      handleContentChange(updated);
+    }
+  };
+
+  // ---- TIMESTAMP MODAL & INSERT ----
+  const openTimestampModal = () => {
+    setCustomTimeInput(getCurrentFormattedTime());
+    setShowTimestampModal(true);
+  };
+
+  const handleInsertTimestamp = (timeToUse = customTimeInput) => {
+    const formatted = formatBoldTimestamp(timeToUse || getCurrentFormattedTime(), includeBrackets) + ' ';
+    const start = cursorPos.start;
+    const end = cursorPos.end;
+    const updated = content.substring(0, start) + formatted + content.substring(end);
+    handleContentChange(updated);
+    setShowTimestampModal(false);
+  };
+
+  // ---- SMART NUMBERED LIST (INCREMENTS 1, 2, 3...) ----
+  const handleNumberedList = () => {
+    const start = cursorPos.start;
+    const end = cursorPos.end;
+    if (start !== end) {
+      const selected = content.substring(start, end);
+      const lines = selected.split('\n');
+      const baseNum = getNextListNumber(content, start);
+      const numberedLines = lines.map((l, idx) => `${baseNum + idx}. ${l}`).join('\n');
+      const updated = content.substring(0, start) + numberedLines + content.substring(end);
+      handleContentChange(updated);
+    } else {
+      const nextNum = getNextListNumber(content, start);
+      const isStartOfLine = start === 0 || content[start - 1] === '\n';
+      const prefix = isStartOfLine ? `${nextNum}. ` : `\n${nextNum}. `;
+      const updated = content.substring(0, start) + prefix + content.substring(end);
+      handleContentChange(updated);
+    }
   };
 
   const insertFormatting = (prefix, suffix = '') => {
@@ -64,14 +152,11 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
     const selected = content.substring(start, end);
 
     let replacement = '';
-    let newCursorPos = start;
-
-    if (prefix === '• ' || prefix === '[ ] ' || prefix === '1. ' || prefix === '> ') {
-      replacement = `\n${prefix}${selected}`;
-      newCursorPos = start + prefix.length + 1;
+    if (prefix === '• ' || prefix === '[ ] ' || prefix === '> ') {
+      const isStartOfLine = start === 0 || content[start - 1] === '\n';
+      replacement = isStartOfLine ? `${prefix}${selected}` : `\n${prefix}${selected}`;
     } else {
       replacement = `${prefix}${selected || 'text'}${suffix}`;
-      newCursorPos = selected ? end + prefix.length + suffix.length : start + prefix.length + 4;
     }
 
     const updated = content.substring(0, start) + replacement + content.substring(end);
@@ -156,22 +241,43 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
       {/* Rich Formatting Toolbar */}
       <View style={[styles.toolbar, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarScroll}>
+          {/* REAL BOLD */}
           <TouchableOpacity
             style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
-            onPress={() => insertFormatting('**', '**')}
+            onPress={handleToggleBold}
           >
-            <Ionicons name="text" size={18} color={theme.text} />
-            <Text style={[styles.toolLabel, { color: theme.text }]}>Bold</Text>
+            <Ionicons name="text" size={18} color={theme.primary} />
+            <Text style={[styles.toolLabel, { color: theme.text, fontWeight: '700' }]}>Bold</Text>
           </TouchableOpacity>
 
+          {/* REAL ITALIC */}
           <TouchableOpacity
             style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
-            onPress={() => insertFormatting('*', '*')}
+            onPress={handleToggleItalic}
           >
             <Ionicons name="pencil" size={18} color={theme.text} />
-            <Text style={[styles.toolLabel, { color: theme.text }]}>Italic</Text>
+            <Text style={[styles.toolLabel, { color: theme.text, fontStyle: 'italic' }]}>Italic</Text>
           </TouchableOpacity>
 
+          {/* TIMESTAMP (BOLD) */}
+          <TouchableOpacity
+            style={[styles.toolBtn, styles.highlightToolBtn, { backgroundColor: theme.primaryLight, borderColor: theme.primary }]}
+            onPress={openTimestampModal}
+          >
+            <Ionicons name="time" size={18} color={theme.primary} />
+            <Text style={[styles.toolLabel, { color: theme.primary, fontWeight: '700' }]}>Timestamp</Text>
+          </TouchableOpacity>
+
+          {/* NUMBERED LIST (SMART INCREMENT) */}
+          <TouchableOpacity
+            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={handleNumberedList}
+          >
+            <Ionicons name="reorder-four" size={18} color={theme.text} />
+            <Text style={[styles.toolLabel, { color: theme.text }]}>1. 2. 3.</Text>
+          </TouchableOpacity>
+
+          {/* BULLET LIST */}
           <TouchableOpacity
             style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
             onPress={() => insertFormatting('• ')}
@@ -180,6 +286,7 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
             <Text style={[styles.toolLabel, { color: theme.text }]}>Bullet</Text>
           </TouchableOpacity>
 
+          {/* TO-DO CHECKLIST */}
           <TouchableOpacity
             style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
             onPress={() => insertFormatting('[ ] ')}
@@ -188,14 +295,7 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
             <Text style={[styles.toolLabel, { color: theme.text }]}>To-Do</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
-            onPress={() => insertFormatting('1. ')}
-          >
-            <Ionicons name="reorder-four" size={18} color={theme.text} />
-            <Text style={[styles.toolLabel, { color: theme.text }]}>Numbered</Text>
-          </TouchableOpacity>
-
+          {/* QUOTE */}
           <TouchableOpacity
             style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
             onPress={() => insertFormatting('> ')}
@@ -205,6 +305,99 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* TIMESTAMP CUSTOMIZATION MODAL */}
+      <Modal
+        visible={showTimestampModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowTimestampModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.modalHeaderRow}>
+              <View style={[styles.modalIconCircle, { backgroundColor: theme.primaryLight }]}>
+                <Ionicons name="time" size={22} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>Insert Timestamp</Text>
+                <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
+                  Customize your time. It will be inserted in bold without any asterisks.
+                </Text>
+              </View>
+            </View>
+
+            {/* Live Bold Preview */}
+            <View style={[styles.previewCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <Text style={[styles.previewLabel, { color: theme.textMuted }]}>PREVIEW IN NOTE</Text>
+              <Text style={[styles.previewText, { color: theme.text }]}>
+                {formatBoldTimestamp(customTimeInput || getCurrentFormattedTime(), includeBrackets)}
+              </Text>
+            </View>
+
+            {/* Time Editable Input */}
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Time to insert:</Text>
+            <View style={[styles.timeInputRow, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <TextInput
+                style={[styles.timeInput, { color: theme.text }]}
+                value={customTimeInput}
+                onChangeText={setCustomTimeInput}
+                placeholder="00:00 AM"
+                placeholderTextColor={theme.textMuted}
+              />
+              <TouchableOpacity
+                style={[styles.nowPill, { backgroundColor: theme.surfaceHover }]}
+                onPress={() => setCustomTimeInput(getCurrentFormattedTime())}
+              >
+                <Ionicons name="refresh" size={14} color={theme.primary} />
+                <Text style={[styles.nowPillText, { color: theme.primary }]}>Now</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Options Row */}
+            <View style={styles.optionsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.optionPill,
+                  { borderColor: theme.border, backgroundColor: includeBrackets ? theme.primaryLight : theme.background },
+                  includeBrackets && { borderColor: theme.primary },
+                ]}
+                onPress={() => setIncludeBrackets(!includeBrackets)}
+              >
+                <Ionicons
+                  name={includeBrackets ? 'checkbox' : 'square-outline'}
+                  size={16}
+                  color={includeBrackets ? theme.primary : theme.textMuted}
+                />
+                <Text style={[styles.optionPillText, { color: includeBrackets ? theme.primary : theme.text }]}>
+                  Include [Brackets]
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal Buttons */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalCancelBtn, { borderColor: theme.border }]}
+                onPress={() => setShowTimestampModal(false)}
+              >
+                <Text style={[styles.modalCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalConfirmBtn, { backgroundColor: theme.primary }]}
+                onPress={() => handleInsertTimestamp()}
+              >
+                <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                <Text style={styles.modalConfirmText}>Insert (Bold)</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -273,6 +466,9 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
   },
+  highlightToolBtn: {
+    borderWidth: 1.5,
+  },
   toolLabel: {
     fontSize: 12,
     fontWeight: '600',
@@ -281,5 +477,134 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     fontSize: 15,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalBox: {
+    width: '100%',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  modalIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+  previewCard: {
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  previewLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  previewText: {
+    fontSize: 22,
+    letterSpacing: 1,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  timeInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  timeInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 10,
+    fontWeight: '600',
+  },
+  nowPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  nowPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  optionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 18,
+  },
+  optionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  optionPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  modalCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalConfirmBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  modalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
