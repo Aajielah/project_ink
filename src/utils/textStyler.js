@@ -201,10 +201,26 @@ export function getNextListNumber(content, cursorIndex) {
 export function handleSmartListNewline(oldText, newText, cursorPos) {
   if (newText.length !== oldText.length + 1) return null;
 
-  const insertIdx = cursorPos.start;
-  if (insertIdx <= 0 || newText[insertIdx - 1] !== '\n') return null;
+  // Determine where the newline character was inserted
+  let insertIdx =
+    cursorPos &&
+    cursorPos.start >= 0 &&
+    cursorPos.start < newText.length &&
+    newText[cursorPos.start] === '\n'
+      ? cursorPos.start
+      : -1;
 
-  const beforeNewline = newText.substring(0, insertIdx - 1);
+  if (insertIdx === -1) {
+    let p = 0;
+    while (p < oldText.length && oldText[p] === newText[p]) p++;
+    if (newText[p] === '\n') {
+      insertIdx = p;
+    } else {
+      return null;
+    }
+  }
+
+  const beforeNewline = newText.substring(0, insertIdx);
   const lastLineStart = beforeNewline.lastIndexOf('\n') + 1;
   const prevLine = beforeNewline.substring(lastLineStart);
   const unstyledPrevLine = unstyle(prevLine);
@@ -218,7 +234,7 @@ export function handleSmartListNewline(oldText, newText, cursorPos) {
 
     if (itemContent === '') {
       // Empty item: cancel list item and leave blank line
-      const updated = newText.substring(0, lastLineStart) + newText.substring(insertIdx);
+      const updated = newText.substring(0, lastLineStart) + newText.substring(insertIdx + 1);
       return {
         updatedText: updated,
         newCursor: lastLineStart,
@@ -227,10 +243,10 @@ export function handleSmartListNewline(oldText, newText, cursorPos) {
       // Non-empty item: increment number!
       const nextNum = num + 1;
       const continuation = `${indent}${nextNum}. `;
-      const updated = newText.substring(0, insertIdx) + continuation + newText.substring(insertIdx);
+      const updated = newText.substring(0, insertIdx + 1) + continuation + newText.substring(insertIdx + 1);
       return {
         updatedText: updated,
-        newCursor: insertIdx + continuation.length,
+        newCursor: insertIdx + 1 + continuation.length,
       };
     }
   }
@@ -241,12 +257,12 @@ export function handleSmartListNewline(oldText, newText, cursorPos) {
     const indent = bulletMatch[1];
     const itemContent = bulletMatch[3].trim();
     if (itemContent === '') {
-      const updated = newText.substring(0, lastLineStart) + newText.substring(insertIdx);
+      const updated = newText.substring(0, lastLineStart) + newText.substring(insertIdx + 1);
       return { updatedText: updated, newCursor: lastLineStart };
     } else {
       const continuation = `${indent}• `;
-      const updated = newText.substring(0, insertIdx) + continuation + newText.substring(insertIdx);
-      return { updatedText: updated, newCursor: insertIdx + continuation.length };
+      const updated = newText.substring(0, insertIdx + 1) + continuation + newText.substring(insertIdx + 1);
+      return { updatedText: updated, newCursor: insertIdx + 1 + continuation.length };
     }
   }
 
@@ -256,14 +272,56 @@ export function handleSmartListNewline(oldText, newText, cursorPos) {
     const indent = todoMatch[1];
     const itemContent = todoMatch[3].trim();
     if (itemContent === '') {
-      const updated = newText.substring(0, lastLineStart) + newText.substring(insertIdx);
+      const updated = newText.substring(0, lastLineStart) + newText.substring(insertIdx + 1);
       return { updatedText: updated, newCursor: lastLineStart };
     } else {
       const continuation = `${indent}[ ] `;
-      const updated = newText.substring(0, insertIdx) + continuation + newText.substring(insertIdx);
-      return { updatedText: updated, newCursor: insertIdx + continuation.length };
+      const updated = newText.substring(0, insertIdx + 1) + continuation + newText.substring(insertIdx + 1);
+      return { updatedText: updated, newCursor: insertIdx + 1 + continuation.length };
     }
   }
 
   return null;
 }
+
+/**
+ * Applies active formatting (Bold or Italic mode like MS Word Ctrl+B / Ctrl+I)
+ * to newly typed characters.
+ */
+export function applyActiveFormatting(oldText, newText, cursorPos, isBoldActive, isItalicActive) {
+  if (!isBoldActive && !isItalicActive) return null;
+  if (newText.length <= oldText.length) return null;
+
+  let start =
+    cursorPos && cursorPos.start >= 0 && cursorPos.start <= oldText.length
+      ? cursorPos.start
+      : -1;
+
+  if (start === -1) {
+    let p = 0;
+    while (p < oldText.length && oldText[p] === newText[p]) p++;
+    start = p;
+  }
+
+  const charsInserted = newText.length - oldText.length;
+  if (charsInserted <= 0) return null;
+
+  const inserted = newText.substring(start, start + charsInserted);
+  // Don't style newlines so list continuations aren't affected
+  if (inserted === '\n') return null;
+
+  let styled = inserted;
+  if (isBoldActive) {
+    styled = toSansBold(styled);
+  }
+  if (isItalicActive) {
+    styled = toItalic(styled);
+  }
+
+  if (styled === inserted) return null;
+
+  const updated = newText.substring(0, start) + styled + newText.substring(start + charsInserted);
+  const newCursor = start + styled.length;
+  return { updatedText: updated, newCursor };
+}
+

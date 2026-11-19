@@ -22,6 +22,7 @@ import {
   getCurrentFormattedTime,
   getNextListNumber,
   handleSmartListNewline,
+  applyActiveFormatting,
 } from '../utils/textStyler';
 
 export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
@@ -30,6 +31,9 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
   const [content, setContent] = useState('');
   const [saveStatus, setSaveStatus] = useState('Saved');
   const [cursorPos, setCursorPos] = useState({ start: 0, end: 0 });
+  const [selectionOverride, setSelectionOverride] = useState(null);
+  const [isBoldActive, setIsBoldActive] = useState(false);
+  const [isItalicActive, setIsItalicActive] = useState(false);
   const [showTimestampModal, setShowTimestampModal] = useState(false);
   const [customTimeInput, setCustomTimeInput] = useState('');
   const [includeBrackets, setIncludeBrackets] = useState(true);
@@ -59,16 +63,27 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
     }
   };
 
-  const handleContentChange = (newText) => {
-    // Check if smart newline continuation applies
+  const handleContentChange = (newText, explicitNextCursor = null) => {
+    // 1. Check smart list newline continuation first
     const smart = handleSmartListNewline(content, newText, cursorPos);
-    const finalContent = smart ? smart.updatedText : newText;
+    let finalContent = smart ? smart.updatedText : newText;
+    let nextCursor = explicitNextCursor !== null ? explicitNextCursor : (smart ? smart.newCursor : null);
+
+    // 2. If not a newline and no explicit cursor, check if Bold / Italic mode is active (like MS Word Ctrl+B / Ctrl+I)
+    if (!smart && explicitNextCursor === null && (isBoldActive || isItalicActive)) {
+      const activeFormat = applyActiveFormatting(content, newText, cursorPos, isBoldActive, isItalicActive);
+      if (activeFormat) {
+        finalContent = activeFormat.updatedText;
+        nextCursor = activeFormat.newCursor;
+      }
+    }
 
     setContent(finalContent);
     setSaveStatus('Saving...');
 
-    if (smart) {
-      setCursorPos({ start: smart.newCursor, end: smart.newCursor });
+    if (nextCursor !== null) {
+      setCursorPos({ start: nextCursor, end: nextCursor });
+      setSelectionOverride({ start: nextCursor, end: nextCursor });
     }
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -78,36 +93,37 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
     }, 400);
   };
 
-  // ---- REAL BOLD (NO ** SYNTAX) ----
+  // ---- REAL BOLD (MS Word Ctrl+B Style) ----
   const handleToggleBold = () => {
     const start = cursorPos.start;
     const end = cursorPos.end;
     if (start !== end) {
+      // Text IS highlighted: toggle bold on the selected text
       const selected = content.substring(start, end);
       const converted = toggleBold(selected);
       const updated = content.substring(0, start) + converted + content.substring(end);
-      handleContentChange(updated);
+      const newCursor = start + converted.length;
+      handleContentChange(updated, newCursor);
     } else {
-      // Insert bold placeholder
-      const placeholder = '𝗯𝗼𝗹𝗱';
-      const updated = content.substring(0, start) + placeholder + content.substring(end);
-      handleContentChange(updated);
+      // NO text highlighted: toggle Bold Mode ON / OFF for next typing (never inserts the word 'bold')
+      setIsBoldActive((prev) => !prev);
     }
   };
 
-  // ---- REAL ITALIC (NO * SYNTAX) ----
+  // ---- REAL ITALIC (MS Word Ctrl+I Style) ----
   const handleToggleItalic = () => {
     const start = cursorPos.start;
     const end = cursorPos.end;
     if (start !== end) {
+      // Text IS highlighted: toggle italic on the selected text
       const selected = content.substring(start, end);
       const converted = toggleItalic(selected);
       const updated = content.substring(0, start) + converted + content.substring(end);
-      handleContentChange(updated);
+      const newCursor = start + converted.length;
+      handleContentChange(updated, newCursor);
     } else {
-      const placeholder = '𝑖𝑡𝑎𝑙𝑖𝑐';
-      const updated = content.substring(0, start) + placeholder + content.substring(end);
-      handleContentChange(updated);
+      // NO text highlighted: toggle Italic Mode ON / OFF for next typing
+      setIsItalicActive((prev) => !prev);
     }
   };
 
@@ -122,7 +138,8 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
     const start = cursorPos.start;
     const end = cursorPos.end;
     const updated = content.substring(0, start) + formatted + content.substring(end);
-    handleContentChange(updated);
+    const newCursor = start + formatted.length;
+    handleContentChange(updated, newCursor);
     setShowTimestampModal(false);
   };
 
@@ -136,13 +153,15 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
       const baseNum = getNextListNumber(content, start);
       const numberedLines = lines.map((l, idx) => `${baseNum + idx}. ${l}`).join('\n');
       const updated = content.substring(0, start) + numberedLines + content.substring(end);
-      handleContentChange(updated);
+      const newCursor = start + numberedLines.length;
+      handleContentChange(updated, newCursor);
     } else {
       const nextNum = getNextListNumber(content, start);
       const isStartOfLine = start === 0 || content[start - 1] === '\n';
       const prefix = isStartOfLine ? `${nextNum}. ` : `\n${nextNum}. `;
       const updated = content.substring(0, start) + prefix + content.substring(end);
-      handleContentChange(updated);
+      const newCursor = start + prefix.length;
+      handleContentChange(updated, newCursor);
     }
   };
 
@@ -160,7 +179,8 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
     }
 
     const updated = content.substring(0, start) + replacement + content.substring(end);
-    handleContentChange(updated);
+    const newCursor = start + replacement.length;
+    handleContentChange(updated, newCursor);
   };
 
   const handleDelete = () => {
@@ -192,8 +212,8 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       {/* Top Header */}
@@ -222,7 +242,6 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
         style={styles.scrollBody}
         contentContainerStyle={styles.scrollBodyContent}
         keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets={true}
       >
         <TextInput
           ref={inputRef}
@@ -231,8 +250,14 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
           placeholder="Start writing your thoughts for today..."
           placeholderTextColor={theme.textMuted}
           value={content}
+          selection={selectionOverride || undefined}
           onChangeText={handleContentChange}
-          onSelectionChange={(e) => setCursorPos(e.nativeEvent.selection)}
+          onSelectionChange={(e) => {
+            setCursorPos(e.nativeEvent.selection);
+            if (selectionOverride) {
+              setSelectionOverride(null);
+            }
+          }}
           textAlignVertical="top"
           autoFocus={!content}
         />
@@ -241,22 +266,44 @@ export default function NoteEditorScreen({ noteId, onBack, onDeleted }) {
       {/* Rich Formatting Toolbar */}
       <View style={[styles.toolbar, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarScroll}>
-          {/* REAL BOLD */}
+          {/* REAL BOLD (MS Word Ctrl+B Style) */}
           <TouchableOpacity
-            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            style={[
+              styles.toolBtn,
+              { backgroundColor: theme.card, borderColor: theme.border },
+              isBoldActive && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+            ]}
             onPress={handleToggleBold}
           >
-            <Ionicons name="text" size={18} color={theme.primary} />
-            <Text style={[styles.toolLabel, { color: theme.text, fontWeight: '700' }]}>Bold</Text>
+            <Ionicons name="text" size={18} color={isBoldActive ? theme.primary : theme.text} />
+            <Text
+              style={[
+                styles.toolLabel,
+                { color: isBoldActive ? theme.primary : theme.text, fontWeight: '700' },
+              ]}
+            >
+              Bold{isBoldActive ? ' • ON' : ''}
+            </Text>
           </TouchableOpacity>
 
-          {/* REAL ITALIC */}
+          {/* REAL ITALIC (MS Word Ctrl+I Style) */}
           <TouchableOpacity
-            style={[styles.toolBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+            style={[
+              styles.toolBtn,
+              { backgroundColor: theme.card, borderColor: theme.border },
+              isItalicActive && { backgroundColor: theme.primaryLight, borderColor: theme.primary },
+            ]}
             onPress={handleToggleItalic}
           >
-            <Ionicons name="pencil" size={18} color={theme.text} />
-            <Text style={[styles.toolLabel, { color: theme.text, fontStyle: 'italic' }]}>Italic</Text>
+            <Ionicons name="pencil" size={18} color={isItalicActive ? theme.primary : theme.text} />
+            <Text
+              style={[
+                styles.toolLabel,
+                { color: isItalicActive ? theme.primary : theme.text, fontStyle: 'italic' },
+              ]}
+            >
+              Italic{isItalicActive ? ' • ON' : ''}
+            </Text>
           </TouchableOpacity>
 
           {/* TIMESTAMP (BOLD) */}
